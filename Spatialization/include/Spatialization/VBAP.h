@@ -59,7 +59,7 @@ namespace JPL
 
         using ChannelGains = typename std::array<typename GainType, MAX_CHANNELS>;
 
-        /// Just hiding convenient aliases in trais, no need to ever override these
+        /// Just hiding convenient aliases in traits, no need to ever override these
         static constexpr auto two_pi = std::numbers::pi_v<AngleType> * AngleType(2.0);
         static constexpr auto pi = std::numbers::pi_v<AngleType>;
         static constexpr auto half_pi = std::numbers::pi_v<AngleType> * AngleType(0.5);
