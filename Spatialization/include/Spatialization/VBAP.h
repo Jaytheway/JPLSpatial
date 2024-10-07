@@ -219,7 +219,7 @@ namespace JPL
     /// While VirtualSource(s) can be used directly with ProcessVirtualSources
     /// function for a more customizable spatialization, e.g. for volumetric
     /// sound sources, or any other circumstances where position and spatial
-    /// extend of each channel needs to be manually cotrolled.
+    /// extend of each channel needed to be manually cotrolled.
     template<class Traits = VBAPStandartTraits>
     class VBAPanner
     {
