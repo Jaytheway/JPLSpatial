@@ -233,4 +233,6 @@ namespace JPL
 #define JPL_CACHE_LINE_SIZE 64
 #endif
 
+#define JPL_BIT(x) (1u << x)
+
 } // namespace JPL

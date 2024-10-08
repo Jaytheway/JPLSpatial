@@ -27,31 +27,30 @@
 namespace JPL
 {
     //==========================================================================
-#define BIT(x) (1u << x)
     /// Default speaker/channel masks
     /// This should be in the order the channels are laid out in the user's
     /// audio processing block.
     /// So far this more-or-less conforms to the Microsoft's standard.
     enum EChannel : uint32
     {
-        FrontLeft           = BIT(0),
-        FrontRight          = BIT(1),
-        FrontCenter         = BIT(2),
-        LFE                 = BIT(3),
-        BackLeft            = BIT(4),
-        BackRight           = BIT(5),
-        FrontLeftCenter     = BIT(6),
-        FrontRightCenter    = BIT(7),
-        BackCenter          = BIT(8),
-        SideLeft            = BIT(9),
-        SideRight           = BIT(10),
-        TopCenter           = BIT(11),
-        TopFrontLeft        = BIT(12),
-        TopFrontCenter      = BIT(13),
-        TopFrontRight       = BIT(14),
-        TopBackLeft         = BIT(15),
-        TopBackCenter       = BIT(16),
-        TopBackRight        = BIT(17),
+        FrontLeft           = JPL_BIT(0),
+        FrontRight          = JPL_BIT(1),
+        FrontCenter         = JPL_BIT(2),
+        LFE                 = JPL_BIT(3),
+        BackLeft            = JPL_BIT(4),
+        BackRight           = JPL_BIT(5),
+        FrontLeftCenter     = JPL_BIT(6),
+        FrontRightCenter    = JPL_BIT(7),
+        BackCenter          = JPL_BIT(8),
+        SideLeft            = JPL_BIT(9),
+        SideRight           = JPL_BIT(10),
+        TopCenter           = JPL_BIT(11),
+        TopFrontLeft        = JPL_BIT(12),
+        TopFrontCenter      = JPL_BIT(13),
+        TopFrontRight       = JPL_BIT(14),
+        TopBackLeft         = JPL_BIT(15),
+        TopBackCenter       = JPL_BIT(16),
+        TopBackRight        = JPL_BIT(17),
         
         // ..other speakers can be added here
 
@@ -61,7 +60,6 @@ namespace JPL
 
         Invalid = 0
     };
-#undef BIT
 
     //==========================================================================
     /// Common channel masks
