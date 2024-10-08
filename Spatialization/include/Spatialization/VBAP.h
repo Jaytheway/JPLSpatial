@@ -43,6 +43,7 @@ namespace JPL
     /// and functions, or use a completely separate traits type with VBAP API.
     struct VBAPStandartTraits
     {
+        /// If you override GainType, make sure to also override ChannelGains
         using GainType = float;
         using AngleType = float;
 
@@ -57,6 +58,7 @@ namespace JPL
         /// and is not very customizable, e.g. stroing in an int mask vs array)
         static constexpr auto MAX_CHANNELS = 32;
 
+        /// If you override ChannelGains, make sure to also override GainType
         using ChannelGains = typename std::array<typename GainType, MAX_CHANNELS>;
 
         /// Just hiding convenient aliases in traits, no need to ever override these
@@ -65,7 +67,7 @@ namespace JPL
         static constexpr auto half_pi = std::numbers::pi_v<AngleType> * AngleType(0.5);
         
         // TODO: customizable EChannel type and ChannelMap type as well?
-        static float GetChannelAngle(EChannel channel)
+        static AngleType GetChannelAngle(EChannel channel)
         {
             /// Standard channel vectors converted to angles
             // TODO: for now we discard elevation
@@ -224,11 +226,29 @@ namespace JPL
     class VBAPanner
     {
     public:
+        /// Aliases to avoid typing wordy templates
         using GainType = Traits::GainType;
         using AngleType = Traits::AngleType;
 
-        using ChannelAngleArray = typename Traits::template Array<ChannelAngle<Traits>>;
+        static_assert(std::same_as<typename Traits::GainType, typename Traits::ChannelGains::value_type>,
+                      "Make sure if overriding either GainType or ChannelGains of VBAPanner traits, override both of them with the same type."
+                      "E.g. both floats, or both doubles.");
 
+        static_assert(std::floating_point<GainType>, "GainType should be floating point.");
+        static_assert(std::floating_point<AngleType>, "AngleType should be floating point.");
+
+        using ChannelAngle = typename ChannelAngle<Traits>;
+        using PanUpdateData = typename PanUpdateData<Traits>;
+        using VirtualSource = typename VirtualSource<Traits>;
+        using ChannelGroup = typename ChannelGroup<Traits>;
+        using VBAPData = typename VBAPData<Traits>;
+        using PanSource = typename PanSource<Traits>;
+
+        template<class T>
+        using Array = typename Traits::template Array<T>;
+        using ChannelAngleArray = typename Array<ChannelAngle>;
+
+        /// Consts and defaults
         static constexpr uint8 sDeafultQuadrantResolution = 128;
         static constexpr uint8 sMinQuadrantResolution = 90;
 
@@ -299,10 +319,10 @@ namespace JPL
 
         /// Get and accumulate speaker gains for all virtual soruces into @outGains
         /// @projection is a function that can be used to preprocess virtual source angles
-        /// before the channel gains are retrieved from the LUT. It takes single float parameter and must return a float.
+        /// before the channel gains are retrieved from the LUT. It takes single AngleType (float) parameter and must return AngleType (float).
         template<class AngleProjection = std::identity>
         void ProcessVirtualSources(
-            std::span<const VirtualSource<Traits>> virtualSources,
+            std::span<const VirtualSource> virtualSources,
             std::span<GainType> outGains,
             const AngleProjection& projection = {}) const requires std::is_invocable_r_v<AngleType, AngleProjection, AngleType>;
 
@@ -310,11 +330,11 @@ namespace JPL
         /// `Gains` of each ChannelGroup of the VBAPData based on PanUpdateData.
         /// VBAPData must be initialized beforehand.
         /// E.g. this would be called for each source that has unique channel layout or panning state
-        void ProcessVBAPData(VBAPData<Traits>& vbap, const PanUpdateData<Traits>& updateData) const;
+        void ProcessVBAPData(VBAPData& vbap, const PanUpdateData& updateData) const;
 
         /// Utility function to apply focus and spread to source angle, which must be in [-Pi, Pi] range.
         /// @returns resulting angle
-        JPL_INLINE static AngleType ApplyFocusAndSpread(const PanSource<Traits>& panSoruce, const PanParameters& parameters);
+        JPL_INLINE static AngleType ApplyFocusAndSpread(const PanSource& panSoruce, const PanParameters& parameters);
 
     private:
         JPL_INLINE static void AccumulateChannelGains(std::span<const GainType> contributingGains, std::span<GainType> outputGains);
@@ -328,8 +348,7 @@ namespace JPL
         /// The actual size of the LUT data is mLUTResolution * number of output channels.
         uint16 mLUTResolution = sDeafultQuadrantResolution * 4;
 
-        // TODO: make the data structure for LUT more configurable
-        Traits::template Array<GainType> mLUT;
+        Array<GainType> mLUT;
         uint32_t mNumChannels = 0;
         ChannelMap mChannelMap;
     };
@@ -355,7 +374,7 @@ namespace JPL
 
             const Traits::AngleType channelAngle = Traits::GetChannelAngle(channel);
 
-            sortedChannelAngles.emplace_back(channelAngle < static_cast<Traits::AngleType>(0.0) ? channelAngle + Traits::two_pi : channelAngle, channelIndex);
+            sortedChannelAngles.emplace_back(channelAngle < Traits::AngleType(0.0) ? channelAngle + Traits::two_pi : channelAngle, channelIndex);
         });
 
         std::ranges::sort(sortedChannelAngles);
@@ -501,7 +520,7 @@ namespace JPL
         const uint32 numChannels = channelMap.GetNumChannels();
         ChannelAngleArray speakerAngles;
         static constexpr bool skipLFE = false;
-        ChannelAngle<Traits>::GetSortedChannelAngles(channelMap, speakerAngles, skipLFE);
+        ChannelAngle::GetSortedChannelAngles(channelMap, speakerAngles, skipLFE);
 
         JPL_ASSERT(speakerAngles.size() == numChannels);
         JPL_ASSERT(numChannels <= Traits::MAX_CHANNELS);
@@ -541,8 +560,8 @@ namespace JPL
                 const uint32 s1 = s;
                 const uint32 s2 = speakerAngles[s1 + 1].ChannelId == lfeIndex ? s1 + 2 : s1 + 1;
 
-                const ChannelAngle<Traits>& ch1 = speakerAngles[s1];
-                const ChannelAngle<Traits>& ch2 = speakerAngles[s2];
+                const ChannelAngle& ch1 = speakerAngles[s1];
+                const ChannelAngle& ch2 = speakerAngles[s2];
 
                 AngleType angle1 = ch1.Angle;
                 AngleType angle2 = ch2.Angle;
@@ -571,8 +590,8 @@ namespace JPL
             // Handle wrap-around between last and first speaker
             if (s == speakerAngles.size() - 1)
             {
-                const ChannelAngle<Traits>& ch1 = speakerAngles[s];
-                const ChannelAngle<Traits>& ch2 = speakerAngles[0];
+                const ChannelAngle& ch1 = speakerAngles[s];
+                const ChannelAngle& ch2 = speakerAngles[0];
 
                 const AngleType angle1 = ch1.Angle;
                 const AngleType angle2 = ch2.Angle + Traits::two_pi;
@@ -658,13 +677,13 @@ namespace JPL
     template<class Traits>
     template<class AngleProjection>
     JPL_INLINE void VBAPanner<Traits>::ProcessVirtualSources(
-        std::span<const VirtualSource<Traits>> virtualSources,
+        std::span<const VirtualSource> virtualSources,
         std::span<GainType> outGains,
         const AngleProjection& projection) const requires std::is_invocable_r_v<AngleType, AngleProjection, AngleType>
     {
         JPL_ASSERT(outGains.size() <= mNumChannels);
 
-        std::ranges::for_each(virtualSources, [this, &outGains, &projection](const VirtualSource<Traits>& virtualSource)
+        std::ranges::for_each(virtualSources, [this, &outGains, &projection](const VirtualSource& virtualSource)
         {
             GainType buffer[Traits::MAX_CHANNELS]{ GainType(0.0) };
             std::span<GainType> mixBuffer(buffer, outGains.size());
@@ -679,20 +698,20 @@ namespace JPL
     }
 
     template<class Traits>
-    inline void VBAPanner<Traits>::ProcessVBAPData(VBAPData<Traits>& vbap, const PanUpdateData<Traits>& updateData) const
+    inline void VBAPanner<Traits>::ProcessVBAPData(VBAPData& vbap, const PanUpdateData& updateData) const
     {
         JPL_ASSERT(!vbap.ChannelGroups.empty());
 
         // Clear all channel group gains
-        std::ranges::for_each(vbap.ChannelGroups, [](ChannelGroup<Traits>& channelGroup)
+        std::ranges::for_each(vbap.ChannelGroups, [](ChannelGroup& channelGroup)
         {
             std::memset(channelGroup.Gains.data(), 0, channelGroup.Gains.size() * sizeof(Traits::ChannelGains::value_type));
         });
 
         // Calculate and accumulate channel panning gains
-        std::ranges::for_each(vbap.ChannelGroups, [this, &updateData](ChannelGroup<Traits>& channelGroup)
+        std::ranges::for_each(vbap.ChannelGroups, [this, &updateData](ChannelGroup& channelGroup)
         {
-            auto applyPanParameters = [&channelGroup, &updateData](float angle)
+            auto applyPanParameters = [&channelGroup, &updateData](AngleType angle)
             {
                 // Calculate VBAP channel gains based on source direction + virtual source offset angle.
                 // We simply rotate, or offset each VS by the sound source direction panning angle.
@@ -714,7 +733,7 @@ namespace JPL
     }
 
     template<class Traits>
-    JPL_INLINE Traits::AngleType VBAPanner<Traits>::ApplyFocusAndSpread(const PanSource<Traits>& panSoruce, const PanParameters& parameters)
+    JPL_INLINE Traits::AngleType VBAPanner<Traits>::ApplyFocusAndSpread(const PanSource& panSoruce, const PanParameters& parameters)
     {
         // Calculate VS angle based on Focus and Spread values.
         // Focus is essentially how much energy between all VSs of the group
@@ -726,7 +745,7 @@ namespace JPL
         // 
         // Because we apply gain compensation at the end, we can have any number of VSs at any position,
         // and the overal energy should remain constant/consistent.
-        auto lerp = [](float a, float b, float t) { return a + t * (b - a); };
+        auto lerp = [](auto a, auto b, auto t) { return a + t * (b - a); };
         return lerp(panSoruce.SourceAngle, panSoruce.GroupAngle, parameters.Focus) * parameters.Spread;
     }
 

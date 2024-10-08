@@ -27,11 +27,12 @@
 #include <algorithm>
 #include <format>
 #include <set>
+#include <concepts>
 
 namespace JPL
 {
-	static constexpr float toRad(float degree) { return static_cast<float>(degree * (std::numbers::pi / 180.0)); };
-	static constexpr float toDegrees(float rads) { return static_cast<float>(rads * (180.0 / std::numbers::pi)); };
+	static constexpr auto toRad(std::floating_point auto degree) { return static_cast<decltype(degree)>(degree * (std::numbers::pi / 180.0)); };
+	static constexpr auto toDegrees(std::floating_point auto rads) { return static_cast<decltype(rads)>(rads * (180.0 / std::numbers::pi)); };
 
 
 	class VBAPTest : public testing::Test
@@ -849,7 +850,15 @@ namespace JPL
 	{
 		// TODO: At Focus 1, spread 1 (or 0.5?), channel mapping should be direct from source to output, or do we still want to spread evenly?
 
-		VBAPanner panner;
+		struct CustomTraits : VBAPStandartTraits
+		{
+			using AngleType = double;
+			using GainType = double;
+			using ChannelGains = typename std::array<typename GainType, MAX_CHANNELS>;
+		};
+
+		using CustomPannerType = typename VBAPanner<CustomTraits>;
+		CustomPannerType panner;
 
 		// Quadraphonic channel layout
 		ASSERT_TRUE(panner.InitializeLUT(ChannelMap::FromNumChannels(4)));
@@ -857,10 +866,10 @@ namespace JPL
 		struct ProcessVBAPDataTestCase
 		{
 			std::string Description;
-			float PanAngleDegrees;
+			CustomTraits::AngleType PanAngleDegrees;
 			float Spread;
 			float Focus;
-			std::vector<float> ExpectedGains; // Expected gains for the ChannelGroup's gains
+			std::vector<CustomTraits::GainType> ExpectedGains; // Expected gains for the ChannelGroup's gains
 		};
 
 		const std::vector<ProcessVBAPDataTestCase> testCases = {
@@ -906,14 +915,14 @@ namespace JPL
 		{
 			SCOPED_TRACE(testCase.Description);
 
-			VBAPData data;
+			CustomPannerType::VBAPData data;
 			// 1 channel group with 2 virtual sources at positions { -90, 90 } in radians
 			ASSERT_TRUE(data.Initialize(ChannelMap::FromNumChannels(1), 2));
 
-			ASSERT_FLOAT_EQ(data.ChannelGroups[0].VirtualSources[0].Angle, toRad(-90.0f));
-			ASSERT_FLOAT_EQ(data.ChannelGroups[0].VirtualSources[1].Angle, toRad(90.0f));
+			ASSERT_NEAR(data.ChannelGroups[0].VirtualSources[0].Angle, toRad(CustomTraits::AngleType(-90.0)), CustomTraits::AngleType(1e-6));
+			ASSERT_NEAR(data.ChannelGroups[0].VirtualSources[1].Angle, toRad(CustomTraits::AngleType(90.0)), CustomTraits::AngleType(1e-6));
 
-			PanUpdateData positionData
+			CustomPannerType::PanUpdateData positionData
 			{
 				.PanAngle = toRad(testCase.PanAngleDegrees),
 				.Spread = testCase.Spread,
