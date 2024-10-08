@@ -22,6 +22,9 @@
 // Thanks Jorrit Rouwe and his JoltPhysics library for the boilerplate below
 // https://github.com/jrouwe/JoltPhysics
 
+#ifndef JPL_ERROR_REPORTING_DEFINED
+#define JPL_ERROR_REPORTING_DEFINED
+
 #include "Core.h"
 #include <format>
 
@@ -83,3 +86,5 @@ inline bool AssertFailedParamHelper(const char* inExpression, const char* inFile
 #endif // !JPL_ERROR_TAG
 
 } // namespace JPL
+
+#endif // JPL_ERROR_REPORTING_DEFINED
