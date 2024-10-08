@@ -1,12 +1,12 @@
 ﻿//
 //      ██╗██████╗     ██╗     ██╗██████╗ ███████╗
-//      ██║██╔══██╗    ██║     ██║██╔══██╗██╔════╝		** MiniaudioCpp **
+//      ██║██╔══██╗    ██║     ██║██╔══██╗██╔════╝		** JPLSpatialziation **
 //      ██║██████╔╝    ██║     ██║██████╔╝███████╗
-// ██   ██║██╔═══╝     ██║     ██║██╔══██╗╚════██║		https://github.com/Jaytheway/MiniaudioCpp
+// ██   ██║██╔═══╝     ██║     ██║██╔══██╗╚════██║		https://github.com/Jaytheway/JPLSpatialziation
 // ╚█████╔╝██║         ███████╗██║██████╔╝███████║
 //  ╚════╝ ╚═╝         ╚══════╝╚═╝╚═════╝ ╚══════╝
 //
-//   Copyright 2024 Jaroslav Pevno, MiniaudioCpp is offered under the terms of the ISC license:
+//   Copyright 2024 Jaroslav Pevno, JPLSpatialziation is offered under the terms of the ISC license:
 //
 //   Permission to use, copy, modify, and/or distribute this software for any purpose with or
 //   without fee is hereby granted, provided that the above copyright notice and this permission
@@ -25,7 +25,7 @@
 
 namespace JPL
 {
-	static void DummyTrace([[maybe_unused]] const char* message)
+	static void DummyTrace(const char* message)
 	{
 		std::cout << message << "\n";
 	};
@@ -34,7 +34,7 @@ namespace JPL
 
 #ifdef JPL_ENABLE_ASSERTS
 
-	static bool DummyAssertFailed(const char* inExpression, const char* inMessage, const char* inFile, uint inLine)
+	static bool DummyAssertFailed(const char* /*inExpression*/, const char* /*inMessage*/, const char* /*inFile*/, uint /*inLine*/)
 	{
 		return true; // Trigger breakpoint
 	};
