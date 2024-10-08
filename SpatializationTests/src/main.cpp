@@ -19,7 +19,7 @@
 
 #ifdef JPL_TEST
 
-#include "Spatialization/ErrorReporting.h"
+#include "JPLSpatialization/ErrorReporting.h"
 
 #include "Tests/VBAPTest.h"
 

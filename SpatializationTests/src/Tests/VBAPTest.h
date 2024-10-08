@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include "Spatialization/VBAP.h"
-#include "Spatialization/ChannelMap.h"
+#include "JPLSpatialization/VBAP.h"
+#include "JPLSpatialization/ChannelMap.h"
 
 #include <gtest/gtest.h>
 #include <numbers>

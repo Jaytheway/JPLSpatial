@@ -16,7 +16,7 @@
 
 		includedirs
 		{
-			"include/Spatialization",
+			"include/JPLSpatialization",
 			"vendor",
 			"src/Spatialization"
 		}
