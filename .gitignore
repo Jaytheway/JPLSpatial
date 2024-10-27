@@ -39,3 +39,4 @@
 *.vcxproj
 *.sln
 *.filters
+.clang-format
