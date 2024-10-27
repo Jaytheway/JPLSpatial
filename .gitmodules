@@ -1,0 +1,6 @@
+[submodule "Spatialization/vendor/nsimd"]
+	path = Spatialization/vendor/nsimd
+	url = https://github.com/agenium-scale/nsimd.git
+[submodule "vendor/JoltPhysics/JoltPhysics"]
+	path = vendor/JoltPhysics/JoltPhysics
+	url = https://github.com/jrouwe/JoltPhysics

@@ -1,12 +1,12 @@
 ﻿//
 //      ██╗██████╗     ██╗     ██╗██████╗ ███████╗
-//      ██║██╔══██╗    ██║     ██║██╔══██╗██╔════╝		** JPLSpatialziation **
+//      ██║██╔══██╗    ██║     ██║██╔══██╗██╔════╝		** JPLSpatial **
 //      ██║██████╔╝    ██║     ██║██████╔╝███████╗
-// ██   ██║██╔═══╝     ██║     ██║██╔══██╗╚════██║		https://github.com/Jaytheway/JPLSpatialziation
+// ██   ██║██╔═══╝     ██║     ██║██╔══██╗╚════██║		https://github.com/Jaytheway/JPLSpatial
 // ╚█████╔╝██║         ███████╗██║██████╔╝███████║
 //  ╚════╝ ╚═╝         ╚══════╝╚═╝╚═════╝ ╚══════╝
 //
-//   Copyright 2024 Jaroslav Pevno, JPLSpatialziation is offered under the terms of the ISC license:
+//   Copyright 2024 Jaroslav Pevno, JPLSpatial is offered under the terms of the ISC license:
 //
 //   Permission to use, copy, modify, and/or distribute this software for any purpose with or
 //   without fee is hereby granted, provided that the above copyright notice and this permission
@@ -87,6 +87,8 @@
 #define JPL_VECTOR_ALIGNMENT 16
 #define JPL_DVECTOR_ALIGNMENT 32
 
+#define NSIMD_SSE2
+
 // Detect enabled instruction sets
 #if defined(__AVX512F__) && defined(__AVX512VL__) && defined(__AVX512DQ__) && !defined(JPL_USE_AVX512)
 #define JPL_USE_AVX512
@@ -133,10 +135,16 @@
 #define JPL_USE_NEON
 #define JPL_VECTOR_ALIGNMENT 16
 #define JPL_DVECTOR_ALIGNMENT 32
+
+#define NSIMD_AARCH64
+
 #else
 #define JPL_CPU_ADDRESS_BITS 32
 #define JPL_VECTOR_ALIGNMENT 8 // 32-bit ARM does not support aligning on the stack on 16 byte boundaries
 #define JPL_DVECTOR_ALIGNMENT 8
+
+#define NSIMD_NEON128
+
 #endif
 #elif defined(JPL_PLATFORM_WASM)
 // WebAssembly CPU architecture

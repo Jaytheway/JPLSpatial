@@ -19,9 +19,13 @@
 
 #ifdef JPL_TEST
 
-#include "JPLSpatialization/ErrorReporting.h"
+#include "JPLSpatial/ErrorReporting.h"
 
 #include "Tests/VBAPTest.h"
+#include "Tests/SpatializerTest.h"
+#include "Tests/AttenuationCurveTest.h"
+#include "Tests/PanningServiceTest.h"
+#include "Tests/DirectPathServiceTest.h"
 
 #undef max
 #undef min

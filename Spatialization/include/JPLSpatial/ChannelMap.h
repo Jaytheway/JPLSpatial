@@ -1,12 +1,12 @@
 ﻿//
 //      ██╗██████╗     ██╗     ██╗██████╗ ███████╗
-//      ██║██╔══██╗    ██║     ██║██╔══██╗██╔════╝		** JPLSpatialization **
+//      ██║██╔══██╗    ██║     ██║██╔══██╗██╔════╝		** JPLSpatial **
 //      ██║██████╔╝    ██║     ██║██████╔╝███████╗
-// ██   ██║██╔═══╝     ██║     ██║██╔══██╗╚════██║		https://github.com/Jaytheway/JPLSpatialization
+// ██   ██║██╔═══╝     ██║     ██║██╔══██╗╚════██║		https://github.com/Jaytheway/JPLSpatial
 // ╚█████╔╝██║         ███████╗██║██████╔╝███████║
 //  ╚════╝ ╚═╝         ╚══════╝╚═╝╚═════╝ ╚══════╝
 //
-//   Copyright 2024 Jaroslav Pevno, JPLSpatialization is offered under the terms of the ISC license:
+//   Copyright 2024 Jaroslav Pevno, JPLSpatial is offered under the terms of the ISC license:
 //
 //   Permission to use, copy, modify, and/or distribute this software for any purpose with or
 //   without fee is hereby granted, provided that the above copyright notice and this permission
@@ -80,20 +80,20 @@ namespace JPL
     //==========================================================================
     /// ChannelMap is just a interface for strongly-typed access to some sort of
     /// channel mask
-    class ChannelMap
+    class [[nodiscard]] ChannelMap
     {
-        constexpr ChannelMap(uint32 value) : mChannelMask(value) {}
+        constexpr explicit ChannelMap(uint32 value) : mChannelMask(value) {}
     public:
         constexpr ChannelMap() = default;
 
         static constexpr uint32 InvalidChannelIndex = ~uint32(0);
      
-        constexpr bool Has(EChannel channel) const { return (mChannelMask & static_cast<uint32_t>(channel)) == channel; }
-        constexpr bool HasLFE() const { return (mChannelMask & static_cast<uint32_t>(EChannel::LFE)) == EChannel::LFE; }
-        constexpr bool IsValid() const { return mChannelMask != ChannelMask::Invalid; }
+        [[nodiscard]] constexpr bool Has(EChannel channel) const noexcept { return (mChannelMask & static_cast<uint32_t>(channel)) == channel; }
+        [[nodiscard]] constexpr bool HasLFE() const noexcept { return (mChannelMask & static_cast<uint32_t>(EChannel::LFE)) == EChannel::LFE; }
+        [[nodiscard]] constexpr bool IsValid() const noexcept { return mChannelMask != ChannelMask::Invalid; }
 
-        constexpr uint32 GetNumChannels() const { return std::popcount(mChannelMask); }
-        constexpr uint32 GetChannelIndex(EChannel channel) const
+        [[nodiscard]] constexpr uint32 GetNumChannels() const noexcept { return std::popcount(mChannelMask); }
+        [[nodiscard]] constexpr uint32 GetChannelIndex(EChannel channel) const
         {
             if (!Has(channel))
                 return InvalidChannelIndex;
@@ -111,7 +111,7 @@ namespace JPL
             return InvalidChannelIndex;
         }
 
-        constexpr EChannel GetChannelAtIndex(uint32 index) const
+        [[nodiscard]] constexpr EChannel GetChannelAtIndex(uint32 index) const
         {
             EChannel foundChannel = EChannel::Invalid;
 
@@ -124,24 +124,24 @@ namespace JPL
             return foundChannel;
         }
 
-        static constexpr uint32 MaxSupportedChannels() { return 8u; }
+        [[nodiscard]] static constexpr uint32 MaxSupportedChannels() noexcept { return 8u; }
 
-        static constexpr ChannelMap FromChannelMask(uint32 channelMask) { return channelMask; }
-        static constexpr ChannelMap FromNumChannels(uint32 numChannels)
+        [[nodiscard]] static constexpr ChannelMap FromChannelMask(uint32 channelMask) { return ChannelMap(channelMask); }
+        [[nodiscard]] static constexpr ChannelMap FromNumChannels(uint32 numChannels)
         {
             switch (numChannels)
             {
-            case 1: return ChannelMask::Mono;
-            case 2: return ChannelMask::Stereo;
-            case 3: return ChannelMask::LCR;
-            case 4: return ChannelMask::Quad;
-            case 5: return ChannelMask::Surround_4_1;
-            case 6: return ChannelMask::Surround_5_1;
-            case 7: return ChannelMask::Surround_6_1;
-            case 8: return ChannelMask::Surround_7_1;
+            case 1: return ChannelMap(ChannelMask::Mono);
+            case 2: return ChannelMap(ChannelMask::Stereo);
+            case 3: return ChannelMap(ChannelMask::LCR);
+            case 4: return ChannelMap(ChannelMask::Quad);
+            case 5: return ChannelMap(ChannelMask::Surround_4_1);
+            case 6: return ChannelMap(ChannelMask::Surround_5_1);
+            case 7: return ChannelMap(ChannelMask::Surround_6_1);
+            case 8: return ChannelMap(ChannelMask::Surround_7_1);
             default:
                 JPL_ASSERT("Currently only up to 8 channels are supported.");
-                return ChannelMask::Invalid;
+                return ChannelMap(ChannelMask::Invalid);
             }
         }
 
@@ -152,21 +152,39 @@ namespace JPL
             int value = static_cast<int>(mChannelMask);
             while (value != 0)
             {
+                static_assert(std::invocable<Predicate, EChannel, uint32> ||
+                              std::invocable<Predicate, EChannel>, "Invalid predicate signature.");
+
                 const auto channel = static_cast<EChannel>(value & -value);
                 if constexpr (std::invocable<Predicate, EChannel, uint32>)
                     predicate(channel, channelIndex);
-                else if constexpr (std::invocable<Predicate, EChannel>)
-                    predicate(channel);
                 else
-                    static_assert(false, "Invalid predicate signature.");
+                    predicate(channel);
 
                 // Clear the lowest set bit
                 value &= (value - 1);
                 ++channelIndex;
             }
         }
+        
+        [[nodiscard]] constexpr bool operator==(const ChannelMap& other) const noexcept { return mChannelMask == other.mChannelMask; }
+        [[nodiscard]] constexpr bool operator!=(const ChannelMap& other) const noexcept { return mChannelMask != other.mChannelMask; }
 
     private:
+        friend struct std::hash<JPL::ChannelMap>;
         uint32 mChannelMask = ChannelMask::Invalid;
     };
 } // namespace JPL
+
+//==============================================================================
+namespace std
+{
+    template <>
+    struct [[nodiscard]] hash<JPL::ChannelMap>
+    {
+        constexpr std::size_t operator()(const JPL::ChannelMap& channelMap) const
+        {
+            return channelMap.mChannelMask;
+        }
+    };
+}

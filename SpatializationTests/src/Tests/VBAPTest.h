@@ -1,12 +1,12 @@
 ﻿//
 //      ██╗██████╗     ██╗     ██╗██████╗ ███████╗
-//      ██║██╔══██╗    ██║     ██║██╔══██╗██╔════╝		** JPLSpatialization **
+//      ██║██╔══██╗    ██║     ██║██╔══██╗██╔════╝		** JPLSpatial **
 //      ██║██████╔╝    ██║     ██║██████╔╝███████╗
-// ██   ██║██╔═══╝     ██║     ██║██╔══██╗╚════██║		https://github.com/Jaytheway/JPLSpatializationTests
+// ██   ██║██╔═══╝     ██║     ██║██╔══██╗╚════██║		https://github.com/Jaytheway/JPLSpatialTests
 // ╚█████╔╝██║         ███████╗██║██████╔╝███████║
 //  ╚════╝ ╚═╝         ╚══════╝╚═╝╚═════╝ ╚══════╝
 //
-//   Copyright 2024 Jaroslav Pevno, JPLSpatializationTests is offered under the terms of the ISC license:
+//   Copyright 2024 Jaroslav Pevno, JPLSpatialTests is offered under the terms of the ISC license:
 //
 //   Permission to use, copy, modify, and/or distribute this software for any purpose with or
 //   without fee is hereby granted, provided that the above copyright notice and this permission
@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include "JPLSpatialization/VBAP.h"
-#include "JPLSpatialization/ChannelMap.h"
+#include "JPLSpatial/VBAP.h"
+#include "JPLSpatial/ChannelMap.h"
 
 #include <gtest/gtest.h>
 #include <numbers>
@@ -853,8 +853,6 @@ namespace JPL
 		struct CustomTraits : VBAPStandartTraits
 		{
 			using AngleType = double;
-			using GainType = double;
-			using ChannelGains = typename std::array<typename GainType, MAX_CHANNELS>;
 		};
 
 		using CustomPannerType = typename VBAPanner<CustomTraits>;
@@ -869,7 +867,7 @@ namespace JPL
 			CustomTraits::AngleType PanAngleDegrees;
 			float Spread;
 			float Focus;
-			std::vector<CustomTraits::GainType> ExpectedGains; // Expected gains for the ChannelGroup's gains
+			std::vector<float> ExpectedGains; // Expected gains for the ChannelGroup's gains
 		};
 
 		const std::vector<ProcessVBAPDataTestCase> testCases = {
@@ -925,13 +923,13 @@ namespace JPL
 			CustomPannerType::PanUpdateData positionData
 			{
 				.PanAngle = toRad(testCase.PanAngleDegrees),
-				.Spread = testCase.Spread,
-				.Focus = testCase.Focus
+				.Focus = testCase.Focus,
+				.Spread = testCase.Spread
 			};
 
-			panner.ProcessVBAPData(data, positionData);
+			CustomTraits::ChannelGains gains;
 
-			const auto& gains = data.ChannelGroups[0].Gains;
+			panner.ProcessVBAPData(data, positionData, [&gains](uint32 channel) -> auto& { return gains; });
 
 			ASSERT_TRUE(testCase.ExpectedGains.size() <= gains.size());
 			for (size_t i = 0; i < testCase.ExpectedGains.size(); ++i)
