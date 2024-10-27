@@ -20,8 +20,6 @@
 #pragma once
 
 #include "Core.h"
-
-#include "Definitions.h"
 #include "DistanceAttenuation.h"
 
 #include <Jolt/Jolt.h>

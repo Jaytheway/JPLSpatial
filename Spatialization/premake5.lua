@@ -20,7 +20,7 @@ project "JPLSpatial"
 	includedirs {
 		"include/JPLSpatial",
 		"src/Spatialization",
-		"vendor/nsimd/include",
+		--"vendor/nsimd/include",
 	}
 	
 	externalincludedirs {
@@ -32,9 +32,9 @@ project "JPLSpatial"
 	}
 
 	links {
-		"nsimd_NEON128.lib",
-		"nsimd_AArch64.lib",
-		"nsimd_SSE2.lib",
+		--"nsimd_NEON128.lib",
+		--"nsimd_AArch64.lib",
+		--"nsimd_SSE2.lib",
 	}
 
 	dependson { "JoltPhysics" }
