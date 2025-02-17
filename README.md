@@ -120,6 +120,9 @@ for (JPL::VirtualSource<>& vs : virtualSources)
 panner.ProcessVirtualSources(virtualSources, quadGains);
 
 ```
+## Documentation
+Most of the things annotated in code.  
+For more examples check out tests.
 ## Compiling
 - Some includes can be used as is as a single header include in your project.
 - For now Services and other high level APIs depend on utilities from [JoltPhysics](https://github.com/jrouwe/JoltPhysics)
