@@ -86,7 +86,7 @@ JPL::VBAPanner panner;
 
 std::array<float, NUM_QUAD_CHANNELS> quadGains;
 
-panner.InitializeLUT(JPL::ChannelMap::FromNumChannels(static_cast<uint32_t>(quadGains.size()))));
+panner.InitializeLUT(JPL::ChannelMap::FromNumChannels(static_cast<uint32_t>(quadGains.size())));
 
 ...
 
