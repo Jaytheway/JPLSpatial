@@ -125,5 +125,11 @@ panner.ProcessVirtualSources(virtualSources, quadGains);
 - For now Services and other high level APIs depend on utilities from [JoltPhysics](https://github.com/jrouwe/JoltPhysics)
 - Compiles with Visual Studio 2022, other compiles haven't been tested
 - Uses C++20
+## Updates
+JPLSpatial library is going to be updated as the need for more features matches my time availability to work on them.
+
+> [!WARNING]
+> - API may change
+> - Things may get added, removed, and restructured
 ## License
 The project is distributed under the [ISC license](https://github.com/Jaytheway/JPLSpatial?tab=License-1-ov-file).
