@@ -30,7 +30,7 @@ void CalculateChannelGains(float sourceToListenerAngleRadians,
 }
 ```
 
-The most efficient way is to use LUT:
+The most efficient way to use `VBAPPanner` is with LUT:
 ```cpp
 #include "JPLSpatial/ChannelMap.h"
 #include "JPLSpatial/VBAP.h"
@@ -49,7 +49,7 @@ panner.InitializeLUT(targetChannelMap);
 // outGains.size() must be <= number of channels of the `targetChannelMap`,
 // in this case of Stereo channel map, number of channels is 2
 void GetChannelGains(float sourceToListenerAngleRadians,
- std::span<const float> outGains)
+ std::span<float> outGains)
 {
 	if (panner.IsInitialized())
 	{
