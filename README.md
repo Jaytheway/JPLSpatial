@@ -8,6 +8,25 @@ Functional WIP
 ## Where it's used
 JPLSpatial library is used as a sound spatialization solution in [Hazel Engine](https://hazelengine.com/).
 If you have access to Hazel Engine code, you can check how JPLSpatial is integrated on the `audio` branch.
+## Features
+- Vector Based Amplitude Panning (VBAP) / Multi-Direction Amplitude Panning (MDAP)
+	- Single-channel sources
+	- Multi-channel sources
+	- Virtual Sources per source channel
+	- Most of the common target/output channel layouts
+	- ~~Elevation / Height channels~~ (TODO)
+- Distance Attenuation
+	- Custom function
+	- Curves
+	- Predefined models:
+		- Inverse
+		- Linear
+		- Exponential
+- Angle Attenuation
+- **High level sound source API**:
+	- Spatial Manager (top level interface managing Sources and Services)
+		- Panning Service
+		- Direct Path Service (for now handles just distance and angle attenuation)
 ## Examples
 The simplest use-case is channel panning using `VBAPPanner`.
 `VBAPPanner` or Vector Based Amplitude Panner handles panning from any source channel map to any target/output channel map.
