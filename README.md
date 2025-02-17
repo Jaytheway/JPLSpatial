@@ -101,3 +101,10 @@ for (JPL::VirtualSource<>& vs : virtualSources)
 panner.ProcessVirtualSources(virtualSources, quadGains);
 
 ```
+## Compiling
+- Some includes can be used as is as a single header include in your project.
+- For now Services and other high level APIs depend on utilities from [JoltPhysics](https://github.com/jrouwe/JoltPhysics)
+- Compiles with Visual Studio 2022, other compiles haven't been tested
+- Uses C++20
+## License
+The project is distributed under the [ISC license](https://github.com/Jaytheway/JPLSpatial?tab=License-1-ov-file).
