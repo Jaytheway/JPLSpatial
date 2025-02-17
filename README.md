@@ -82,18 +82,18 @@ Simple example of `VirtualSource`s API with single-channel sound source and quad
 static constexpr uint32_t NUM_QUAD_CHANNELS = 4;
 
 // Initialize panner for a quad channel map
-VBAPanner panner;
+JPL::VBAPanner panner;
 
 std::array<float, NUM_QUAD_CHANNELS> quadGains;
 
-panner.InitializeLUT(ChannelMap::FromNumChannels(static_cast<uint32_t>(quadGains.size()))));
+panner.InitializeLUT(JPL::ChannelMap::FromNumChannels(static_cast<uint32_t>(quadGains.size()))));
 
 ...
 
-std::vector<VirtualSource<>> virtualSources;
+std::vector<JPL::VirtualSource<>> virtualSources;
 
 // ..assign angles to virtual sources relative to the listener, e.g. based on sound source extent
-for (VirtualSource<>& vs : virtualSources)
+for (JPL::VirtualSource<>& vs : virtualSources)
 	vs.Angle = ... // agnle relative to listener in radians
 
 ...
