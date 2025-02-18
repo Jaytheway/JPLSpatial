@@ -123,6 +123,32 @@ panner.ProcessVirtualSources(virtualSources, quadGains);
 ## Documentation
 Most of the things annotated in code.  
 For more examples check out tests.
+## Folder structure
+- **Spatialization** - source code for the library
+- **SpatializationTests** - a set of tests to validate the behavior of the features and interfaces
+- **docs** - so far non-functioning auto-generated documentation
+- **scripts** - build scripts; running `Setup.bat` will create VS 2022 solution
+- **vendor** - dependencies
+## Library structure
+As much of the library as possible is header-only.
+
+**JPLSpatial library is structured in a few hierarchical layers**:
+- SpatialManager
+	- Services
+		- Low level features
+
+..any layer can be used on its own for a more manual control.
+
+---
+- **SpatialManager.h** - top level interface that manages all the library services on the sound source level.
+	- Services - each service handles a specific feature set, relevant data and updates, and serve as a higher level interfaces for low level features.
+		- **PanningService.h** - VBAP/MDAP Panning, Virtual Sources
+		- **DirectPathService.h** - Distance and Angle based Attenuation
+		- ..others.
+- *"Low level" features and utilities that can be used on their own dependency-free:*
+	- **ChannelMap.h**
+	- **VBAP.h**
+	- **DistanceAttenuation.h**
 ## Compiling
 - Some includes can be used as is as a single header include in your project.
 - For now Services and other high level APIs depend on utilities from [JoltPhysics](https://github.com/jrouwe/JoltPhysics)
