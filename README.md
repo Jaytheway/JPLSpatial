@@ -120,9 +120,6 @@ for (JPL::VirtualSource<>& vs : virtualSources)
 panner.ProcessVirtualSources(virtualSources, quadGains);
 
 ```
-## Documentation
-Most of the things annotated in code.  
-For more examples check out tests and [SpatialManager.h](https://github.com/Jaytheway/JPLSpatial/blob/main/Spatialization/include/JPLSpatial/SpatialManager.h) specifically how it uses Services.
 ## Folder structure
 - **Spatialization** - source code for the library
 - **SpatializationTests** - a set of tests to validate the behavior of the features and interfaces
@@ -149,6 +146,10 @@ As much of the library as possible is header-only.
 	- **ChannelMap.h**
 	- **VBAP.h**
 	- **DistanceAttenuation.h**
+## Documentation
+- Most of the things annotated in code.
+- For more examples check out tests.
+- For an example of integrating **Services** take a look at [SpatialManager.h](https://github.com/Jaytheway/JPLSpatial/blob/main/Spatialization/include/JPLSpatial/SpatialManager.h)
 ## Compiling
 - Some includes can be used as is as a single header include in your project.
 - For now Services and other high level APIs depend on utilities from [JoltPhysics](https://github.com/jrouwe/JoltPhysics)
