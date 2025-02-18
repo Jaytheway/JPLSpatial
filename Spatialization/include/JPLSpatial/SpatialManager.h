@@ -80,7 +80,7 @@ namespace JPL::Spatial
 		/// Base distance attenuation curve
 		AttenuationCurveRef DistanceAttenuationCurve; 
 
-		/// Attenuation cone from listener's perspective
+		/// Source directivity cone
 		AttenuationCone AttenuationCone;
 	};
 
@@ -113,7 +113,7 @@ namespace JPL::Spatial
 		PositionData Data;
 	};
 
-	struct SourceMock
+	struct SourceData
 	{
 		SourceId Id;
 		ListenerId Listener;
@@ -219,11 +219,16 @@ namespace JPL::Spatial
 		PanningService mPanningService;
 
 		// Sources to be updated at next call to AdvanceSimulation()
-		std::unordered_set<SourceId> mDirtySources;
+		std::unordered_set<SourceId> mDirtySources;		///< Sources to update paths for
+
+		// Object that have changed during last update.
+		// User or mixing engine may need this information.
 		std::vector<SourceId> mLastUpdatedSources;
+		std::vector<SourceId> mLastSourceRoomsChanged;
+		std::vector<ListenerId> mLastListenerRoomsChanged;
 
 		// Per source data
-		std::unordered_map<SourceId, SourceMock> mSourceStuff;
+		std::unordered_map<SourceId, SourceData> mSourceStuff;
 
 		// Intermediate data processed for the position the sources were at
 		// at the last call to AdvanceSimulation()
@@ -267,7 +272,7 @@ namespace JPL::Spatial
 
 		for (SourceId source : mDirtySources)
 		{
-			const SourceMock& sourceData = mSourceStuff[source];
+			const SourceData& sourceData = mSourceStuff[source];
 
 			const auto& sourcePosition = sourceData.Position;
 			const auto& listenerPosition = mListeners[sourceData.Listener].Position;
@@ -365,7 +370,7 @@ namespace JPL::Spatial
 		};
 
 		mSourceStuff.emplace(newId,
-							 SourceMock{
+							 SourceData{
 								 .Id = newId,
 								 .Listener = options.ListenerId.IsValid() ? options.ListenerId : mDefaultListener,
 								 .DirectEffectHandle = mDirectPathService.InitializeDirrectEffect(std::move(directEffectParameters)),
@@ -401,6 +406,7 @@ namespace JPL::Spatial
 
 		mSourceStuff.erase(source);
 		mPositionData.erase(source);
+		mDirtySources.erase(source);
 
 		return true;
 	}

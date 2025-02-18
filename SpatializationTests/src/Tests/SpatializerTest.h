@@ -25,8 +25,6 @@
 #include "JPLSpatial/GenericOperation.h"
 #include "JPLSpatial/DistanceAttenuation.h"
 
-#include <Jolt/Jolt.h>
-
 #include <nsimd/nsimd-all.hpp>
 #include <gtest/gtest.h>
 

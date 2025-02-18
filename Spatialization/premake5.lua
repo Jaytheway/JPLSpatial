@@ -18,7 +18,7 @@ project "JPLSpatial"
 	}
 
 	includedirs {
-		"include/JPLSpatial",
+		"include",
 		"src/Spatialization",
 		--"vendor/nsimd/include",
 	}

@@ -24,9 +24,9 @@ project "JPLSpatialTests"
 		
 		local joltPath = _OPTIONS["jolt-path"] or "../../vendor/JoltPhysics/JoltPhysics"
 
-		includedirs
-		{
+		includedirs {
 			"../Spatialization/include",
+			"../Spatialization/src/Spatialization",
 			joltPath,
 			
 			"vendor/googletest/googletest/include",
@@ -35,13 +35,11 @@ project "JPLSpatialTests"
 			"../Spatialization/vendor/nsimd/include",
 		}
 
-		libdirs
-		{
+		libdirs {
 			"../Spatialization/vendor/nsimd/build/Release"
 		}
 
-		links
-		{
+		links {
 			"JPLSpatial",
 			"JoltPhysics",
 			"nsimd_NEON128.lib",

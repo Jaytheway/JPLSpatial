@@ -92,7 +92,7 @@ namespace JPL
 		/// The curve should not be owned by the user.
 		JPL_INLINE AttenuationCurveRef AssignAttenuationCurve(DirectEffectHandle source, AttenuationFunction* attenuationFunction);
 
-		/// Compute direct path parameters based on position and referencePoint.
+		/// Compute direct path parameters based on position of the soruce and listener.
 		/// This can be used to compute parameters for position of a source
 		/// relative to listener, as well as position of the listener relative
 		/// to a source.
