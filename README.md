@@ -122,7 +122,7 @@ panner.ProcessVirtualSources(virtualSources, quadGains);
 ```
 ## Documentation
 Most of the things annotated in code.  
-For more examples check out tests.
+For more examples check out tests and [SpatialManager.h](https://github.com/Jaytheway/JPLSpatial/blob/main/Spatialization/include/JPLSpatial/SpatialManager.h) specifically how it's using Services.
 ## Folder structure
 - **Spatialization** - source code for the library
 - **SpatializationTests** - a set of tests to validate the behavior of the features and interfaces
