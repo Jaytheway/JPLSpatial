@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include "Core.h"
-#include "DistanceAttenuation.h"
+#include "../Core.h"
+#include "../DistanceAttenuation.h"
 
 #include <Jolt/Jolt.h>
 
