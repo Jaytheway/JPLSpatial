@@ -35,14 +35,14 @@ using TraceFunction = void (*)(const char* message);
 JPL_EXPORT extern TraceFunction Trace;
 
 // Always turn on asserts in Debug mode
-#if defined(_DEBUG) && !defined(JPL_ENABLE_ASSERTS)
+#if !defined(NDEBUG) && !defined(JPL_ENABLE_ASSERTS)
 #define JPL_ENABLE_ASSERTS
 #ifndef JPL_TEST
 #define JPL_ENABLE_ENSURE
 #endif
 #endif
 
-#ifdef JPL_ENABLE_ASSERTS
+#if defined(JPL_ENABLE_ASSERTS) || defined(JPL_ENABLE_ENSURE)
 /// Function called when an assertion fails. This function should return true if a breakpoint needs to be triggered
 using AssertFailedFunction = bool(*)(const char* inExpression, const char* inMessage, const char* inFile, uint inLine);
 JPL_EXPORT extern AssertFailedFunction AssertFailed;
@@ -51,7 +51,9 @@ JPL_EXPORT extern AssertFailedFunction AssertFailed;
 struct AssertLastParam {};
 inline bool AssertFailedParamHelper(const char* inExpression, const char* inFile, uint inLine, AssertLastParam) { return AssertFailed(inExpression, nullptr, inFile, inLine); }
 inline bool AssertFailedParamHelper(const char* inExpression, const char* inFile, uint inLine, const char* inMessage, AssertLastParam) { return AssertFailed(inExpression, inMessage, inFile, inLine); }
+#endif
 
+#ifdef JPL_ENABLE_ASSERTS
 /// Main assert macro, usage: JPL_ASSERT(condition, message) or JPL_ASSERT(condition)
 #define JPL_ASSERT(inExpression, ...)	do { if (!(inExpression) && AssertFailedParamHelper(#inExpression, __FILE__, JPL::uint(__LINE__), ##__VA_ARGS__, JPL::AssertLastParam())) JPL_BREAKPOINT; } while (false)
 
