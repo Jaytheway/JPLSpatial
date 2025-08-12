@@ -56,7 +56,7 @@ namespace JPL
         /// and is not very customizable, e.g. stroing in an int mask vs array)
         static constexpr auto MAX_CHANNELS = 32;
 
-        using ChannelGains = typename std::array<typename float, MAX_CHANNELS>;
+        using ChannelGains = typename std::array<float, MAX_CHANNELS>;
 
         /// Just hiding convenient aliases in traits, no need to ever override these
         static constexpr auto two_pi = std::numbers::pi_v<AngleType> * AngleType(2.0);
@@ -113,8 +113,8 @@ namespace JPL
         // Operators necessary for sorting
         constexpr std::strong_ordering operator<=>(const ChannelAngle& other) const
         {
-            const Traits::AngleType a1 = Angle < Traits::AngleType(0.0) ? Angle + Traits::two_pi : Angle;
-            const Traits::AngleType a2 = other.Angle < Traits::AngleType(0.0) ? other.Angle + Traits::two_pi : other.Angle;
+            const typename Traits::AngleType a1 = Angle < typename Traits::AngleType(0.0) ? Angle + Traits::two_pi : Angle;
+            const typename Traits::AngleType a2 = other.Angle < typename Traits::AngleType(0.0) ? other.Angle + Traits::two_pi : other.Angle;
             if (a1 < a2) return std::strong_ordering::less;
             if (a1 > a2) return std::strong_ordering::greater;
             return std::strong_ordering::equal;
@@ -234,18 +234,18 @@ namespace JPL
         static_assert(std::floating_point<GainType>, "GainType should be floating point.");
         static_assert(std::floating_point<AngleType>, "AngleType should be floating point.");
 
-        using ChannelAngle = typename ChannelAngle<Traits>;
-        using PanUpdateData = typename PanUpdateData<Traits>;
-        using VirtualSource = typename VirtualSource<Traits>;
-        using ChannelGroup = typename ChannelGroup<Traits>;
-        using VBAPData = typename VBAPData<Traits>;
-        using PanSource = typename PanSource<Traits>;
+        using ChannelAngle = ChannelAngle<Traits>;
+        using PanUpdateData = PanUpdateData<Traits>;
+        using VirtualSource = VirtualSource<Traits>;
+        using ChannelGroup = ChannelGroup<Traits>;
+        using VBAPData = VBAPData<Traits>;
+        using PanSource = PanSource<Traits>;
 
         template<class T>
-        using Array = typename Traits::template Array<T>;
-        using ChannelAngleArray = typename Array<ChannelAngle>;
+        using Array = Traits::template Array<T>;
+        using ChannelAngleArray = Array<ChannelAngle>;
 
-        using ChannelGainsRef = typename Traits::ChannelGains&;
+        using ChannelGainsRef = Traits::ChannelGains&;
 
         /// Consts and defaults
         static constexpr uint8 sDeafultQuadrantResolution = 128;
@@ -380,9 +380,9 @@ namespace JPL
             if (skipLFO && channel == EChannel::LFE)
                 return;
 
-            const Traits::AngleType channelAngle = Traits::GetChannelAngle(channel);
+            const typename Traits::AngleType channelAngle = Traits::GetChannelAngle(channel);
 
-            sortedChannelAngles.emplace_back(channelAngle < Traits::AngleType(0.0) ? channelAngle + Traits::two_pi : channelAngle, channelIndex);
+            sortedChannelAngles.emplace_back(channelAngle < typename Traits::AngleType(0.0) ? channelAngle + Traits::two_pi : channelAngle, channelIndex);
         });
 
         std::ranges::sort(sortedChannelAngles);
@@ -418,17 +418,17 @@ namespace JPL
         ChannelAngle<Traits>::GetSortedChannelAngles(channelMap, sourceChannelsSorted);
 
         // Width of a singe source channel in radians
-        const Traits::AngleType channelWidth = Traits::two_pi / static_cast<Traits::AngleType>(numChannels);
-        const Traits::AngleType channelHalfWidth = channelWidth * 0.5f;
+        const typename Traits::AngleType channelWidth = Traits::two_pi / static_cast<Traits::AngleType>(numChannels);
+        const typename Traits::AngleType channelHalfWidth = channelWidth * 0.5f;
 
         // If we don't have center channel, we need to offset channel groups
-        const Traits::AngleType channelAngleOffset = !channelMap.Has(EChannel::FrontCenter)
+        const typename Traits::AngleType channelAngleOffset = !channelMap.Has(EChannel::FrontCenter)
                                         ? 0.5f * channelWidth
                                         : 0.0f;
 
         // Width of a single VS in radians
-        const Traits::AngleType vsBaseWidth = Traits::two_pi / static_cast<Traits::AngleType>(virtualSourcesPerChannel * numChannels);
-        const Traits::AngleType vsHalfWidth = vsBaseWidth * 0.5f;
+        const typename Traits::AngleType vsBaseWidth = Traits::two_pi / static_cast<Traits::AngleType>(virtualSourcesPerChannel * numChannels);
+        const typename Traits::AngleType vsHalfWidth = vsBaseWidth * 0.5f;
 
 
         // 1. Find equal source channel positions for 100% spread
@@ -436,7 +436,7 @@ namespace JPL
         for (uint32 i = 0; i < sourceChannelsSorted.size(); ++i)
         {
             // Assign a centre angle of the next equal section of the source plane
-            const Traits::AngleType channelAngle = channelAngleOffset + channelWidth * i;
+            const typename Traits::AngleType channelAngle = channelAngleOffset + channelWidth * i;
 
             // Create channel group for each source channel
             ChannelGroup<Traits>& channelGroup = ChannelGroups[i];
@@ -453,14 +453,14 @@ namespace JPL
             */
 
             // Find the position of the first virtual source for this channel
-            const Traits::AngleType channelArchStart = channelAngle - channelHalfWidth;
+            const typename Traits::AngleType channelArchStart = channelAngle - channelHalfWidth;
 
-            const Traits::AngleType channelVSStart = channelArchStart + vsHalfWidth;
+            const typename Traits::AngleType channelVSStart = channelArchStart + vsHalfWidth;
             JPL_ASSERT(channelVSStart <= Traits::two_pi);
 
             for (uint32 vi = 0; vi < virtualSourcesPerChannel; ++vi)
             {
-                const Traits::AngleType sourceAngle = channelVSStart + vsBaseWidth * vi;
+                const typename Traits::AngleType sourceAngle = channelVSStart + vsBaseWidth * vi;
                 channelGroup.VirtualSources.emplace_back(VirtualSource<Traits>{ .Angle = sourceAngle });
             }
         }
@@ -485,7 +485,7 @@ namespace JPL
     template<class Traits>
     JPL_INLINE int VBAPanner<Traits>::AngleNormalizedToLUTPosition(AngleType angleNormalised) const
     {
-        const int pos = static_cast<int>((angleNormalised / Traits::two_pi) * mLUTResolution + Traits::AngleType(0.5));
+        const int pos = static_cast<int>((angleNormalised / Traits::two_pi) * mLUTResolution + typename Traits::AngleType(0.5));
         return pos % mLUTResolution;
     }
 
@@ -493,7 +493,7 @@ namespace JPL
     JPL_INLINE int VBAPanner<Traits>::AngleToLUTPosition(AngleType angleInRadians) const
     {
         // Normalize to [0, 2Pi]
-        if (angleInRadians < Traits::AngleType(0.0))
+        if (angleInRadians < typename Traits::AngleType(0.0))
             angleInRadians += Traits::two_pi;
         return AngleNormalizedToLUTPosition(angleInRadians);
     }
@@ -502,7 +502,7 @@ namespace JPL
     JPL_INLINE int VBAPanner<Traits>::CartesianToLUTPosition(float x, float z) const
     {
         // Angle in [-Pi, Pi]
-        const Traits::AngleType angle = std::atan2(x, z);
+        const typename Traits::AngleType angle = std::atan2(x, z);
         return AngleToLUTPosition(angle);
     }
 
@@ -667,7 +667,7 @@ namespace JPL
         JPL_ASSERT(outGains.size() <= mNumChannels);
 
         // Sanity check
-        static_assert(std::is_same_v<decltype(mLUT)::value_type, GainType>);
+        static_assert(std::is_same_v<typename decltype(mLUT)::value_type, GainType>);
 
         const GainType* speakerGain = &mLUT[mNumChannels * lutPosition];
         std::memcpy(outGains.data(), speakerGain, sizeof(GainType) * outGains.size());
@@ -719,7 +719,7 @@ namespace JPL
         std::ranges::for_each(vbap.ChannelGroups, [&getOutGains](const ChannelGroup& channelGroup)
         {
             ChannelGainsRef channelGains = getOutGains(channelGroup.Channel);
-            std::memset(channelGains.data(), 0, channelGains.size() * sizeof(Traits::ChannelGains::value_type));
+            std::memset(channelGains.data(), 0, channelGains.size() * sizeof(typename Traits::ChannelGains::value_type));
         });
 
         // Calculate and accumulate channel panning gains

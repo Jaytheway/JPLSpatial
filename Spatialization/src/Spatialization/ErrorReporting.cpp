@@ -32,7 +32,7 @@ namespace JPL
 
 	TraceFunction Trace = DummyTrace;
 
-#ifdef JPL_ENABLE_ASSERTS
+#if defined(JPL_ENABLE_ASSERTS) || defined(JPL_ENABLE_ENSURE)
 
 	static bool DummyAssertFailed(const char* /*inExpression*/, const char* /*inMessage*/, const char* /*inFile*/, uint /*inLine*/)
 	{

@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include "Core.h"
-#include "DistanceAttenuation.h"
+#include "JPLSpatial/Core.h"
+#include "JPLSpatial/DistanceAttenuation.h"
 
 #include <Jolt/Jolt.h>
 
