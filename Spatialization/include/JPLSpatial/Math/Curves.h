@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "../Core.h"
+#include "JPLSpatial/Core.h"
 
 #include <cmath>
 #include <numbers>

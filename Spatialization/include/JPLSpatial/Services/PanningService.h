@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include "../VBAP.h"
-#include "../IDType.h"
+#include "JPLSpatial/VBAP.h"
+#include "JPLSpatial/IDType.h"
 
 #include "Jolt/Core/Core.h"
 #include "Jolt/Core/HashCombine.h"
