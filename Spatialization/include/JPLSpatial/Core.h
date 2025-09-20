@@ -19,9 +19,10 @@
 
 #pragma once
 
-// Thanks Jorrit Rouwe and his JoltPhysics library for the boilerplate below
+// Thanks Jorrit Rouwe and his JoltPhysics library for most of the boilerplate below
 // https://github.com/jrouwe/JoltPhysics
 
+//==============================================================================
 // Determine platform
 #if defined(JPL_PLATFORM_BLUE)
 	// Correct define already defined, this overrides everything else
@@ -48,6 +49,7 @@
 #define JPL_PLATFORM_WASM
 #endif
 
+//==============================================================================
 // Determine compiler
 #if defined(__clang__)
 #define JPL_COMPILER_CLANG
@@ -57,6 +59,7 @@
 #define JPL_COMPILER_MSVC
 #endif
 
+//==============================================================================
 // OS-specific includes
 #if defined(JPL_PLATFORM_WINDOWS)
 #define JPL_BREAKPOINT		__debugbreak()
@@ -74,6 +77,7 @@
 #error Unknown platform
 #endif
 
+//==============================================================================
 // Detect CPU architecture
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
 // X86 CPU architecture
@@ -89,6 +93,7 @@
 
 #define NSIMD_SSE2
 
+//==============================================================================
 // Detect enabled instruction sets
 #if defined(__AVX512F__) && defined(__AVX512VL__) && defined(__AVX512DQ__) && !defined(JPL_USE_AVX512)
 #define JPL_USE_AVX512
@@ -168,6 +173,7 @@
 #error Unsupported CPU architecture
 #endif
 
+//==============================================================================
 // If this define is set, JPL is compiled as a shared library
 #ifdef JPL_SHARED_LIBRARY
 #ifdef JPL_BUILD_SHARED_LIBRARY
@@ -202,6 +208,15 @@
 #define JPL_EXPORT_GCC_BUG_WORKAROUND JPL_EXPORT
 #endif
 
+//==============================================================================
+#if (defined (__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)) || __BIG_ENDIAN__
+#define JPL_LITTLE_ENDIAN 0
+#define JPL_BIG_ENDIAN    1
+#else
+#define JPL_LITTLE_ENDIAN 1
+#define JPL_BIG_ENDIAN    0
+#endif
+
 // Macro used by the RTTI macros to not export a function
 #define JPL_NO_EXPORT
 
@@ -216,6 +231,11 @@ namespace JPL
 	using uint16 = std::uint16_t;
 	using uint32 = std::uint32_t;
 	using uint64 = std::uint64_t;
+
+	using int8 = std::int8_t;
+	using int16 = std::int16_t;
+	using int32 = std::int32_t;
+	using int64 = std::int64_t;
 
 	// Assert sizes of types
 	static_assert(sizeof(uint) >= 4, "Invalid size of uint");
