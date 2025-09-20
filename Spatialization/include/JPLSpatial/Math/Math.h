@@ -62,25 +62,25 @@ namespace JPL::Math
 	//======================================================================
 	/// Function to convert degrees to radians
 	template<std::floating_point T>
-	[[nodiscard]] constexpr T ToRadians(T degrees) noexcept
+	[[nodiscard]] JPL_INLINE constexpr T ToRadians(T degrees) noexcept
 	{
 		return degrees * JPL_TO_RAD_V<T>;
 	}
 	
 	/// Function to convert radians to degrees
 	template<std::floating_point T>
-	[[nodiscard]] constexpr T ToDegrees(T radians) noexcept
+	[[nodiscard]] JPL_INLINE constexpr T ToDegrees(T radians) noexcept
 	{
 		return radians * JPL_TO_DEG_V<T>;
 	}
 
 	//======================================================================
 	template<std::floating_point T>
-	[[nodiscard]] constexpr bool IsNan(T x) noexcept { return x != x; }
+	[[nodiscard]] JPL_INLINE constexpr bool IsNan(T x) noexcept { return x != x; }
 
 	/// Standard `abs` is not constexpr in C++20
 	template<CArithmetic T>
-	[[nodiscard]] constexpr auto Abs(const T& value) noexcept
+	[[nodiscard]] JPL_INLINE constexpr auto Abs(const T& value) noexcept
 	{
 		return value < 0 ? -value : value;
 	}
@@ -89,7 +89,7 @@ namespace JPL::Math
 	/// A constexpr implementation of floor.
 	/// Note: NaN-s and inf-s are not handled.
 	template<std::floating_point T>
-	[[nodiscard]] constexpr T Floor(T value) noexcept
+	[[nodiscard]] JPL_INLINE constexpr T Floor(T value) noexcept
 	{
 		if (std::is_constant_evaluated())
 		{
@@ -112,19 +112,19 @@ namespace JPL::Math
 
 	/// A constexpr implementation of floor.
 	template<std::integral T>
-	[[nodiscard]] constexpr T Floor(T value) noexcept { return value; }
+	[[nodiscard]] JPL_INLINE constexpr T Floor(T value) noexcept { return value; }
 
 	//======================================================================
 	/// Sign returns -1 for negative values, 1 for positive, 0 for 0
 	template<CArithmetic T>
-	[[nodiscard]] constexpr T Sign(T value) noexcept
+	[[nodiscard]] JPL_INLINE constexpr T Sign(T value) noexcept
 	{
 		return (value > T(0)) ? T(1) : ((value < T(0)) ? T(-1) : T(0));
 	}
 
 	/// Sign2 returns -1 for negative values, 1 otherwise
 	template<CArithmetic T>
-	[[nodiscard]] constexpr T Sign2(T value) noexcept
+	[[nodiscard]] JPL_INLINE constexpr T Sign2(T value) noexcept
 	{
 		if (std::is_constant_evaluated())
 			return value < T(0) ? T(-1) : T(1);
@@ -133,19 +133,19 @@ namespace JPL::Math
 	}
 
 	template<CArithmetic T1, CArithmeticAndOrderedWith<T1> T2>
-	[[nodiscard]] constexpr bool IsPositiveAndBelow(T1 value, T2 below) noexcept
+	[[nodiscard]] JPL_INLINE constexpr bool IsPositiveAndBelow(T1 value, T2 below) noexcept
 	{
 		return value > T1(0) && value < below;
 	}
 
 	template<CArithmetic T>
-	[[nodiscard]] constexpr bool IsNearlyZero(T value, T errorTolerance = JPL_FLOAT_EPS_V<T>) noexcept
+	[[nodiscard]] JPL_INLINE constexpr bool IsNearlyZero(T value, T errorTolerance = JPL_FLOAT_EPS_V<T>) noexcept
 	{
 		return Abs(value) <= errorTolerance;
 	}
 
 	template<std::floating_point T>
-	[[nodiscard]] constexpr bool IsNearlyEqual(T a, T b, T tolerance = JPL_FLOAT_EPS_V<T>) noexcept
+	[[nodiscard]] JPL_INLINE constexpr bool IsNearlyEqual(T a, T b, T tolerance = JPL_FLOAT_EPS_V<T>) noexcept
 	{
 		return Abs(a - b) <= tolerance;
 	}
@@ -159,7 +159,7 @@ namespace JPL::Math
 
 	/// Linearly interpolate v0 towards v1 and normalize.
 	template<std::floating_point T>
-	[[nodiscard]] constexpr T Lerp(const T& v0, const T& v1, T t) noexcept
+	[[nodiscard]] JPL_INLINE constexpr T Lerp(const T& v0, const T& v1, T t) noexcept
 	{
 		return t * (v1 - v0) + v0;
 	}
@@ -242,7 +242,7 @@ namespace JPL::Math
 	/// Tempalte param 'NR' (used at for consteval): number of Newton–Raphson refinement steps on 1/sqrt(x).
 	/// NR=2 is a decent default for float.
 	template<std::floating_point T, int NR = 2>
-	[[nodiscard]] constexpr T Sqrt(T x) noexcept
+	[[nodiscard]] JPL_INLINE constexpr T Sqrt(T x) noexcept
 	{
 		static_assert(NR >= 0, "NR must be >= 0");
 
@@ -256,7 +256,7 @@ namespace JPL::Math
 	/// Tempalte param 'NR' (used at for consteval): number of Newton–Raphson refinement steps on 1/sqrt(x).
 	/// NR=2 is a decent default for float.
 	template<std::floating_point T, int NR = 2>
-	[[nodiscard]] constexpr T InvSqrt(T x)
+	[[nodiscard]] JPL_INLINE constexpr T InvSqrt(T x) noexcept
 	{
 		if (std::is_constant_evaluated())
 			return T(1.0) / Detail::SqrtConstevalFallback<T, NR>(x);
