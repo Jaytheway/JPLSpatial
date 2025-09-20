@@ -27,6 +27,7 @@
 #include <concepts>
 #include <type_traits>
 #include <bit>
+#include <concepts>
 
 namespace JPL
 {
@@ -138,7 +139,7 @@ namespace JPL::Math
 		return value > T1(0) && value < below;
 	}
 
-	template<CArithmetic T>
+	template<std::floating_point T>
 	[[nodiscard]] JPL_INLINE constexpr bool IsNearlyZero(T value, T errorTolerance = JPL_FLOAT_EPS_V<T>) noexcept
 	{
 		return Abs(value) <= errorTolerance;

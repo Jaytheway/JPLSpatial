@@ -21,6 +21,7 @@
 
 #include "JPLSpatial/Core.h"
 #include "JPLSpatial/Math/Math.h"
+#include "JPLSpatial/Math/Vec3Traits.h"
 
 #include <array>
 #include <cmath>
@@ -109,13 +110,17 @@ namespace JPL
     [[nodiscard]] static JPL_INLINE constexpr MinimalVec3 Abs(const MinimalVec3& V) noexcept { return { Math::Abs(V.X), Math::Abs(V.Y), Math::Abs(V.Z) }; }
 
     // CVec3Accessible interface
-    [[nodiscard]] JPL_INLINE static float GetX(const MinimalVec3& v) noexcept { return v.X; }
-    [[nodiscard]] JPL_INLINE static float GetY(const MinimalVec3& v) noexcept { return v.Y; }
-    [[nodiscard]] JPL_INLINE static float GetZ(const MinimalVec3& v) noexcept { return v.Z; }
+    template<>
+    struct Vec3Access<MinimalVec3>
+    {
+        [[nodiscard]] static JPL_INLINE float GetX(const MinimalVec3& v) noexcept { return v.X; }
+        [[nodiscard]] static JPL_INLINE float GetY(const MinimalVec3& v) noexcept { return v.Y; }
+        [[nodiscard]] static JPL_INLINE float GetZ(const MinimalVec3& v) noexcept { return v.Z; }
 
-    JPL_INLINE static void SetX(MinimalVec3& v, float value) noexcept { v.X = value; }
-    JPL_INLINE static void SetY(MinimalVec3& v, float value) noexcept { v.Y = value; }
-    JPL_INLINE static void SetZ(MinimalVec3& v, float value) noexcept { v.Z = value; }
+        static JPL_INLINE void SetX(MinimalVec3& v, float value) noexcept { v.X = value; }
+        static JPL_INLINE void SetY(MinimalVec3& v, float value) noexcept { v.Y = value; }
+        static JPL_INLINE void SetZ(MinimalVec3& v, float value) noexcept { v.Z = value; }
+    };
 
     std::ostream& operator<<(std::ostream& os, const MinimalVec3& v) { os << "{ " << v.X << ", " << v.Y << ", " << v.Z << " }"; return os; }
 } // namespace JPL
