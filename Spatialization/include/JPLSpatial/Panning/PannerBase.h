@@ -35,8 +35,10 @@
 
 #include "JPLSpatial/Panning/VBAPEx.h"
 
+#include <array>
 #include <optional>
 #include <vector>
+#include <limits>
 #include <map>
 #include <span>
 #include <ranges>
@@ -49,23 +51,22 @@
 namespace JPL
 {
 	/// Forward declaration
-	template<CVec3Accessible Vec3>
-	struct VBAPCustomVec3Traits;
+	template<CVec3Accessible Vec3, template<class> class AllocatorType = std::allocator>
+	struct VBAPBaseTraits;
 
 	//======================================================================
-	using VBAPStandartTraits = VBAPCustomVec3Traits<MinimalVec3>;
+	using VBAPStandartTraits = VBAPBaseTraits<MinimalVec3>;
 
 	//======================================================================
 	/// Customization. You can either inherit from this and shadow some types
 	/// and functions, or use a completely separate traits type with VBAP API.
-	template<CVec3Accessible Vec3>
-	struct VBAPCustomVec3Traits
+	template<CVec3Accessible Vec3, template<class> class Allocator>
+	struct VBAPBaseTraits
 	{
-		using Vec3Type = Vec3;
-
-		/// Can be shadowed by the user to use custom allocator in stl containers
 		template<class T>
-		using AllocatorType = std::allocator<T>;
+		using AllocatorType = Allocator<T>;
+
+		using Vec3Type = Vec3;
 
 		/// Can be shadowed by the user
 		template<class T>
@@ -78,7 +79,7 @@ namespace JPL
 		/// and is not very customizable, e.g. storing in an int mask, not array)
 		static constexpr auto MAX_CHANNELS = 32;
 
-		using ChannelGains = typename std::array<float, MAX_CHANNELS>;
+		using ChannelGains = std::array<float, MAX_CHANNELS>;
 
 		// TODO: customizable EChannel type and ChannelMap type as well?
 		static float GetChannelAngle(EChannel channel)
@@ -387,7 +388,7 @@ namespace JPL
 		std::unique_ptr<LUTType> mLUT;
 
 		ChannelMap mChannelMap;     // Target channel map
-		uint32_t mNumChannels = 0;  // Number of channels in target channel map
+		uint32 mNumChannels = 0;  // Number of channels in target channel map
 
 		// Shortest aperture between two speakers (dot product for 3D, angle for 2D panner)
 		// Used to determine number of virtual sources required to leave no gaps in the target channel layout

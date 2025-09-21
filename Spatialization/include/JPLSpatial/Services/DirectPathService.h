@@ -21,23 +21,31 @@
 
 #include "JPLSpatial/Core.h"
 #include "JPLSpatial/DistanceAttenuation.h"
+#include "JPLSpatial/Containers/FlatMap.h"
+#include "JPLSpatial/Math/Math.h"
+#include "JPLSpatial/Math/MinimalBasis.h"
+#include "JPLSpatial/Math/Position.h"
+#include "JPLSpatial/Math/Vec3Traits.h"
+#include "JPLSpatial/Utilities/IDType.h"
 
-#include <Jolt/Jolt.h>
-
-#include <vector>
+#include <algorithm>
+#include <cmath>
 #include <memory>
+#include <iterator>
+#include <vector>
 #include <unordered_map>
-#include <ranges>
 
 namespace JPL
 {
 	//==========================================================================
+	template<CVec3Accessible Vec3Type>
 	struct DirectPathResult
 	{
-		float Distance;		//< Distance from source to listener
-		float Azimuth;		//< Angle between direction from listener to source and listener's forward vector
-		float Altitude;		//< Altitude angle between direction from listener to source and listener's forward vector
-		float InvAzimuth;	//< Angle between direction from source to listener and source's forward vector
+		float Distance;					//< Distance from source to listener
+		float DirectionDot;				//< Dot product between source direction relative to listener and listener's forward vector
+		float InvDirectionDot;			//< Dot product listener direction relative to source and source's forward vector
+
+		Position<Vec3Type> Position;	//< Direction and orientation relative to listener
 	};
 
 	struct AttenuationCone
@@ -61,8 +69,8 @@ namespace JPL
 		float AttenuationValue;
 	};
 
-	class DirectPathService;
-	using DirectEffectHandle = IDType<DirectPathService>;
+	struct DirectPathServiceIDTag {};
+	using DirectEffectHandle = IDType<DirectPathServiceIDTag>;
 
 	struct DirectEffectInitParameters
 	{
@@ -71,8 +79,14 @@ namespace JPL
 	};
 
 	//==========================================================================
+	template<template<class> class AllocatorType = std::allocator>
 	class DirectPathService
 	{
+	public:
+		// Alias to override allocator for the internal FlatMap we use
+		template<class Key, class T>
+		using FlatMapType = FlatMapWithAllocator<Key, T, AllocatorType>;
+
 	public:
 		DirectPathService() = default;
 
@@ -101,11 +115,12 @@ namespace JPL
 		/// @param referencePoint		reference point to compute parameters from, in world space
 		/// 
 		/// @returns					paramteres of the position relative to the reference point
-		static JPL_INLINE DirectPathResult ProcessDirectPath(const JPH::Mat44& source,
-															 const JPH::Mat44& listener);
-
-		static JPL_INLINE float ProcessAngleAttenuation(const JPH::Vec3& position,
-														const JPH::Mat44& referencePoint,
+		template<CVec3Accessible Vec3Type>
+		static JPL_INLINE DirectPathResult<Vec3Type> ProcessDirectPath(const Position<Vec3Type>& source,
+															 const Position<Vec3Type>& listener);
+		template<CVec3Accessible Vec3Type>
+		static JPL_INLINE float ProcessAngleAttenuation(const Vec3Type& position,
+														const Position<Vec3Type>& referencePoint,
 														AttenuationCone cone);
 
 		static JPL_INLINE float ProcessAngleAttenuation(float azimuth, AttenuationCone cone);
@@ -133,11 +148,11 @@ namespace JPL
 		/// The value is cached internally and can be retrieved by calling
 		/// GetDirectionAttenuation function.
 		/// 
-		/// @param source		source to evaluate the curves for
-		/// @param azimuth	direction angle relative to forward axis to evaluate
+		/// @param source			source to evaluate the curves for
+		/// @param directionDot	direction dot product relative to forward axis to evaluate
 		/// 
-		/// @returns			'true' if the source is valid, 'false' otherwise
-		JPL_INLINE bool EvaluateDirection(DirectEffectHandle source, float azimuth);
+		/// @returns				'true' if the source is valid, 'false' otherwise
+		JPL_INLINE bool EvaluateDirection(DirectEffectHandle source, float directionDot);
 
 
 		/// Get distance attenuation value for source evaluated from the curve.
@@ -164,9 +179,11 @@ namespace JPL
 		static JPL_INLINE float ProcessAngleAttenuationImpl(float azimutCos, const AttenuationCone& cone);
 
 	private:
+		using CurveAttenuationCacheArray = std::vector<CurveAttenuationCache, AllocatorType<CurveAttenuationCache>>;
+
 		// TODO: can we store cache for more efficient access?
-		std::unordered_map<DirectEffectHandle, std::vector<CurveAttenuationCache>> mAttenuationCache;
-		std::unordered_map<DirectEffectHandle, ConeAttenuationCache> mDirectionAttenuationCache;
+		FlatMapType<DirectEffectHandle, CurveAttenuationCacheArray> mAttenuationCache;
+		FlatMapType<DirectEffectHandle, ConeAttenuationCache> mDirectionAttenuationCache;
 	};
 } // namespace JPL
 
@@ -177,26 +194,29 @@ namespace JPL
 //==============================================================================
 namespace JPL
 {
-	JPL_INLINE DirectEffectHandle DirectPathService::InitializeDirrectEffect(const DirectEffectInitParameters& initParameters)
+	template<template<class> class AllocatorType>
+	JPL_INLINE DirectEffectHandle DirectPathService<AllocatorType>::InitializeDirrectEffect(const DirectEffectInitParameters& initParameters)
 	{
 		const auto handle = DirectEffectHandle::New();
 		mAttenuationCache.emplace(handle,
 								  initParameters.BaseCurve
-								  ? std::vector<CurveAttenuationCache>{{ .Curve = initParameters.BaseCurve, .AttenuationValue = 1.0f }}
-								  : std::vector<CurveAttenuationCache>{});
+								  ? CurveAttenuationCacheArray{ {.Curve = initParameters.BaseCurve, .AttenuationValue = 1.0f } }
+		: CurveAttenuationCacheArray{});
 
 		mDirectionAttenuationCache.emplace(handle,
-										   ConeAttenuationCache{ .Cone = initParameters.AttenuationCone, .AttenuationValue = 1.0f });
+			ConeAttenuationCache{ .Cone = initParameters.AttenuationCone, .AttenuationValue = 1.0f });
 
 		return handle;
 	}
 
-	JPL_INLINE bool DirectPathService::ReleaseEffectData(DirectEffectHandle source)
+	template<template<class> class AllocatorType>
+	JPL_INLINE bool DirectPathService<AllocatorType>::ReleaseEffectData(DirectEffectHandle source)
 	{
 		return mAttenuationCache.erase(source) + mDirectionAttenuationCache.erase(source);
 	}
 
-	JPL_INLINE AttenuationCurveRef DirectPathService::AssignAttenuationCurve(DirectEffectHandle source, AttenuationFunction* attenuationFunction)
+	template<template<class> class AllocatorType>
+	JPL_INLINE AttenuationCurveRef DirectPathService<AllocatorType>::AssignAttenuationCurve(DirectEffectHandle source, AttenuationFunction* attenuationFunction)
 	{
 		if (!source.IsValid() || !attenuationFunction)
 			return nullptr;
@@ -208,7 +228,8 @@ namespace JPL
 		return curve;
 	}
 
-	JPL_INLINE float DirectPathService::GetDistanceAttenuation(DirectEffectHandle source, const AttenuationCurveRef& curve) const
+	template<template<class> class AllocatorType>
+	JPL_INLINE float DirectPathService<AllocatorType>::GetDistanceAttenuation(DirectEffectHandle source, const AttenuationCurveRef& curve) const
 	{
 		auto it = mAttenuationCache.find(source);
 		if (it == mAttenuationCache.end())
@@ -221,7 +242,8 @@ namespace JPL
 		return 1.0f;
 	}
 
-	JPL_INLINE float DirectPathService::GetDirectionAttenuation(DirectEffectHandle source) const
+	template<template<class> class AllocatorType>
+	JPL_INLINE float DirectPathService<AllocatorType>::GetDirectionAttenuation(DirectEffectHandle source) const
 	{
 		auto it = mDirectionAttenuationCache.find(source);
 		if (it == mDirectionAttenuationCache.end())
@@ -230,12 +252,14 @@ namespace JPL
 		return it->second.AttenuationValue;
 	}
 
-	JPL_INLINE float DirectPathService::EvaluateDistance(float distance, const AttenuationCurveRef& attenuationCurve)
+	template<template<class> class AllocatorType>
+	JPL_INLINE float DirectPathService<AllocatorType>::EvaluateDistance(float distance, const AttenuationCurveRef& attenuationCurve)
 	{
 		return attenuationCurve->Evaluate(distance);
 	}
 
-	JPL_INLINE bool DirectPathService::EvaluateDistance(DirectEffectHandle source, float distance)
+	template<template<class> class AllocatorType>
+	JPL_INLINE bool DirectPathService<AllocatorType>::EvaluateDistance(DirectEffectHandle source, float distance)
 	{
 		auto it = mAttenuationCache.find(source);
 		if (it == mAttenuationCache.end())
@@ -247,56 +271,98 @@ namespace JPL
 		return true;
 	}
 
-	JPL_INLINE bool DirectPathService::EvaluateDirection(DirectEffectHandle source, float azimuth)
+	template<template<class> class AllocatorType>
+	JPL_INLINE bool DirectPathService<AllocatorType>::EvaluateDirection(DirectEffectHandle source, float directionDot)
 	{
 		auto it = mDirectionAttenuationCache.find(source);
 		if (it == mDirectionAttenuationCache.end())
 			return false;
 
-		it->second.AttenuationValue = ProcessAngleAttenuation(azimuth, it->second.Cone);
+		JPL_ASSERT(directionDot >= -1.0f && directionDot <= 1.0f);
+
+		it->second.AttenuationValue = ProcessAngleAttenuationImpl(directionDot, it->second.Cone);
 
 		return true;
 	}
 
-	JPL_INLINE DirectPathResult DirectPathService::ProcessDirectPath(const JPH::Mat44& source, const JPH::Mat44& listener)
+	template<template<class> class AllocatorType>
+	template<CVec3Accessible Vec3Type>
+	JPL_INLINE DirectPathResult<Vec3Type> DirectPathService<AllocatorType>::ProcessDirectPath(const Position<Vec3Type>& source, const Position<Vec3Type>& listener)
 	{
-		const JPH::Vec3 sourceToListener = listener.InversedRotationTranslation() * source.GetTranslation();
+		static const Vec3Type cForwardAxis(0, 0, -1); // TODO: this is very assuming
+		static const Vec3Type cUpAxis(0, 1, 0); // TODO: this is very assuming
+#if 1
+		const Basis<Vec3Type> listenerBasis = listener.Orientation.ToBasisUnsafe();
 
-		const JPH::Vec3 xz(sourceToListener.GetX(), 0.0f, sourceToListener.GetZ());
-		const JPH::Vec3 xy(sourceToListener.GetX(), 0.0f, sourceToListener.GetY());
+		Vec3Type sourcePosInListenerFrame = listenerBasis.Transform(source.Location);
+		// If source is directly on top, above or below the listener,
+		// nudge it a bit forward
+		//! Assuming Y axis is UP-DOWN
+		if (Math::IsNearlyZero(GetX(sourcePosInListenerFrame)) && Math::IsNearlyZero(GetZ(sourcePosInListenerFrame)))
+		{
+			sourcePosInListenerFrame += cForwardAxis * 1e-5f;
+		}
 
-		const float azimuth = xz.IsNearZero() ? 0.0f : JPH::ATan2(sourceToListener.GetX(), -sourceToListener.GetZ());
-		// TODO: this altitude may not be correct
-		const float altitude = xy.IsNearZero() ? 0.0f : JPH::ATan2(sourceToListener.GetY(), xy.Length());
+		// Get distance and cos of source in listener's frame
+		const float distance = Length(sourcePosInListenerFrame);
+		const Vec3Type dirRelativeToListener = sourcePosInListenerFrame / distance;
+		const float directionDot = DotProduct(dirRelativeToListener, cForwardAxis);
 
-		const JPH::Vec3 listenerToSource = source.InversedRotationTranslation() * listener.GetTranslation();
-	
-		const float listenerToSourceAzimuth =
-			JPH::Vec3(listenerToSource.GetX(), 0.0f, listenerToSource.GetZ()).IsNearZero()
-			? 0.0f
-			: JPH::ATan2(listenerToSource.GetX(), -listenerToSource.GetZ());
-		
-		return DirectPathResult{
-			.Distance = sourceToListener.Length(),
-			.Azimuth = azimuth,
-			.Altitude = altitude,
-			.InvAzimuth = listenerToSourceAzimuth
+		// Get cos of listener in source's frame
+		const Vec3Type& sourceForward = source.Orientation.Forward;
+		const Vec3Type listenerToSourceDir = listenerBasis.InverseTransform(-dirRelativeToListener);
+		const float invDirectionDot = DotProduct(sourceForward, listenerToSourceDir);
+
+		// Get orientation of source in listener's frame
+		const Basis<Vec3Type> sourceToListenerOrientation = listenerBasis.InverseTransform(source.Orientation.ToBasisUnsafe());
+#else
+		Vec3Type sourcePosInListenerFrame = listener.Orientation.ToQuat().Rotate(source.Location);
+
+		// If source is directly on top, above or below the listener,
+		// nudge it a bit forward
+		//! Assuming Y axis is UP-DOWN
+		if (Math::IsNearlyZero(GetX(sourcePosInListenerFrame)) && Math::IsNearlyZero(GetZ(sourcePosInListenerFrame)))
+		{
+			sourcePosInListenerFrame += cForwardAxis * 1e-5f;
+		}
+
+		// Get distance and cos of source in listener's frame
+		const float distance = Length(sourcePosInListenerFrame);
+		const Vec3Type dirRelativeToListener = sourcePosInListenerFrame / distance;
+		const float directionDot = DotProduct(dirRelativeToListener, cForwardAxis);
+
+		// Get cos of listener in source's frame
+		const Vec3Type sourceForward = source.Orientation.ToQuat().Rotate(cForwardAxis);
+		const Vec3Type listenerToSourceDir = listener.Orientation.ToQuat().Conjugated().Rotate(-dirRelativeToListener);
+		const float invDirectionDot = DotProduct(sourceForward, listenerToSourceDir);
+
+		// Get orientation of source in listener's frame
+		const Basis<Vec3Type> sourceToListenerOrientation =
+			(listener.Orientation.ToQuat().Conjugated() * source.Orientation.ToQuat()).ToBasis();
+#endif
+		return DirectPathResult<Vec3Type>{
+			.Distance = distance,
+				.DirectionDot = directionDot,
+				.InvDirectionDot = invDirectionDot,
+				.Position = {
+					.Location = dirRelativeToListener,
+					.Orientation = {.Up = sourceToListenerOrientation.Y, .Forward = sourceToListenerOrientation.Z}
+			}
 		};
 	}
 
-	JPL_INLINE float DirectPathService::ProcessAngleAttenuationImpl(float azimutCos, const AttenuationCone& cone)
+	template<template<class> class AllocatorType>
+	JPL_INLINE float DirectPathService<AllocatorType>::ProcessAngleAttenuationImpl(float azimutCos, const AttenuationCone& cone)
 	{
 		// Compute cosines of half of the cone sectors
-		const float cutoffInner = std::cos(cone.InnerAngle * 0.5f);
+		const float cutoffInner = std::cos(cone.InnerAngle * 0.5f); // TODO: can we cache actual dot isntead of angles?
 		const float cutoffOuter = std::cos(cone.OuterAngle * 0.5f);
 
 		float factor = 0.0f;
 
-		auto lerp = [](auto a, auto b, auto t) { return a + t * (b - a); };
-
 		if (azimutCos > cutoffInner)
 			return factor;
-		
+
 		if (azimutCos > cutoffOuter)
 		{
 			// Between inner and outer cones
@@ -311,11 +377,10 @@ namespace JPL
 		return factor;
 	}
 
-	JPL_INLINE float DirectPathService::ProcessAngleAttenuation(float azimuth, AttenuationCone cone)
+	template<template<class> class AllocatorType>
+	JPL_INLINE float DirectPathService<AllocatorType>::ProcessAngleAttenuation(float azimuth, AttenuationCone cone)
 	{
-		static constexpr float two_pi = std::numbers::pi_v<float> * 2.0f;
-
-		if (cone.InnerAngle >= two_pi)
+		if (cone.InnerAngle >= JPL_TWO_PI)
 		{
 			// Inner angle is 360 degrees so no need to do any attenuation.
 			return 0.0f;
@@ -324,22 +389,26 @@ namespace JPL
 		return ProcessAngleAttenuationImpl(std::cos(azimuth), cone);
 	}
 
-	JPL_INLINE float DirectPathService::ProcessAngleAttenuation(const JPH::Vec3& position,
-																const JPH::Mat44& referencePoint,
+	template<template<class> class AllocatorType>
+	template<CVec3Accessible Vec3Type>
+	JPL_INLINE float DirectPathService<AllocatorType>::ProcessAngleAttenuation(const Vec3Type& position,
+																const Position<Vec3Type>& referencePoint,
 																AttenuationCone cone)
 	{
-		static constexpr float two_pi = std::numbers::pi_v<float> * 2.0f;
-
-		if (cone.InnerAngle >= two_pi)
+		if (cone.InnerAngle >= JPL_TWO_PI)
 		{
 			// Inner angle is 360 degrees so no need to do any attenuation.
 			return 0.0f;
 		}
 
-		JPH::Vec3 listenerForward = referencePoint.GetRotation().GetAxisZ().Normalized();
-		const JPH::Vec3 sourceDirection = (position - referencePoint.GetTranslation()).Normalized();
+		// Position and reference must not be the same point
+		JPL_ASSERT(!Math::IsNearlyEqual(position, referencePoint.Location));
 
-		return ProcessAngleAttenuationImpl(listenerForward.Dot(sourceDirection), cone);
+		const Vec3Type referenceForward = referencePoint.Orientation.Forward;
+		const Vec3Type sourceDirection = Normalized(position - referencePoint.Location);
+		const float dot = DotProduct(referenceForward, sourceDirection);
+
+		return ProcessAngleAttenuationImpl(dot, cone);
 
 #if 0 // Branchless vercorized version turned out to be actually slower
 
