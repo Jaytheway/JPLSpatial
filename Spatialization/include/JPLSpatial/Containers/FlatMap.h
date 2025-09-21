@@ -341,4 +341,15 @@ namespace JPL
 			[[no_unique_address]] Equals eq;
 	};
 #endif
+
+	// Alias to override just the allocator for the FlatMap
+	template<class KeyType, class T, template<class> class AllocatorType>
+	using FlatMapWithAllocator =
+		FlatMap<
+			KeyType,
+			T,
+			std::equal_to<KeyType>,
+			std::vector<KeyType, AllocatorType<KeyType>>,
+			std::vector<T, AllocatorType<T>>
+		>;
 } // namespace JPL
