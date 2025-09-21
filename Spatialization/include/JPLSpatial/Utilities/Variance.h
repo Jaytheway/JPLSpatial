@@ -21,6 +21,7 @@
 
 #include <span>
 #include <cmath>
+#include <cstdint>
 
 namespace JPL
 {
@@ -32,11 +33,11 @@ namespace JPL
         // Welford’s online variance algorithm
         struct Online
         {
-            int Count = 0;
+            uint32_t Count = 0;
             float Mean = 0.0f;
             float M2 = 0.0f;
 
-            constexpr void Add(float x)
+            inline constexpr void Add(float x) noexcept
             {
                 ++Count;
                 const float delta = x - Mean;
@@ -45,12 +46,12 @@ namespace JPL
                 M2 += delta * delta2;
             }
 
-            constexpr float GetVariance() const
+            inline constexpr float GetVariance() const noexcept
             {
                 return (Count > 1) ? (M2 / (Count - 1)) : 0.0f;
             }
             
-            constexpr float GetSNR() const
+            inline constexpr float GetSNR() const noexcept
             {
                 if (Count <= 1)
                     return 0.0f; // Not enough data
@@ -60,9 +61,9 @@ namespace JPL
             }
         };
 
-        static constexpr float ComputeFor(std::span<const float> values)
+        static inline constexpr float ComputeFor(std::span<const float> values) noexcept
         {
-            const auto count = static_cast<int>(values.size());
+            const auto count = static_cast<uint32_t>(values.size());
             if (count <= 1)
                 return 0.0f; // Not enough samples to compute variance
 
@@ -79,9 +80,9 @@ namespace JPL
             return sumSq / (count - 1);
         }
 
-        static constexpr float ComputeSNRFor(std::span<const float> values)
+        static inline constexpr float ComputeSNRFor(std::span<const float> values) noexcept
         {
-            const auto count = static_cast<int>(values.size());
+            const auto count = static_cast<uint32_t>(values.size());
             if (count <= 1)
                 return 0.0f;
 
