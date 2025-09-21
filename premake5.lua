@@ -12,11 +12,11 @@ newoption {
     value       = "path",
     description = "Path to the JoltPhysics project directory"
 }
-_OPTIONS["jolt-path"] = "%{wks.location}/vendor/JoltPhysics/JoltPhysics"
 
 include "Spatialization"
 include "SpatializationTests"
 
+-- Only needed for test project
 group "Dependencies"
-include "vendor/JoltPhysics/JoltPhysicsPremake.lua"
+include "SpatializationTests/vendor/JoltPhysics/JoltPhysicsPremake.lua"
 group ""

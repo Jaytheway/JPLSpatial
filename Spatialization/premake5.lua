@@ -1,6 +1,3 @@
-
-local joltPath = _OPTIONS["jolt-path"] or "../../vendor/JoltPhysics/JoltPhysics"
-	
 project "JPLSpatial"
 	kind "StaticLib"
 	language "C++"
@@ -23,12 +20,8 @@ project "JPLSpatial"
 		--"vendor/nsimd/include",
 	}
 	
-	externalincludedirs {
-		joltPath,
-	}
-
 	libdirs {
-		"vendor/nsimd/build/Release"
+		--"vendor/nsimd/build/Release"
 	}
 
 	links {
@@ -36,8 +29,6 @@ project "JPLSpatial"
 		--"nsimd_AArch64.lib",
 		--"nsimd_SSE2.lib",
 	}
-
-	dependson { "JoltPhysics" }
 
 	-- Temp. Disable work in progress stuff
 	defines { "JPL_HAS_ENV_PROPAGATION=0" }

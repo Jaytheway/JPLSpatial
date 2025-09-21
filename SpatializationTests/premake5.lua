@@ -1,3 +1,5 @@
+local joltPath = _OPTIONS["jolt-path"] or "vendor/JoltPhysics/JoltPhysics/"
+
 project "JPLSpatialTests"
 	language "C++"
 	cppdialect "C++20"
@@ -22,8 +24,6 @@ project "JPLSpatialTests"
         	"vendor/googletest/googletest/src/gtest-all.cc"
 		}
 		
-		local joltPath = _OPTIONS["jolt-path"] or "../../vendor/JoltPhysics/JoltPhysics"
-
 		includedirs {
 			"../Spatialization/include",
 			"../Spatialization/src/Spatialization",
@@ -41,6 +41,10 @@ project "JPLSpatialTests"
 			"../Spatialization/vendor/nsimd/build/Release"
 		}
 
+		externalincludedirs {
+			joltPath,
+		}
+
 		links {
 			"JPLSpatial",
 			"JoltPhysics",
@@ -53,7 +57,7 @@ project "JPLSpatialTests"
 		include "Spatialization"
 		group ""
 
-		dependson { "JPLSpatial" }
+		dependson { "JPLSpatial", "JoltPhysics" }
 
 	filter "configurations:Test"
 		runtime "Debug"
