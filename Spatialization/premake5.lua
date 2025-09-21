@@ -52,15 +52,18 @@ project "JPLSpatial"
 	filter "configurations:Debug"
 		runtime "Debug"
 		symbols "on"
+		defines { "DEBUG" }
 		
 	filter "configurations:Release"
 		runtime "Release"
 		optimize "on"
+		defines { "NDEBUG" }
 		
 	filter "configurations:Dist"
 		runtime "Release"
 		optimize "on"
 		symbols "off"
+		defines { "NDEBUG" }
 		
 	filter "configurations:Test"
 		runtime "Debug"
@@ -72,5 +75,13 @@ project "JPLSpatial"
 		runtime "Release"
 		symbols "on"
 		optimize "speed"
-		defines { "JPL_TEST" }
+		defines { "NDEBUG" }
+		--defines { "JPL_TEST" }
 
+	-- Enable AVX2 vector extensions for x64 builds on all toolchains
+    filter { "architecture:x86_64" }
+        vectorextensions "AVX2"
+
+    -- Fallback to SSE2 for 32-bit builds
+    filter { "architecture:x86" }
+        vectorextensions "SSE2"
