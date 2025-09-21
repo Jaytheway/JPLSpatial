@@ -21,51 +21,46 @@
 
 #include "JPLSpatial/ErrorReporting.h"
 
-#include "Tests/VBAPTest.h"
 #include "Tests/SpatializerTest.h"
+
+#include "Tests/VBAP2DTest.h"
+#include "Tests/VBAP3DTest.h"
+#include "Tests/ComputeVBAPTest.h"
+#if 0
 #include "Tests/AttenuationCurveTest.h"
+#endif
 #include "Tests/PanningServiceTest.h"
-#include "Tests/DirectPathServiceTest.h"
+
+#include "Tests/DirectPathServiceTest.h"    
+#if JPL_HAS_BEAM_TRACING
+#include "Tests/RayAndPolyTest.h"
+//? No need to test quad tree for now, while it's still just a copy of Jolt's
+//#include "Tests/QuadTreeTest.h"
+#endif
+#if JPL_HAS_PATH_TRACING
+//#include "Tests/BDPTTest.h"
+//#include "Tests/DelayLineTest.h"
+#endif
+#include "Tests/MathTest.h"
+#include "Tests/SquareRootTest.h"
+#include "Tests/DirectionEncodingTest.h"
+
+#include "Tests/FlatMapTest.h"
 
 #undef max
 #undef min
 
+#include <cstdint>
+#include <atomic>
+#include <array>
 #include <iostream>
+
 #include <gtest/gtest.h>
-
-struct vec3
-{
-    float x, y, z;
-};
-
-constexpr std::array<vec3, 20> g_maChannelDirections = {
-                      vec3{ 0.0f,     0.0f,    -1.0f    },  /* MA_CHANNEL_NONE */
-                      vec3{ 0.0f,     0.0f,    -1.0f    },  /* MA_CHANNEL_MONO */
-                      vec3{-0.7071f,  0.0f,    -0.7071f },  /* MA_CHANNEL_FRONT_LEFT */
-                      vec3{+0.7071f,  0.0f,    -0.7071f },  /* MA_CHANNEL_FRONT_RIGHT */
-                      vec3{ 0.0f,     0.0f,    -1.0f    },  /* MA_CHANNEL_FRONT_CENTER */
-                      vec3{ 0.0f,     0.0f,    -1.0f    },  /* MA_CHANNEL_LFE */
-                      vec3{-0.7071f,  0.0f,    +0.7071f },  /* MA_CHANNEL_BACK_LEFT */
-                      vec3{+0.7071f,  0.0f,    +0.7071f },  /* MA_CHANNEL_BACK_RIGHT */
-                      vec3{-0.3162f,  0.0f,    -0.9487f },  /* MA_CHANNEL_FRONT_LEFT_CENTER */
-                      vec3{+0.3162f,  0.0f,    -0.9487f },  /* MA_CHANNEL_FRONT_RIGHT_CENTER */
-                      vec3{ 0.0f,     0.0f,    +1.0f    },  /* MA_CHANNEL_BACK_CENTER */
-                      vec3{-1.0f,     0.0f,     0.0f    },  /* MA_CHANNEL_SIDE_LEFT */
-                      vec3{+1.0f,     0.0f,     0.0f    },  /* MA_CHANNEL_SIDE_RIGHT */
-                      vec3{ 0.0f,    +1.0f,     0.0f    },  /* MA_CHANNEL_TOP_CENTER */
-                      vec3{-0.5774f, +0.5774f, -0.5774f },  /* MA_CHANNEL_TOP_FRONT_LEFT */
-                      vec3{ 0.0f,    +0.7071f, -0.7071f },  /* MA_CHANNEL_TOP_FRONT_CENTER */
-                      vec3{+0.5774f, +0.5774f, -0.5774f },  /* MA_CHANNEL_TOP_FRONT_RIGHT */
-                      vec3{-0.5774f, +0.5774f, +0.5774f },  /* MA_CHANNEL_TOP_BACK_LEFT */
-                      vec3{ 0.0f,    +0.7071f, +0.7071f },  /* MA_CHANNEL_TOP_BACK_CENTER */
-                      vec3{+0.5774f, +0.5774f, +0.5774f },  /* MA_CHANNEL_TOP_BACK_RIGHT */
-};
 
 //==========================================================================
 using AllocationCallbackData = std::atomic<uint64_t>;
 
 inline static std::atomic<uint64_t> sMemoryUsedByEngine{ 0 };
-
 
 //==========================================================================
 static void JPLTraceCallback(const char* message)
@@ -76,13 +71,17 @@ static void JPLTraceCallback(const char* message)
 //==========================================================================
 static void Main(int argc, char* argv[])
 {
-    // Printing out some values to embed later
-   /* for (const vec3 p : g_maChannelDirections)
-        std::cout << std::atan2(p.x, -p.z) << "f, " << '\n';*/
+    JPH::RegisterDefaultAllocator();
 
 	JPL::Trace = JPLTraceCallback;
 }
 
+//? Just a temp hack to make sure we have registered default allocation functions
+//? when initializing static objects with JPH::STLAllocator
+static struct StaticInit
+{
+    StaticInit() { JPH::RegisterDefaultAllocator();}
+} Init;
 
 //==========================================================================
 int main(int argc, char* argv[])

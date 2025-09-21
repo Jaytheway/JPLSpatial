@@ -22,8 +22,9 @@
 #include "JPLSpatial/Core.h"
 #include "JPLSpatial/Services/DirectPathService.h"
 
-
-#include <Jolt/Jolt.h>
+#include "JPLSpatial/Math/MinimalVec3.h"
+#include "JPLSpatial/Math/MinimalQuat.h"
+#include "JPLSpatial/Math/Position.h"
 
 #include <gtest/gtest.h>
 #include <cmath>
@@ -36,27 +37,28 @@ namespace JPL
 	class ProcessAngleAttenuationTest : public ::testing::Test
 	{
 	protected:
+		using Vec3 = MinimalVec3;
+
 		static JPL_INLINE float DegreesToRadians(float degrees)
 		{
 			return degrees * (std::numbers::pi_v<float> / 180.0f);
 		}
 
-		static JPL_INLINE JPH::Mat44 GetForwardFacingIdentity()
+		static JPL_INLINE Position<Vec3> GetForwardFacingIdentity()
 		{
-			return JPH::Mat44::sRotationTranslation(
-				JPH::Quat::sRotation(JPH::Vec3::sAxisY(), std::numbers::pi_v<float>).Normalized(),
-				JPH::Vec3::sZero());
+			return Position<Vec3>{
+				.Location = Vec3(0, 0, 0),
+				.Orientation = { .Up = Vec3(0, 1, 0), .Forward = Vec3(0, 0, -1) }//Quat<Vec3>::Identity()
+			};
 		}
-
 	};
-
 
 	TEST_F(ProcessAngleAttenuationTest, InsideInnerCone)
 	{
 		// Inputs
-		JPH::Vec3 position(0.0f, 0.0f, -1.0f); // Directly in front (since forward is -Z)
-		JPH::Mat44 referencePoint = GetForwardFacingIdentity();
-		JPH::Vec3 forw = referencePoint.GetRotation().GetAxisZ();
+		Vec3 position(0.0f, 0.0f, -1.0f); // Directly in front (since forward is -Z)
+		Position<Vec3> referencePoint = GetForwardFacingIdentity();
+		Vec3 forw = referencePoint.Orientation.ToBasisUnsafe().Transform(Vec3(0, 0, 1)); // get forward axis rotation
 		AttenuationCone cone;
 		cone.InnerAngle = DegreesToRadians(60.0f);
 		cone.OuterAngle = DegreesToRadians(120.0f);
@@ -66,7 +68,7 @@ namespace JPL
 		float expectedAngularGain = 1.0f;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Assertions
@@ -79,15 +81,15 @@ namespace JPL
 		// Inputs
 		// Position at 45 degrees off the forward vector (-Z)
 		float angle = DegreesToRadians(45.0f);
-		JPH::Vec3 position(std::sin(angle), 0.0f, -std::cos(angle));
-		JPH::Mat44 referencePoint = GetForwardFacingIdentity();
+		Vec3 position(std::sin(angle), 0.0f, -std::cos(angle));
+		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
 		cone.InnerAngle = DegreesToRadians(60.0f);
 		cone.OuterAngle = DegreesToRadians(120.0f);
 		float coneOuterGain = 0.5f;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Assertions
@@ -99,8 +101,8 @@ namespace JPL
 	TEST_F(ProcessAngleAttenuationTest, OutsideOuterCone)
 	{
 		// Inputs
-		JPH::Vec3 position(0.0f, 0.0f, 1.0f); // Directly behind (since forward is -Z)
-		JPH::Mat44 referencePoint = GetForwardFacingIdentity();
+		Vec3 position(0.0f, 0.0f, 1.0f); // Directly behind (since forward is -Z)
+		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
 		cone.InnerAngle = DegreesToRadians(60.0f);
 		cone.OuterAngle = DegreesToRadians(120.0f);
@@ -110,7 +112,7 @@ namespace JPL
 		float expectedAngularGain = coneOuterGain;
 
 		// Compute using original function
-		float angularGain = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGain = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGain = std::lerp(1.0f, coneOuterGain, angularGain);
 
 		// Assertions
@@ -121,15 +123,15 @@ namespace JPL
 	TEST_F(ProcessAngleAttenuationTest, InnerAngleEqualsOuterAngle)
 	{
 		// Inputs
-		JPH::Vec3 position(1.0f, 0.0f, -1.0f); // Arbitrary position in front-left
-		JPH::Mat44 referencePoint = GetForwardFacingIdentity();
+		Vec3 position(1.0f, 0.0f, -1.0f); // Arbitrary position in front-left
+		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
 		cone.InnerAngle = DegreesToRadians(45.0f);
 		cone.OuterAngle = DegreesToRadians(45.0f);
 		float coneOuterGain = 0.5f;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Assertions
@@ -140,8 +142,8 @@ namespace JPL
 	TEST_F(ProcessAngleAttenuationTest, AnglesZero)
 	{
 		// Inputs
-		JPH::Vec3 position(0.0f, 0.0f, -1.0f); // Directly in front (-Z)
-		JPH::Mat44 referencePoint = GetForwardFacingIdentity();
+		Vec3 position(0.0f, 0.0f, -1.0f); // Directly in front (-Z)
+		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
 		cone.InnerAngle = 0.0f;
 		cone.OuterAngle = 0.0f;
@@ -151,7 +153,7 @@ namespace JPL
 		float expectedAngularGain = coneOuterGain;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Assertions
@@ -162,8 +164,8 @@ namespace JPL
 	TEST_F(ProcessAngleAttenuationTest, AnglesFullCircle)
 	{
 		// Inputs
-		JPH::Vec3 position(10.0f, 0.0f, 5.0f); // Arbitrary position
-		JPH::Mat44 referencePoint = GetForwardFacingIdentity();
+		Vec3 position(10.0f, 0.0f, 5.0f); // Arbitrary position
+		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
 		cone.InnerAngle = DegreesToRadians(360.0f);
 		cone.OuterAngle = DegreesToRadians(360.0f);
@@ -173,7 +175,7 @@ namespace JPL
 		float expectedAngularGain = 1.0f;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Assertions
@@ -184,8 +186,8 @@ namespace JPL
 	TEST_F(ProcessAngleAttenuationTest, NegativeAngles)
 	{
 		// Inputs
-		JPH::Vec3 position(0.0f, 1.0f, -1.0f); // Arbitrary position in front-up
-		JPH::Mat44 referencePoint = GetForwardFacingIdentity();
+		Vec3 position(0.0f, 1.0f, -1.0f); // Arbitrary position in front-up
+		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
 		cone.InnerAngle = DegreesToRadians(-90.0f);
 		cone.OuterAngle = DegreesToRadians(-180.0f);
@@ -194,7 +196,7 @@ namespace JPL
 		float expectedAngularGain = 1.0f;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Since negative angles may not be valid, ensure both functions handle them consistently
@@ -205,15 +207,15 @@ namespace JPL
 	TEST_F(ProcessAngleAttenuationTest, OuterAngleLessThanInnerAngle)
 	{
 		// Inputs
-		JPH::Vec3 position(-1.0f, 0.0f, -1.0f); // Arbitrary position in front-left
-		JPH::Mat44 referencePoint = GetForwardFacingIdentity();
+		Vec3 position(-1.0f, 0.0f, -1.0f); // Arbitrary position in front-left
+		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
 		cone.InnerAngle = DegreesToRadians(120.0f);
 		cone.OuterAngle = DegreesToRadians(60.0f); // Outer angle greater than inner angle
 		float coneOuterGain = 0.5f;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Assertions
@@ -224,7 +226,7 @@ namespace JPL
 	TEST_F(ProcessAngleAttenuationTest, DAtCutoffValues)
 	{
 		// Inputs
-		JPH::Mat44 referencePoint = GetForwardFacingIdentity();
+		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
 		cone.InnerAngle = DegreesToRadians(60.0f);
 		cone.OuterAngle = DegreesToRadians(90.0f);
@@ -239,19 +241,19 @@ namespace JPL
 
 		// Angle corresponding to cutoffInner
 		float angleInner = std::acos(cutoffInner);
-		JPH::Vec3 positionInner(std::sin(angleInner), 0.0f, -std::cos(angleInner));
+		Vec3 positionInner(std::sin(angleInner), 0.0f, -std::cos(angleInner));
 
 		// Angle corresponding to cutoffOuter
 		float angleOuter = std::acos(cutoffOuter);
-		JPH::Vec3 positionOuter(std::sin(angleOuter), 0.0f, -std::cos(angleOuter));
+		Vec3 positionOuter(std::sin(angleOuter), 0.0f, -std::cos(angleOuter));
 
 		// Compute using original function for cutoffInner
-		float angularGainOriginalInner = DirectPathService::ProcessAngleAttenuation(positionInner, referencePoint, cone);
+		float angularGainOriginalInner = DirectPathService<>::ProcessAngleAttenuation(positionInner, referencePoint, cone);
 		angularGainOriginalInner = std::lerp(1.0f, coneOuterGain, angularGainOriginalInner);
 
 
 		// Compute using original function for cutoffOuter
-		float angularGainOriginalOuter = DirectPathService::ProcessAngleAttenuation(positionOuter, referencePoint, cone);
+		float angularGainOriginalOuter = DirectPathService<>::ProcessAngleAttenuation(positionOuter, referencePoint, cone);
 		angularGainOriginalOuter = std::lerp(1.0f, coneOuterGain, angularGainOriginalOuter);
 
 		// Assertions
@@ -263,7 +265,7 @@ namespace JPL
 	TEST_F(ProcessAngleAttenuationTest, AzimuthOverload)
 	{
 		std::mt19937 rng(42); // Seed for reproducibility
-		std::uniform_real_distribution<float> angleDist(0.0f, std::numbers::pi_v<float> * 2.0f);
+		std::uniform_real_distribution<float> angleDist(0.0f, std::numbers::pi_v<float> *2.0f);
 		std::uniform_real_distribution<float> azimuthDist(-std::numbers::pi_v<float>, std::numbers::pi_v<float>);
 		std::uniform_real_distribution<float> gainDist(0.0f, 1.0f);
 
@@ -271,13 +273,13 @@ namespace JPL
 		static constexpr float toleranse = 1e-5f;
 
 		// Random reference point
-		JPH::Mat44 referencePoint = GetForwardFacingIdentity();
+		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 
 		for (int i = 0; i < numTests; ++i)
 		{
 			// Random positions around the listener
 			float azimuth = azimuthDist(rng);
-			JPH::Vec3 position(std::sin(azimuth), 0.0f, -std::cos(azimuth));
+			Vec3 position(std::sin(azimuth), 0.0f, -std::cos(azimuth));
 
 			// Random cone angles and gain
 			AttenuationCone cone{
@@ -292,11 +294,11 @@ namespace JPL
 				std::swap(cone.InnerAngle, cone.OuterAngle);
 
 			// Compute using azimuth overload
-			float angularGainAzimuth = DirectPathService::ProcessAngleAttenuation(azimuth, cone);
+			float angularGainAzimuth = DirectPathService<>::ProcessAngleAttenuation(azimuth, cone);
 			angularGainAzimuth = std::lerp(1.0f, coneOuterGain, angularGainAzimuth);
 
 			// Compute using original function
-			float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
+			float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
 			angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 			EXPECT_NEAR(angularGainAzimuth, angularGainOriginal, toleranse) << "Mismatch at iteration " << i;
@@ -314,7 +316,7 @@ namespace JPL
 		static constexpr float toleranse = 1e-5f;
 
 		// Random reference point
-		JPH::Mat44 referencePoint = GetForwardFacingIdentity();
+		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 
 		float branchedTime = 0.0f;
 		{
@@ -323,7 +325,7 @@ namespace JPL
 			for (int i = 0; i < numTests; ++i)
 			{
 				// Random positions around the listener
-				const JPH::Vec3 position = JPH::Vec3::sRandom(rng) * 10.0f;
+				const Vec3 position = Vec3::sRandom(rng) * 10.0f;
 
 				// Random cone angles and gain
 				AttenuationCone cone{
@@ -351,10 +353,10 @@ namespace JPL
 			for (int i = 0; i < numTests; ++i)
 			{
 				// Random positions around the listener
-				const JPH::Vec3 position = JPH::Vec3::sRandom(rng) * 10.0f;
+				const Vec3 position = Vec3::sRandom(rng) * 10.0f;
 
 				// Random reference point
-				JPH::Mat44 referencePoint = GetForwardFacingIdentity();
+				Position<Vec3> referencePoint = GetForwardFacingIdentity();
 
 				// Random cone angles and gain
 				AttenuationCone cone{
@@ -368,7 +370,7 @@ namespace JPL
 					std::swap(cone.InnerAngle, cone.OuterAngle);
 
 				// Compute using SIMD function
-				volatile float angularGainSIMD = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
+				volatile float angularGainSIMD = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
 				//angularGainSIMD = 
 				auto l = [angularGainSIMD] {};
 			}
@@ -388,19 +390,19 @@ namespace JPL
 		// Inputs
 		// Position at 45 degrees off the forward vector (-Z)
 		float azimuth = DegreesToRadians(45.0f);
-		JPH::Vec3 position(std::sin(azimuth), 0.0f, -std::cos(azimuth));
+		Vec3 position(std::sin(azimuth), 0.0f, -std::cos(azimuth));
 
-		JPH::Mat44 referencePoint = GetForwardFacingIdentity();
+		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
 		cone.InnerAngle = DegreesToRadians(60.0f);
 		cone.OuterAngle = DegreesToRadians(120.0f);
 		float coneOuterGain = 0.5f;
 
 		// Compute using original function
-		float angularGainAzimuth = DirectPathService::ProcessAngleAttenuation(azimuth, cone);
+		float angularGainAzimuth = DirectPathService<>::ProcessAngleAttenuation(azimuth, cone);
 		angularGainAzimuth = std::lerp(1.0f, coneOuterGain, angularGainAzimuth);
 
-		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 

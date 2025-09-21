@@ -19,13 +19,18 @@
 
 #pragma once
 
+#include "JPLSpatial/Core.h"
+#include "JPLSpatial/ChannelMap.h"
 #include "JPLSpatial/SpatialManager.h"
 #include "JPLSpatial/TypeUtilities.h"
-#include "JPLSpatial/Operations.h"
-#include "JPLSpatial/GenericOperation.h"
+//#include "JPLSpatial/Operations.h"
+//#include "JPLSpatial/GenericOperation.h"
 #include "JPLSpatial/DistanceAttenuation.h"
+#include "JPLSpatial/Math/MinimalVec3.h"
 
-#include <nsimd/nsimd-all.hpp>
+#include "../Utility/Vec3Types.h"
+
+//#include <nsimd/nsimd-all.hpp>
 #include <gtest/gtest.h>
 
 #include <format>
@@ -41,6 +46,8 @@ namespace JPL
 	class SpatializationTest : public testing::Test
 	{
 	protected:
+		using Vec3Type = MinimalVec3;
+
 		SpatializationTest() = default;
 
 	protected:
@@ -372,7 +379,7 @@ namespace JPL
 
 	TEST_F(SpatializationTest, CreateDeleteSource)
 	{
-		SpatialManager spatializer;
+		SpatialManager<Vec3Type> spatializer;
 
 		EXPECT_EQ(spatializer.mSourceStuff.size(), 0);
 		EXPECT_FALSE(spatializer.DeleteSource(SourceId()));
@@ -392,14 +399,14 @@ namespace JPL
 		// Delete 1st source data
 		EXPECT_TRUE(spatializer.DeleteSource(id1));
 	}
-	
+
 	TEST_F(SpatializationTest, AdvanceSimulation)
 	{
 		struct AdvanceSimTestCase
 		{
 			std::string Description;
-			JPH::Vec3 SourcePosition;
-			const std::vector<AttenuationCurve::Point> AttenuationCurvePoints
+			Vec3Type SourcePosition;
+			const std::vector<typename AttenuationCurve::Point> AttenuationCurvePoints
 			{
 					{.Distance = 0.0f, .Value = 1.0f, .FunctionType = Curve::EType::Linear},
 					{.Distance = 10.0f, .Value = 0.5f, .FunctionType = Curve::EType::Linear}
@@ -415,42 +422,45 @@ namespace JPL
 		{
 			{
 				.Description = "Source in front of the listener",
-				.SourcePosition = JPH::Vec3(0.0f, 0.0f, -5.0f),
+				.SourcePosition = Vec3Type(0.0f, 0.0f, -5.0f),
 				.ExpectedAttenuationValue = 0.75f,
 				.ExpectedGains = { 0.7071f, 0.7071f, 0.0f, 0.0f }
 			},
 			{
 				.Description = "Source above the listener",
-				.SourcePosition = JPH::Vec3(0.0f, 5.0f, 0.0f),
+				.SourcePosition = Vec3Type(0.0f, 5.0f, 0.0f),
 				.ExpectedAttenuationValue = 0.75f,
 				.ExpectedGains = { 0.7071f, 0.7071f, 0.0f, 0.0f }
 			},
 			{
 				.Description = "Source left of the listener",
-				.SourcePosition = JPH::Vec3(-5.0f, 0.0f, 0.0f),
+				.SourcePosition = Vec3Type(-5.0f, 0.0f, 0.0f),
 				.ExpectedAttenuationValue = 0.75f,
 				.ExpectedGains = { 0.7071f, 0.0f, 0.7071f, 0.0f }
 			},
 			{
 				.Description = "Source on top of the listener",
-				.SourcePosition = JPH::Vec3(0.0f, 0.0f, 0.0f),
+				.SourcePosition = Vec3Type(0.0f, 0.0f, 0.0f),
 				.ExpectedAttenuationValue = 1.0f,
 				.ExpectedGains = { 0.7071f, 0.7071f, 0.0f, 0.0f }
 			},
 		};
 
-		SpatialManager spatializer;
+		SpatialManager<Vec3Type> spatializer;
 		const ChannelMap quadChannels = ChannelMap::FromChannelMask(ChannelMask::Quad);
 
 		for (auto& testCase : testCases)
 		{
-			SourceId source = spatializer.CreateSource(SourceInitParameters{ .NumChannels = 1 });
+			SourceId source = spatializer.CreateSource(SourceInitParameters{ .NumChannels = 1, .NumTargetChannels = quadChannels.GetNumChannels() });
 			ASSERT_TRUE(source.IsValid());
 			testCase.Source = source;
 
-			JPH::Mat44 sourcePos = JPH::Mat44::sTranslation(testCase.SourcePosition);
+			Position<Vec3Type> sourcePos{
+				.Location = testCase.SourcePosition,
+				.Orientation = Orientation<Vec3Type>::Identity() //Quat<Vec3Type>::Identity()
+			};
 			ASSERT_TRUE(spatializer.SetSourcePosition(source, sourcePos));
-			
+
 			// Prepare attenuation
 			auto* curve = new AttenuationCurve();
 			curve->Points = testCase.AttenuationCurvePoints;
@@ -459,10 +469,10 @@ namespace JPL
 
 			// Prepare panning
 			// TODO: test PanningService on its own
-			const StandartPanner* panner = spatializer.GetPanningService().CreatePannerFor(quadChannels);
-			const bool targetCacheInitialized = spatializer.GetPanningService().AddSourceTargets(spatializer.GetPanEffectHandle(source), {quadChannels});
+			const auto* panner = spatializer.GetPanningService().CreatePannerFor(quadChannels);
 			ASSERT_TRUE(panner != nullptr);
-			ASSERT_TRUE(targetCacheInitialized);
+			//const bool targetCacheInitialized = spatializer.GetPanningService().AddSourceTargets(spatializer.GetPanEffectHandle(source), {quadChannels});
+			//ASSERT_TRUE(targetCacheInitialized);
 		}
 
 		// TODO: test the cases where panner and/or channel gains are not initialzied
@@ -482,16 +492,16 @@ namespace JPL
 			EXPECT_NEAR(attenuation, testCase.ExpectedAttenuationValue, tolerance);
 
 			// Test panning
-			const auto* channelGains = spatializer.GetChannelGains(testCase.Source, quadChannels);
-			ASSERT_TRUE(channelGains);
+			const auto channelGains = spatializer.GetChannelGains(testCase.Source, quadChannels);
+			ASSERT_FALSE(channelGains.empty());
 
 			static constexpr uint32 sourceChannel = 0;
 
-			const auto& channelGainsRef = *channelGains;
+			const auto& channelGainsRef = channelGains;
 
 			for (uint32 targetChannel = 0; targetChannel < testCase.ExpectedGains.size(); ++targetChannel)
 			{
-				EXPECT_NEAR(channelGainsRef[sourceChannel][targetChannel], testCase.ExpectedGains[targetChannel], tolerance);
+				EXPECT_NEAR(channelGainsRef[sourceChannel][targetChannel], testCase.ExpectedGains[targetChannel], tolerance) << "Target channel: " << targetChannel;
 			}
 		}
 	}
@@ -508,7 +518,7 @@ namespace JPL
 			std::set<uint32> DirtyIndices;
 		};
 
-		constexpr auto createDirtyIniceSet = [] (uint32 numIndices)
+		constexpr auto createDirtyIniceSet = [](uint32 numIndices)
 		{
 			std::set<uint32> dirtyIndices;
 			for (uint32 i = 0; i < numIndices; ++i)
@@ -554,7 +564,7 @@ namespace JPL
 		},
 		};
 
-		static const Vec3 dirtyPosition = Vec3(0.0f, 5.0f, 0.0f);
+		static const Vec3Type dirtyPosition = Vec3Type(0.0f, 5.0f, 0.0f);
 		static constexpr float nonDirtyAttenuation = SourceOutputDataMock{}.DistanceAttenuation;
 		static constexpr float dirtyAttenuation = 0.2f;
 
@@ -564,7 +574,7 @@ namespace JPL
 		{
 			SCOPED_TRACE(testCase.Description);
 
-			SpatialManager spatializer;
+			SpatialManager<Vec3Type> spatializer;
 
 			std::vector<SourceId> testSources(testCase.NumSources);
 			for (auto& id : testSources)

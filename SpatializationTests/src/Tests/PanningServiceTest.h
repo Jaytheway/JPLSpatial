@@ -1,6 +1,6 @@
 ﻿//
 //      ██╗██████╗     ██╗     ██╗██████╗ ███████╗
-//      ██║██╔══██╗    ██║     ██║██╔══██╗██╔════╝		** JPLSpatialTests **
+//      ██║██╔══██╗    ██║     ██║██╔══██╗██╔════╝		** JPLSpatial **
 //      ██║██████╔╝    ██║     ██║██████╔╝███████╗
 // ██   ██║██╔═══╝     ██║     ██║██╔══██╗╚════██║		https://github.com/Jaytheway/JPLSpatial
 // ╚█████╔╝██║         ███████╗██║██████╔╝███████║
@@ -22,6 +22,8 @@
 #include "JPLSpatial/ChannelMap.h"
 #include "JPLSpatial/Services/PanningService.h"
 
+#include "JPLSpatial/Math/MinimalVec3.h"
+
 #include <gtest/gtest.h>
 
 #include <vector>
@@ -32,7 +34,9 @@ namespace JPL
     class PanningServiceTest : public ::testing::Test
     {
     protected:
-        JPL::PanningService panningService;
+        using Vec3 = MinimalVec3;
+
+        JPL::PanningService<Vec3> panningService;
 
         // Helper methods to create valid/invalid channel maps and handles
         JPL::ChannelMap CreateValidChannelMap(uint32 channelMask) const;
@@ -75,20 +79,20 @@ namespace JPL
     TEST_F(PanningServiceTest, CreatePannerFor_ValidChannelMap_ReturnsPanner)
     {
         JPL::ChannelMap validChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
-        const JPL::StandartPanner* panner = panningService.CreatePannerFor(validChannelMap);
+        const auto* panner = panningService.CreatePannerFor(validChannelMap);
 
         ASSERT_NE(panner, nullptr);
         EXPECT_TRUE(panner->IsInitialized());
 
         // Verify that the panner is stored in mPanners
-        const JPL::StandartPanner* storedPanner = panningService.GetPannerFor(validChannelMap);
+        const auto* storedPanner = panningService.GetPannerFor(validChannelMap);
         EXPECT_EQ(panner, storedPanner);
     }
 
     TEST_F(PanningServiceTest, CreatePannerFor_InvalidChannelMap_ReturnsNullptr)
     {
         JPL::ChannelMap invalidChannelMap = CreateInvalidChannelMap();
-        const JPL::StandartPanner* panner = panningService.CreatePannerFor(invalidChannelMap);
+        const auto* panner = panningService.CreatePannerFor(invalidChannelMap);
 
         EXPECT_EQ(panner, nullptr);
     }
@@ -96,8 +100,8 @@ namespace JPL
     TEST_F(PanningServiceTest, CreatePannerFor_DuplicateCreation_ReturnsSamePanner)
     {
         JPL::ChannelMap validChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
-        const JPL::StandartPanner* panner1 = panningService.CreatePannerFor(validChannelMap);
-        const JPL::StandartPanner* panner2 = panningService.CreatePannerFor(validChannelMap);
+        const auto* panner1 = panningService.CreatePannerFor(validChannelMap);
+        const auto* panner2 = panningService.CreatePannerFor(validChannelMap);
 
         ASSERT_NE(panner1, nullptr);
         ASSERT_NE(panner2, nullptr);
@@ -107,17 +111,17 @@ namespace JPL
     TEST_F(PanningServiceTest, GetPannerFor_ExistingPanner_ReturnsPanner)
     {
         JPL::ChannelMap validChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
-        const JPL::StandartPanner* pannerCreated = panningService.CreatePannerFor(validChannelMap);
+        const auto* pannerCreated = panningService.CreatePannerFor(validChannelMap);
         ASSERT_NE(pannerCreated, nullptr);
 
-        const JPL::StandartPanner* pannerRetrieved = panningService.GetPannerFor(validChannelMap);
+        const auto* pannerRetrieved = panningService.GetPannerFor(validChannelMap);
         EXPECT_EQ(pannerCreated, pannerRetrieved);
     }
 
     TEST_F(PanningServiceTest, GetPannerFor_NonExistentPanner_ReturnsNullptr)
     {
         JPL::ChannelMap validChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
-        const JPL::StandartPanner* panner = panningService.GetPannerFor(validChannelMap);
+        const auto* panner = panningService.GetPannerFor(validChannelMap);
 
         EXPECT_EQ(panner, nullptr);
     }
@@ -132,36 +136,30 @@ namespace JPL
                 .SourceChannelMap = sourceChannelMap,
                 .TargetChannelMaps = targetChannelMaps
             });
-
         ASSERT_TRUE(handle.IsValid());
-
-        // Verify that VBAP data is initialized
-        auto vbapData = panningService.GetPanningDataFor(sourceChannelMap);
-        EXPECT_NE(vbapData, nullptr);
 
         // Verify that channel gains are initialized for the targets
         for (const auto& targetChannelMap : targetChannelMaps)
         {
+            // Verify that VBAP data is initialized
+            auto pannindData = panningService.GetPanningDataFor({ .SourceMap = sourceChannelMap, .TargetMap = targetChannelMap});
+            EXPECT_NE(pannindData, nullptr);
+
             auto channelGains = panningService.GetChannelGainsFor(handle, targetChannelMap);
-            EXPECT_NE(channelGains, nullptr);
+            EXPECT_NE(channelGains.data(), nullptr);
         }
     }
 
-    TEST_F(PanningServiceTest, InitializePanningEffect_ValidSourceNoTargets_ReturnsValidHandle)
+    TEST_F(PanningServiceTest, InitializePanningEffect_ValidSourceNoTargets_ReturnsInvalidHandle)
     {
         JPL::ChannelMap sourceChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
 
         JPL::PanEffectHandle handle = panningService.InitializePanningEffect({ .SourceChannelMap = sourceChannelMap });
-
-        ASSERT_TRUE(handle.IsValid());
-
-        // Verify that VBAP data is initialized
-        auto vbapData = panningService.GetPanningDataFor(sourceChannelMap);
-        EXPECT_NE(vbapData, nullptr);
+        EXPECT_FALSE(handle.IsValid());
 
         // No targets, so no channel gains should be initialized
         auto channelGains = panningService.GetChannelGainsFor(handle, sourceChannelMap);
-        EXPECT_EQ(channelGains, nullptr);
+        EXPECT_EQ(channelGains.data(), nullptr);
     }
 
     TEST_F(PanningServiceTest, InitializePanningEffect_InvalidSource_ReturnsInvalidHandle)
@@ -195,14 +193,14 @@ namespace JPL
         EXPECT_TRUE(released);
 
         // Verify that VBAP data is removed from mSourceVBAPs
-        auto vbapDataIt = panningService.GetVBAPDataFor(handle);
-        EXPECT_EQ(vbapDataIt, nullptr);
+        auto sourceLayoutIt = panningService.GetSourceLayoutFor(handle);
+        EXPECT_EQ(sourceLayoutIt, nullptr);
 
         // Verify that channel gains are removed
         for (const auto& targetChannelMap : targetChannelMaps)
         {
             auto channelGains = panningService.GetChannelGainsFor(handle, targetChannelMap);
-            EXPECT_EQ(channelGains, nullptr);
+            EXPECT_EQ(channelGains.data(), nullptr);
         }
     }
 
@@ -218,26 +216,36 @@ namespace JPL
     TEST_F(PanningServiceTest, CreatePanningDataFor_ValidSourceChannelMap_ReturnsVBAPData)
     {
         JPL::ChannelMap sourceChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
+        std::vector<JPL::ChannelMap> targetChannelMaps = CreateValidTargetChannelMaps({ JPL::ChannelMask::Stereo, JPL::ChannelMask::Quad });
 
-        auto vbapData = panningService.CreatePanningDataFor(sourceChannelMap);
+        for (ChannelMap targetChannelMap : targetChannelMaps)
+        {
+            const SourceLayoutKey layoutKey{ .SourceMap = sourceChannelMap, .TargetMap = targetChannelMap };
+            auto vbapData = panningService.CreatePanningDataFor(layoutKey);
 
-        ASSERT_NE(vbapData, nullptr);
-        EXPECT_TRUE(vbapData->IsInitialized());
+            ASSERT_NE(vbapData, nullptr);
+            EXPECT_TRUE(vbapData->IsInitialized());
 
-        // Verify that VBAP data is stored
-        auto storedVbapData = panningService.GetPanningDataFor(sourceChannelMap);
-        EXPECT_EQ(vbapData, storedVbapData);
+            // Verify that VBAP data is stored
+            auto storedVbapData = panningService.GetPanningDataFor(layoutKey);
+            EXPECT_EQ(vbapData, storedVbapData);
+        }
     }
 
     TEST_F(PanningServiceTest, CreatePanningDataFor_InvalidSourceChannelMap_ReturnsNullptr)
     {
         JPL::ChannelMap invalidSourceChannelMap = CreateInvalidChannelMap();
-
-        auto vbapData = panningService.CreatePanningDataFor(invalidSourceChannelMap);
-
-        EXPECT_EQ(vbapData, nullptr);
+        std::vector<JPL::ChannelMap> targetChannelMaps = CreateValidTargetChannelMaps({ JPL::ChannelMask::Stereo, JPL::ChannelMask::Quad });
+        
+        for (ChannelMap targetChannelMap : targetChannelMaps)
+        {
+            const SourceLayoutKey layoutKey{ .SourceMap = invalidSourceChannelMap, .TargetMap = targetChannelMap };
+            auto vbapData = panningService.CreatePanningDataFor(layoutKey);
+            EXPECT_EQ(vbapData, nullptr);
+        }
     }
 
+#if 0 // Now we enfrce initialization of panning sources with target layouts
     TEST_F(PanningServiceTest, MultipleSourcesAndTargets_IndependentData)
     {
         // Initialize first source
@@ -279,6 +287,7 @@ namespace JPL
             EXPECT_NE(channelGains2, nullptr);
         }
     }
+#endif
 
     TEST_F(PanningServiceTest, SetPanningEffectParameters_InvalidHandle_ReturnsFalse)
     {
