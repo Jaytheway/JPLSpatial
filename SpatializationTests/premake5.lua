@@ -32,7 +32,9 @@ project "JPLSpatialTests"
 			"vendor/googletest/googletest/include",
 			"vendor/googletest/googletest/",
 
-			"../Spatialization/vendor/nsimd/include",
+			"vendor/glm",
+
+			--"../Spatialization/vendor/nsimd/include",
 		}
 
 		libdirs {
@@ -42,9 +44,9 @@ project "JPLSpatialTests"
 		links {
 			"JPLSpatial",
 			"JoltPhysics",
-			"nsimd_NEON128.lib",
-			"nsimd_AArch64.lib",
-			"nsimd_SSE2.lib",
+			--"nsimd_NEON128.lib",
+			--"nsimd_AArch64.lib",
+			--"nsimd_SSE2.lib",
 		}
 
 		group "Core"

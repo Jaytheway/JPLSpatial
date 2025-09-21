@@ -39,6 +39,11 @@ project "JPLSpatial"
 
 	dependson { "JoltPhysics" }
 
+	-- Temp. Disable work in progress stuff
+	defines { "JPL_HAS_ENV_PROPAGATION=0" }
+	defines { "JPL_HAS_PATH_TRACING=0" }
+	defines { "JPL_HAS_BEAM_TRACING=0" }
+
 
 	filter "system:windows"
 		systemversion "latest"
