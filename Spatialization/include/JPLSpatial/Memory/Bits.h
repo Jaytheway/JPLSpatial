@@ -22,6 +22,7 @@
 #include <concepts>
 #include <bit>
 #include <limits>
+#include <climits>
 
 namespace JPL
 {
@@ -51,5 +52,8 @@ namespace JPL
     {
         return (n + T(3)) & ~T(3);
     }
+
+    template<std::integral T>
+    [[nodiscard]] constexpr std::size_t BitWidthOf() noexcept { return sizeof(T) * CHAR_BIT; }
 
 } // namespace JPL
