@@ -30,33 +30,49 @@ namespace JPL
     /// Default speaker/channel masks
     /// This should be in the order the channels are laid out in the user's
     /// audio processing block.
-    /// So far this more-or-less conforms to the Microsoft's standard.
+    //  This no longer conforms to WAVEFORMATEXTENSIBLE, but supposidely conforms
+    //  to common speaker arrangements.
+    //! The main difference between wave channel formats and this, is in that the
+    //! side channels in wave come after back channels
     enum EChannel : uint32
     {
         FrontLeft           = JPL_BIT(0),
         FrontRight          = JPL_BIT(1),
         FrontCenter         = JPL_BIT(2),
         LFE                 = JPL_BIT(3),
-        BackLeft            = JPL_BIT(4),
-        BackRight           = JPL_BIT(5),
+
+        SideLeft            = JPL_BIT(4),   // also "left surround side", "left centre"
+        SideRight           = JPL_BIT(5),   // also "right surround side", "right centre"
+       
         FrontLeftCenter     = JPL_BIT(6),
         FrontRightCenter    = JPL_BIT(7),
-        BackCenter          = JPL_BIT(8),
-        SideLeft            = JPL_BIT(9),
-        SideRight           = JPL_BIT(10),
-        TopCenter           = JPL_BIT(11),
-        TopFrontLeft        = JPL_BIT(12),
-        TopFrontCenter      = JPL_BIT(13),
-        TopFrontRight       = JPL_BIT(14),
-        TopBackLeft         = JPL_BIT(15),
-        TopBackCenter       = JPL_BIT(16),
-        TopBackRight        = JPL_BIT(17),
         
+        BackLeft            = JPL_BIT(8),   // also "left surround", "left surround read"
+        BackRight           = JPL_BIT(9),   // also "right surround", "right surround rear"
+        BackCenter          = JPL_BIT(10),  // also "surround" or "centre surround"
+        
+        WideLeft            = JPL_BIT(11),
+        WideRight           = JPL_BIT(12),
+
+        TopCenter           = JPL_BIT(13),
+        TopFrontLeft        = JPL_BIT(14),
+        TopFrontCenter      = JPL_BIT(15),
+        TopFrontRight       = JPL_BIT(16),
+
+        // These used by Dolby Atmos 7.0.2 and 7.1.2
+        TopSideLeft         = JPL_BIT(17),
+        TopSideRight        = JPL_BIT(18),
+
+        TopBackLeft         = JPL_BIT(19),  // also "top rear left"
+        TopBackCenter       = JPL_BIT(20),
+        TopBackRight        = JPL_BIT(21),  // also "top rear right"
+
         // ..other speakers can be added here
 
-
-        NUM_GroundChannels = std::bit_width((uint32)SideRight), // Number of ground channels
-        TOP_Channels = TopCenter,                                // Top channels have value >= than TOP_Channels
+        NUM_GroundChannels = std::bit_width((uint32)WideRight), // Number of ground channels
+        
+        TOP_Channels = TopCenter,                               // Top channels have value >= than TOP_Channels
+        NUM_TopChannels = std::bit_width((uint32)TopBackRight) - NUM_GroundChannels, // Number of ground channels
 
         Invalid = 0
     };
@@ -65,17 +81,62 @@ namespace JPL
     /// Common channel masks
     namespace ChannelMask
     {
-        static constexpr uint32 Invalid = uint32(0);
+        // TODO: channel order matters and some formats differ only by it, so our simple bit mask may not be functional for everything
+        
+        // TODO: Extended setups WIP. Integrate, test, etc...
 
-        static constexpr uint32 Mono = FrontCenter;
-        static constexpr uint32 Stereo = FrontLeft | FrontRight;
-        static constexpr uint32 LCR = FrontLeft | FrontRight | FrontCenter;
-        static constexpr uint32 Quad = FrontLeft | FrontRight | BackLeft | BackRight;
-        static constexpr uint32 Surround_4_1 = FrontLeft | FrontRight | LFE | BackLeft | BackRight;
-        static constexpr uint32 Surround_5_1 = FrontLeft | FrontRight | FrontCenter | LFE | BackLeft | BackRight;
-        static constexpr uint32 Surround_6_1 = FrontLeft | FrontRight | FrontCenter | LFE | BackCenter | BackLeft | BackRight;
-        static constexpr uint32 Surround_7_1 = FrontLeft | FrontRight | FrontCenter | LFE | BackCenter | BackLeft | BackRight | SideLeft | SideRight;
+        static constexpr uint32 Invalid = uint32(0);
+        
+        //======================================================================
+        static constexpr uint32 Mono                = FrontCenter;
+        static constexpr uint32 Stereo              = FrontLeft | FrontRight;
+        static constexpr uint32 LCR                 = FrontLeft | FrontRight | FrontCenter;
+	    static constexpr uint32 LRS                 = FrontLeft | FrontRight | BackCenter;
+	    static constexpr uint32 LCRS                = FrontLeft | FrontRight | FrontCenter | BackCenter;
+        static constexpr uint32 Quad                = FrontLeft | FrontRight | BackLeft | BackRight;
+	    static constexpr uint32 Pentagonal          = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight;
+        
+        //? Couldn't arrange in a way to preserve channel order across different setups
+	    //?static constexpr uint32 Hexagonal           = FrontLeft | FrontRight | FrontCenter | BackCenter | BackLeft | BackRight;
+	    
+        static constexpr uint32 Octagonal           = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight | BackCenter | WideLeft | WideRight;
+
+        //======================================================================
+        static constexpr uint32 Surround_4_1        = FrontLeft | FrontRight | LFE | BackLeft | BackRight;
+	    static constexpr uint32 Surround_5_0        = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight;
+        static constexpr uint32 Surround_5_1        = FrontLeft | FrontRight | FrontCenter | LFE | BackLeft | BackRight;
+	    static constexpr uint32 Surround_6_0        = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight | BackCenter;
+        static constexpr uint32 Surround_6_1        = FrontLeft | FrontRight | FrontCenter | LFE | BackLeft | BackRight | BackCenter;
+        
+        //======================================================================
+        // DTS surround setups
+	    static constexpr uint32 Surround_7_0        = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight;
+	    static constexpr uint32 Surround_7_1        = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight;
+
+        //======================================================================
+        static constexpr uint32 Surround_5_0_2      = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight | TopSideLeft | TopSideRight;
+	    static constexpr uint32 Surround_5_1_2      = FrontLeft | FrontRight | FrontCenter | LFE | BackLeft | BackRight | TopSideLeft | TopSideRight;
+	    static constexpr uint32 Surround_5_0_4      = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
+	    static constexpr uint32 Surround_5_1_4      = FrontLeft | FrontRight | FrontCenter | LFE | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
+	    
+        //======================================================================
+        // Dolby Atmos surround setups
+        static constexpr uint32 Surround_7_0_2      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | TopSideLeft | TopSideRight;
+        static constexpr uint32 Surround_7_1_2      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | TopSideLeft | TopSideRight;
+        static constexpr uint32 Surround_7_0_4      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
+	    static constexpr uint32 Surround_7_1_4      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
+
+        static constexpr uint32 Surround_7_0_6      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
+	    static constexpr uint32 Surround_7_1_6      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
+	    
+        //======================================================================
+        // Atmos surround setups
+        static constexpr uint32 Surround_9_0_4      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
+	    static constexpr uint32 Surround_9_1_4      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
+	    static constexpr uint32 Surround_9_0_6      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
+	    static constexpr uint32 Surround_9_1_6      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
     }
+
 
     //==========================================================================
     /// ChannelMap is just a interface for strongly-typed access to some sort of
@@ -90,6 +151,7 @@ namespace JPL
      
         [[nodiscard]] constexpr bool Has(EChannel channel) const noexcept { return (mChannelMask & static_cast<uint32_t>(channel)) == channel; }
         [[nodiscard]] constexpr bool HasLFE() const noexcept { return (mChannelMask & static_cast<uint32_t>(EChannel::LFE)) == EChannel::LFE; }
+        [[nodiscard]] constexpr bool HasTopChannels() const noexcept { return mChannelMask >= EChannel::TOP_Channels; }
         [[nodiscard]] constexpr bool IsValid() const noexcept { return mChannelMask != ChannelMask::Invalid; }
 
         [[nodiscard]] constexpr uint32 GetNumChannels() const noexcept { return std::popcount(mChannelMask); }
@@ -124,8 +186,10 @@ namespace JPL
             return foundChannel;
         }
 
-        [[nodiscard]] static constexpr uint32 MaxSupportedChannels() noexcept { return 8u; }
-
+        [[nodiscard]] constexpr uint32 GetChannelMask() const { return mChannelMask; }
+        
+        //[[nodiscard]] static constexpr uint32 MaxSupportedChannels() noexcept { return 8u; }
+        
         [[nodiscard]] static constexpr ChannelMap FromChannelMask(uint32 channelMask) { return ChannelMap(channelMask); }
         [[nodiscard]] static constexpr ChannelMap FromNumChannels(uint32 numChannels)
         {
@@ -140,7 +204,7 @@ namespace JPL
             case 7: return ChannelMap(ChannelMask::Surround_6_1);
             case 8: return ChannelMap(ChannelMask::Surround_7_1);
             default:
-                JPL_ASSERT("Currently only up to 8 channels are supported.");
+                JPL_ASSERT("ChannelMap can be created from channel count up to 8 channels.");
                 return ChannelMap(ChannelMask::Invalid);
             }
         }
