@@ -61,7 +61,7 @@ namespace JPL
 			Vec3 Y = up;
 			const Vec3 Z = forward;
 			if (Math::IsNearlyEqual(Math::Abs(DotProduct(Y, Z)), Float(1.0)))
-				Y = (Math::Abs(Z.Z) < Float(0.999) ? Vec3(0, 0, 1) : Vec3(1, 0, 0));
+				Y = (Math::Abs(GetZ(Z)) < Float(0.999) ? Vec3(0, 0, 1) : Vec3(1, 0, 0));
 
 			const Vec3 X = Normalized(CrossProduct(Y, Z));
 			Y = CrossProduct(Z, X);
