@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.28)
 option(INTERPROCEDURAL_OPTIMIZATION "Enable interprocedural optimizations" OFF)
 
 # Option to enable testing Jolt's types with some of the librarie's interfaces
-option(TEST_WITH_JOLT "Enable tests that require JoltPhysics" ON)
+option(TEST_WITH_JOLT "Enable tests that require JoltPhysics" OFF)
 
 option(JPL_FETCH_DEPS "Allow fetching dependencies with FetchContent" ON)
 
