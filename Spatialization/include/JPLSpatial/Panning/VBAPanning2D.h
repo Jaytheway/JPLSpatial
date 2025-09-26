@@ -220,7 +220,7 @@ namespace JPL::VBAP
 
             // Mirror duplicated first half ring to make a full ring
             for (Vec3Type& mirror : std::span(destination, halfSamples))
-                SetX(mirror) = -GetX(mirror);
+                SetX(mirror, -GetX(mirror));
         }
     }
 } // namespace JPL::VBAP
