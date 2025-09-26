@@ -1096,8 +1096,9 @@ namespace JPL
 				}
 			}
 		};
-
+#if defined(JPL_TEST_WITH_JOLT)
 		testVec3Type.operator()<JPH::Vec3>();
+#endif
 		testVec3Type.operator()<glm::vec3>();
 		testVec3Type.operator()<MinimalVec3>();
 	}

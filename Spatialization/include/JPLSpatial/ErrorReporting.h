@@ -35,9 +35,11 @@ using TraceFunction = void (*)(const char* message);
 JPL_EXPORT extern TraceFunction Trace;
 
 // Always turn on asserts in Debug mode
-#if !defined(NDEBUG) && !defined(JPL_ENABLE_ASSERTS)
+#if defined(JPL_DEBUG)
+#ifndef JPL_ENABLE_ASSERTS
 #define JPL_ENABLE_ASSERTS
-#ifndef JPL_TEST
+#endif
+#if !defined (JPL_TEST) && !defined(JPL_ENABLE_ENSURE)
 #define JPL_ENABLE_ENSURE
 #endif
 #endif

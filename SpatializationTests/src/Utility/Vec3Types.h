@@ -22,13 +22,16 @@
 #include "JPLSpatial/Core.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
 
+#if defined(JPL_TEST_WITH_JOLT)
 #include <Jolt/Jolt.h>
+#endif
 #include <glm/glm.hpp>
 
 namespace JPL
 {
 	// TODO: consider removing this struct and moving everything under corresponding namespaces
 	//		- or the other way around
+#if defined(JPL_TEST_WITH_JOLT)
 	template<>
 	struct Vec3Access<JPH::Vec3>
 	{
@@ -40,6 +43,7 @@ namespace JPL
 		JPL_INLINE static void SetY(JPH::Vec3& v, float value) noexcept { v.SetY(value); }
 		JPL_INLINE static void SetZ(JPH::Vec3& v, float value) noexcept { v.SetZ(value); }
 	};
+#endif
 
 	template<>
 	struct Vec3Access<glm::vec3>
@@ -55,6 +59,7 @@ namespace JPL
 
 } // namespace JPL
 
+#if defined(JPL_TEST_WITH_JOLT)
 namespace JPH
 {
 	[[nodiscard]] JPL_INLINE JPH::Vec3 Abs(const JPH::Vec3& v) { return v.Abs(); }
@@ -67,6 +72,9 @@ namespace JPH
 	JPL_INLINE [[nodiscard]] float Length(const JPH::Vec3& V) { return V.Length(); }
 }
 
+static_assert(JPL::CVec3Accessible<JPH::Vec3>);
+#endif
+
 namespace glm
 {
 	[[nodiscard]] JPL_INLINE glm::vec3 Abs(const glm::vec3& v) { return glm::abs(v); }
@@ -78,5 +86,3 @@ namespace glm
 	JPL_INLINE [[nodiscard]] float LengthSquared(const glm::vec3& v) { return glm::dot(v, v); }
 	JPL_INLINE [[nodiscard]] float Length(const glm::vec3& v) { return glm::length(v); }
 }
-
-static_assert(JPL::CVec3Accessible<JPH::Vec3>);

@@ -245,6 +245,11 @@ namespace JPL
 	static_assert(sizeof(uint64) == 8, "Invalid size of uint64");
 	static_assert(sizeof(void*) == (JPL_CPU_ADDRESS_BITS == 64 ? 8 : 4), "Invalid size of pointer");
 
+// Determine if we want extra debugging code to be active
+#if !defined(NDEBUG) && !defined(JPL_NO_DEBUG)
+#define JPL_DEBUG
+#endif
+
 	// Define inline macro
 #if defined(JPL_NO_FORCE_INLINE)
 #define JPL_INLINE inline

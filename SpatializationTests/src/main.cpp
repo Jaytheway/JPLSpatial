@@ -71,17 +71,20 @@ static void JPLTraceCallback(const char* message)
 //==========================================================================
 static void Main(int argc, char* argv[])
 {
+#if defined(JPL_TEST_WITH_JOLT)
     JPH::RegisterDefaultAllocator();
-
+#endif
 	JPL::Trace = JPLTraceCallback;
 }
 
+#if defined(JPL_TEST_WITH_JOLT)
 //? Just a temp hack to make sure we have registered default allocation functions
 //? when initializing static objects with JPH::STLAllocator
 static struct StaticInit
 {
     StaticInit() { JPH::RegisterDefaultAllocator();}
 } Init;
+#endif
 
 //==========================================================================
 int main(int argc, char* argv[])

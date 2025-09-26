@@ -1,0 +1,99 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28
+  },
+  "configurePresets": [
+     {
+      "name": "_root-config",
+      "hidden": true,
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_GENERATOR_PLATFORM": "x64"
+      }
+    },
+    {
+      "name": "vs",
+      "inherits": ["_root-config"],
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "JPL_FETCH_DEPS": "OFF"
+      }
+    },
+    {
+      "name": "vs-tests",
+      "inherits": ["_root-config"],
+      "cacheVariables": {
+        "BUILD_TESTING": "ON",
+        "JPL_FETCH_DEPS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "_vs-base",
+      "hidden": true,
+      "configurePreset": "vs"
+    },
+    {
+      "name": "vs-debug",
+      "inherits": "_vs-base",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs-release",
+      "inherits": "_vs-base",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs-dist",
+      "inherits": "_vs-base",
+      "configuration": "Distribution"
+    },
+    {
+      "name": "vs-profile",
+      "inherits": "_vs-base",
+      "configuration": "Profile"
+    },
+    {
+      "name": "vs-tests",
+      "configurePreset": "vs-tests",
+      "configuration": "Release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "vs-tests-run",
+      "configurePreset": "vs-tests",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      }
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "vs-tests",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "vs-tests"
+        },
+        {
+          "type": "build",
+          "name": "vs-tests"
+        },
+        {
+          "type": "test",
+          "name": "vs-tests-run"
+        }
+      ]
+    }
+  ]
+}

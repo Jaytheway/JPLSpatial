@@ -1,6 +1,0 @@
-[submodule "SpatializationTests/vendor/glm"]
-	path = SpatializationTests/vendor/glm
-	url = https://github.com/g-truc/glm.git
-[submodule "SpatializationTests/vendor/JoltPhysics"]
-	path = SpatializationTests/vendor/JoltPhysics
-	url = https://github.com/jrouwe/JoltPhysics.git
