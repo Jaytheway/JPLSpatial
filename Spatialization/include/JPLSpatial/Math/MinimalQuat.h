@@ -83,9 +83,9 @@ namespace JPL
         [[nodiscard]] inline static Quat FromBasis(const Basis<Vec3>& basis) noexcept
         {
             // axes-as-columns rotation matrix:
-            const Float r00 = basis.X.X, r01 = basis.Y.X, r02 = basis.Z.X;
-            const Float r10 = basis.X.Y, r11 = basis.Y.Y, r12 = basis.Z.Y;
-            const Float r20 = basis.X.Z, r21 = basis.Y.Z, r22 = basis.Z.Z;
+            const Float r00 = GetX(basis.X), r01 = GetX(basis.Y), r02 = GetX(basis.Z);
+            const Float r10 = GetY(basis.X), r11 = GetY(basis.Y), r12 = GetY(basis.Z);
+            const Float r20 = GetZ(basis.X), r21 = GetZ(basis.Y), r22 = GetZ(basis.Z);
 
             Float tr = r00 + r11 + r22;
             Float qw, qx, qy, qz;
@@ -127,7 +127,7 @@ namespace JPL
                 qz = Float(0.25) * s;
             }
 
-            return Quat { Vec3{ qx, qy, qz }, qw };
+            return Quat{ Vec3{ qx, qy, qz }, qw };
         }
 
         /// Construct rotation quaternion from up and forward axis
@@ -210,20 +210,20 @@ namespace JPL
         /// Convert to an orthonormal Basis3 (column-major)
         [[nodiscard]] inline Basis<Vec3> ToBasis() const noexcept
         {
-            const Float xx = V.X * V.X, yy = V.Y * V.Y, zz = V.Z * V.Z;
-            const Float xy = V.X * V.Y, xz = V.X * V.Z, yz = V.Y * V.Z;
-            const Float wx = W * V.X,   wy = W * V.Y,   wz = W * V.Z;
+            const Float xx = GetX(V) * GetX(V), yy = GetY(V) * GetY(V), zz = GetZ(V) * GetZ(V);
+            const Float xy = GetX(V) * GetY(V), xz = GetX(V) * GetZ(V), yz = GetY(V) * GetZ(V);
+            const Float wx = W * GetX(V), wy = W * GetY(V), wz = W * GetZ(V);
             return Basis<Vec3>{
                 .X = Vec3{ Float(1) - Float(2) * (yy + zz), Float(2) * (xy + wz),               Float(2) * (xz - wy) },
-                .Y = Vec3{ Float(2) * (xy - wz),            Float(1) - Float(2) * (xx + zz),    Float(2) * (yz + wx) },
-                .Z = Vec3{ Float(2) * (xz + wy),            Float(2) * (yz - wx),               Float(1) - Float(2) * (xx + yy) }
+                    .Y = Vec3{ Float(2) * (xy - wz),            Float(1) - Float(2) * (xx + zz),    Float(2) * (yz + wx) },
+                    .Z = Vec3{ Float(2) * (xz + wy),            Float(2) * (yz - wx),               Float(1) - Float(2) * (xx + yy) }
             };
         }
 
     };
-    
+
     template<CVec3Accessible Vec3>
-    std::ostream& operator<<(std::ostream& os, const Quat<Vec3>& quat) { os << "V ={ " << quat.V.X << ", " << quat.V.Y << ", " << quat.V.Z << " }, W = " << quat.W; return os; }
+    std::ostream& operator<<(std::ostream& os, const Quat<Vec3>& quat) { os << "V ={ " << GetX(quat.V) << ", " << GetY(quat.V) << ", " << GetZ(quat.V) << " }, W = " << quat.W; return os; }
 
     /// Slerp two Quats based on `t`
     template<CVec3Accessible Vec3>
@@ -232,7 +232,7 @@ namespace JPL
         using F = typename Quat<Vec3>::Float;
         F dot = a.W * b.W + DotProduct(a.V, b.V);
         Quat<Vec3> b1 = (dot < 0) ? Quat<Vec3>{-b.W, -b.V} : b; // enforce short arc
-        
+
         if (Math::Abs(dot) > F(0.9995))
         {
             // near 0 degrees -> nlerp
@@ -247,7 +247,7 @@ namespace JPL
         F wB = std::sin(t * phi) * invSinPhi;
         return Quat<Vec3>{
             .V = wA * a.V + wB * b1.V,
-            .W = wA * a.W + wB * b1.W
+                .W = wA * a.W + wB * b1.W
         };
     }
 
