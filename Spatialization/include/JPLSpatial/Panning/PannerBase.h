@@ -471,10 +471,10 @@ namespace JPL
 #else
 	template<class PannerType, class Traits>
 	template<class ChannelGroupGainsGetter>
-	inline void VBAPannerBase<PannerType, Traits>::ProcessVBAPData(const SourceLayoutType& sourceLayout,
-																   const PanUpdateData& updateData,
-																   ChannelGroupGainsGetter&& getOutGains) const
-		requires (CGetSpeakerGainsFunction<ChannelGroupGainsGetter>)
+	JPL_INLINE void VBAPannerBase<PannerType, Traits>::ProcessVBAPData(const SourceLayoutType& sourceLayout,
+																	   const PanUpdateData& updateData,
+																	   ChannelGroupGainsGetter&& getOutGains) const
+		requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>
 	{
 		JPL_ASSERT(sourceLayout.GetTargetChannelMap() == mChannelMap, "VBAP Panner can only work with VBAP source layout created for that panner.");
 
@@ -508,9 +508,9 @@ namespace JPL
 #else
 	template<class PannerType, class Traits>
 	template<class ChannelGroupGainsGetter>
-	inline void VBAPannerBase<PannerType, Traits>::ProcessVBAPData(const SourceLayoutType& sourceLayout,
-																   const PanUpdateDataWithOrientation& updateData,
-																   ChannelGroupGainsGetter&& getOutGains) const
+	JPL_INLINE void VBAPannerBase<PannerType, Traits>::ProcessVBAPData(const SourceLayoutType& sourceLayout,
+																	   const PanUpdateDataWithOrientation& updateData,
+																	   ChannelGroupGainsGetter&& getOutGains) const
 		requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>
 	{
 		JPL_ASSERT(sourceLayout.GetTargetChannelMap() == mChannelMap, "VBAP Panner can only work with VBAP source layout created for that panner.");
@@ -536,10 +536,10 @@ namespace JPL
 #else
 	template<class PannerType, class Traits>
 	template<class ChannelGroupGainsGetter>
-	inline void VBAPannerBase<PannerType, Traits>::ProcessVBAPData(const SourceLayout& sourceLayout,
-																   const PanUpdateData& updateData,
-																   const Quat<Vec3Type>& panRotation,
-																   ChannelGroupGainsGetter&& getOutGains) const
+	inline void VBAPannerBase<PannerType, Traits>::ProcessVBAPDataImpl(const SourceLayoutType& sourceLayout,
+																	   const PanUpdateData& updateData,
+																	   const Quat<Vec3Type>& panRotation,
+																	   ChannelGroupGainsGetter&& getOutGains) const
 		requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>
 #endif
 	{
