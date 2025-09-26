@@ -107,7 +107,7 @@ namespace JPL
 		[[nodiscard]] JPL_INLINE Vec3 Transform(const Vec3& vector) const noexcept
 		{
 			// 3 FMAs, or 9 mul + 6 add
-			return vector.X * X + vector.Y * Y + vector.Z * Z;
+			return GetX(vector) * X + GetY(vector) * Y + GetZ(vector) * Z;
 		}
 
 		/// Compose orientations: apply 'this' basis mapping to the other's axes.
