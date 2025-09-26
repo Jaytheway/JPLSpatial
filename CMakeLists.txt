@@ -28,6 +28,10 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio|Xcode")
   set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Distribution;Profile" CACHE STRING "" FORCE)
 endif()
 
+# Some projects may not have a Distribution or Profile config, so we need to map them to Release
+set(CMAKE_MAP_IMPORTED_CONFIG_PROFILE       Release)
+set(CMAKE_MAP_IMPORTED_CONFIG_DISTRIBUTION  Release)
+
 include(CMakeDependentOption)
 # Ability to toggle between the static and DLL versions of the MSVC runtime library
 # Windows Store only supports the DLL version
@@ -45,21 +49,18 @@ if(MSVC)
   # MSVC flags
   set(CMAKE_CXX_FLAGS_DEBUG "/Od /Zi")
   set(CMAKE_CXX_FLAGS_RELEASE "/O2 /DNDEBUG")
-  set(CMAKE_CXX_FLAGS_DIST "/O2 /DNDEBUG")
+  set(CMAKE_CXX_FLAGS_DISTRIBUTION "/O2 /DNDEBUG")
   set(CMAKE_CXX_FLAGS_PROFILE "/O2 /Zi") # Use /O2 for optimization, /Zi for debug info
-  set(CMAKE_CXX_FLAGS_TEST "/Od /Zi")
 
   # MSVC linker flags for debug information
   set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/DEBUG")
   set(CMAKE_EXE_LINKER_FLAGS_PROFILE "/DEBUG")
-  set(CMAKE_EXE_LINKER_FLAGS_TEST "/DEBUG")
 else() # Assumed to be GCC/Clang
   # GCC/Clang flags
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-  set(CMAKE_CXX_FLAGS_DIST "-O3 -DNDEBUG")
+  set(CMAKE_CXX_FLAGS_DISTRIBUTION "-O3 -DNDEBUG")
   set(CMAKE_CXX_FLAGS_PROFILE "-O3 -g")
-  set(CMAKE_CXX_FLAGS_TEST "-O0 -g")
 endif()
   
 # Set output directories

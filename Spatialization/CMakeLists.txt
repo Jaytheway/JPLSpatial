@@ -14,12 +14,17 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${JPLSPATIAL_SRC})
 # C++ version
 target_compile_features(JPLSpatial PUBLIC cxx_std_20)
 
-# Includes
+# Includes: public headers from include/, private headers from src/
 target_include_directories(JPLSpatial
   PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Spatialization"
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Spatialization
 )
+
+# Namespaced alias
+add_library(JPL::Spatial ALIAS JPLSpatial)
 
 # Place the project in a folder in IDEs
 set_target_properties(JPLSpatial PROPERTIES FOLDER "Core")
@@ -35,9 +40,7 @@ target_compile_definitions(JPLSpatial
 # Per-config defines (DEBUG/NDEBUG + JPL_TEST if tests are enabled)
 target_compile_definitions(JPLSpatial
   PRIVATE
-    $<$<CONFIG:Debug>:DEBUG>
     $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
-    #$<$<OR:$<CONFIG:Release>,$<CONFIG:Distribution>,$<CONFIG:Profile>>:NDEBUG>
     $<$<BOOL:${BUILD_TESTING}>:JPL_TESTS>
 )
 
