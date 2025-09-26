@@ -14,7 +14,7 @@ If you have access to Hazel Engine code, you can check how JPLSpatial is integra
 	- Multi-channel sources
 	- Virtual Sources per source channel
 	- Most of the common target/output channel layouts
-	- ~~Elevation / Height channels~~ (TODO)
+	- Elevation / Height channels
 - Distance Attenuation
 	- Custom function
 	- Curves
@@ -79,13 +79,6 @@ void GetChannelGains(float sourceToListenerAngleRadians,
 ---
 A more advanced use cases using `VirtualSource`s, or sometimes they're called Virtual Positions, can be handled manually using low level API of `VBAPPaner`, or higher level API of `PanningService`.
 
-> [!WARNING]
-> **Dependency**
-> 
-> Currently Services depend on utilities pulled from [JoltPhysics](https://github.com/jrouwe/JoltPhysics). `PanningService` requires a couple of includes:
-> - "Jolt/Core/Core.h"
-> - "Jolt/Core/HashCombine.h"
-
 ---
 Simple example of `VirtualSource`s API with single-channel sound source and quad panner:
 ```cpp
@@ -124,8 +117,8 @@ panner.ProcessVirtualSources(virtualSources, quadGains);
 - **Spatialization** - source code for the library
 - **SpatializationTests** - a set of tests to validate the behavior of the features and interfaces
 - **docs** - so far non-functioning auto-generated documentation
-- **scripts** - build scripts; running `Setup.bat` will create VS 2022 solution
-- **vendor** - dependencies
+- **build** - build scripts; running `cmake_vs2022_cl_x64.bat` will create VS 2022 solution
+- **cmake** - cmake utilities
 ## Library structure
 As much of the library as possible is header-only.
 
@@ -142,7 +135,7 @@ As much of the library as possible is header-only.
 		- **PanningService.h** - VBAP/MDAP Panning, Virtual Sources
 		- **DirectPathService.h** - Distance and Angle based Attenuation
 		- ..others.
-- *"Low level" features and utilities that can be used on their own dependency-free:*
+- *"Low level" features and utilities that can be used on their own:*
 	- **ChannelMap.h**
 	- **VBAP.h**
 	- **DistanceAttenuation.h**
@@ -152,8 +145,9 @@ As much of the library as possible is header-only.
 - For an example of integrating **Services** take a look at [SpatialManager.h](https://github.com/Jaytheway/JPLSpatial/blob/main/Spatialization/include/JPLSpatial/SpatialManager.h)
 ## Compiling
 - Some includes can be used as is as a single header include in your project.
-- For now Services and other high level APIs depend on utilities from [JoltPhysics](https://github.com/jrouwe/JoltPhysics)
-- Compiles with Visual Studio 2022, other compiles haven't been tested
+- Depends only on the standard template library.
+- Tests optionally can be ran with Jolt passing `-DTEST_WITH_JOLT=ON` flag.
+- Compiles with Visual Studio 2022, other compiles haven't been tested.
 - Uses C++20
 ## Updates
 JPLSpatial library is going to be updated as the need for more features matches my time availability to work on them.
