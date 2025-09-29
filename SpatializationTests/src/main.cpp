@@ -74,7 +74,7 @@ static void Main(int argc, char* argv[])
 #if defined(JPL_TEST_WITH_JOLT)
     JPH::RegisterDefaultAllocator();
 #endif
-	JPL::Trace = JPLTraceCallback;
+	JPL::SpatialTrace = JPLTraceCallback;
 }
 
 #if defined(JPL_TEST_WITH_JOLT)
