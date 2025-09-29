@@ -293,8 +293,9 @@ namespace JPL
 		static const Vec3Type cUpAxis(0, 1, 0); // TODO: this is very assuming
 #if 1
 		const Basis<Vec3Type> listenerBasis = listener.Orientation.ToBasisUnsafe();
+		const Vec3Type sourceRelativePosition = source.Location - listener.Location;
 
-		Vec3Type sourcePosInListenerFrame = listenerBasis.Transform(source.Location);
+		Vec3Type sourcePosInListenerFrame = listenerBasis.InverseTransform(sourceRelativePosition);
 		// If source is directly on top, above or below the listener,
 		// nudge it a bit forward
 		//! Assuming Y axis is UP-DOWN

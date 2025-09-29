@@ -285,7 +285,7 @@ namespace JPL::Spatial
 				.Id = mDefaultListener,
 				.Position = {
 					.Location = Vec3Type(0, 0, 0),
-					.Orientation = Orientation<Vec3Type>::Identity()
+					.Orientation = Orientation<Vec3Type>::IdentityForward()
 				}}
 			}
 		};
@@ -442,7 +442,7 @@ namespace JPL::Spatial
 			.Id = listenerId,
 				.Position = {
 					.Location = Vec3Type(0, 0, 0),
-					.Orientation = Orientation<Vec3Type>::Identity()
+					.Orientation = Orientation<Vec3Type>::IdentityForward()
 			}
 		});
 		return listenerId;

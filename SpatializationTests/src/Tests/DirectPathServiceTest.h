@@ -22,6 +22,7 @@
 #include "JPLSpatial/Core.h"
 #include "JPLSpatial/Services/DirectPathService.h"
 
+#include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/MinimalVec3.h"
 #include "JPLSpatial/Math/MinimalQuat.h"
 #include "JPLSpatial/Math/Position.h"
@@ -30,7 +31,8 @@
 #include <cmath>
 #include <random>
 #include <numbers>
-#include <chrono>
+#include <vector>
+#include <string>
 
 namespace JPL
 {
@@ -39,17 +41,61 @@ namespace JPL
 	protected:
 		using Vec3 = MinimalVec3;
 
-		static JPL_INLINE float DegreesToRadians(float degrees)
-		{
-			return degrees * (std::numbers::pi_v<float> / 180.0f);
-		}
-
 		static JPL_INLINE Position<Vec3> GetForwardFacingIdentity()
 		{
 			return Position<Vec3>{
 				.Location = Vec3(0, 0, 0),
-				.Orientation = { .Up = Vec3(0, 1, 0), .Forward = Vec3(0, 0, -1) }//Quat<Vec3>::Identity()
+				.Orientation = Orientation<Vec3>::IdentityForward()
 			};
+		}
+	};
+	
+	class ProcessDirectPath : public ProcessAngleAttenuationTest
+	{
+	protected:
+		enum class EFacing { Forward, Backward, Left, Right };
+		struct ListenerTestCase
+		{
+			std::string Description;
+			Position<Vec3> Position;
+		};
+
+
+		static Orientation<Vec3> OrientForward(const Vec3& forward)
+		{
+			return Orientation<Vec3>{.Up = Vec3(0, 1, 0), .Forward = forward };
+		};
+
+		static ListenerTestCase GetListenerCaseFor(EFacing direction)
+		{
+			switch (direction)
+			{
+			case ProcessDirectPath::EFacing::Forward:
+				return {
+					.Description = "Listener at origin, facing forwawrd",
+					.Position = {.Location = Vec3(0, 0, 0), .Orientation = OrientForward(Vec3(0, 0, -1)) }
+				};
+			case ProcessDirectPath::EFacing::Backward:
+				return {
+						.Description = "Listener at origin, facing backward",
+						.Position = {.Location = Vec3(0, 0, 0), .Orientation = OrientForward(Vec3(0, 0, 1)) }
+				};
+			case ProcessDirectPath::EFacing::Left:
+				return {
+						.Description = "Listener at origin, facing left",
+						.Position = {.Location = Vec3(0, 0, 0), .Orientation = OrientForward(Vec3(-1, 0, 0)) }
+				};
+			case ProcessDirectPath::EFacing::Right:
+				return {
+					.Description = "Listener at origin, facing right",
+					.Position = {.Location = Vec3(0, 0, 0), .Orientation = OrientForward(Vec3(1, 0, 0)) }
+				};
+			default:
+				return {
+					.Description = "Listener at origin, facing forwawrd",
+					.Position = {.Location = Vec3(0, 0, 0), .Orientation = OrientForward(Vec3(0, 0, -1)) }
+				};
+			}
 		}
 	};
 
@@ -60,8 +106,8 @@ namespace JPL
 		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		Vec3 forw = referencePoint.Orientation.ToBasisUnsafe().Transform(Vec3(0, 0, 1)); // get forward axis rotation
 		AttenuationCone cone;
-		cone.InnerAngle = DegreesToRadians(60.0f);
-		cone.OuterAngle = DegreesToRadians(120.0f);
+		cone.InnerAngle = Math::ToRadians(60.0f);
+		cone.OuterAngle = Math::ToRadians(120.0f);
 		float coneOuterGain = 0.5f;
 
 		// Expected Output
@@ -80,12 +126,12 @@ namespace JPL
 	{
 		// Inputs
 		// Position at 45 degrees off the forward vector (-Z)
-		float angle = DegreesToRadians(45.0f);
+		float angle = Math::ToRadians(45.0f);
 		Vec3 position(std::sin(angle), 0.0f, -std::cos(angle));
 		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
-		cone.InnerAngle = DegreesToRadians(60.0f);
-		cone.OuterAngle = DegreesToRadians(120.0f);
+		cone.InnerAngle = Math::ToRadians(60.0f);
+		cone.OuterAngle = Math::ToRadians(120.0f);
 		float coneOuterGain = 0.5f;
 
 		// Compute using original function
@@ -104,8 +150,8 @@ namespace JPL
 		Vec3 position(0.0f, 0.0f, 1.0f); // Directly behind (since forward is -Z)
 		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
-		cone.InnerAngle = DegreesToRadians(60.0f);
-		cone.OuterAngle = DegreesToRadians(120.0f);
+		cone.InnerAngle = Math::ToRadians(60.0f);
+		cone.OuterAngle = Math::ToRadians(120.0f);
 		float coneOuterGain = 0.5f;
 
 		// Expected Output
@@ -126,8 +172,8 @@ namespace JPL
 		Vec3 position(1.0f, 0.0f, -1.0f); // Arbitrary position in front-left
 		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
-		cone.InnerAngle = DegreesToRadians(45.0f);
-		cone.OuterAngle = DegreesToRadians(45.0f);
+		cone.InnerAngle = Math::ToRadians(45.0f);
+		cone.OuterAngle = Math::ToRadians(45.0f);
 		float coneOuterGain = 0.5f;
 
 		// Compute using original function
@@ -167,8 +213,8 @@ namespace JPL
 		Vec3 position(10.0f, 0.0f, 5.0f); // Arbitrary position
 		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
-		cone.InnerAngle = DegreesToRadians(360.0f);
-		cone.OuterAngle = DegreesToRadians(360.0f);
+		cone.InnerAngle = Math::ToRadians(360.0f);
+		cone.OuterAngle = Math::ToRadians(360.0f);
 		float coneOuterGain = 0.5f;
 
 		// Expected Output: angularGain should be 1.0f
@@ -189,8 +235,8 @@ namespace JPL
 		Vec3 position(0.0f, 1.0f, -1.0f); // Arbitrary position in front-up
 		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
-		cone.InnerAngle = DegreesToRadians(-90.0f);
-		cone.OuterAngle = DegreesToRadians(-180.0f);
+		cone.InnerAngle = Math::ToRadians(-90.0f);
+		cone.OuterAngle = Math::ToRadians(-180.0f);
 		float coneOuterGain = 0.5f;
 
 		float expectedAngularGain = 1.0f;
@@ -210,8 +256,8 @@ namespace JPL
 		Vec3 position(-1.0f, 0.0f, -1.0f); // Arbitrary position in front-left
 		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
-		cone.InnerAngle = DegreesToRadians(120.0f);
-		cone.OuterAngle = DegreesToRadians(60.0f); // Outer angle greater than inner angle
+		cone.InnerAngle = Math::ToRadians(120.0f);
+		cone.OuterAngle = Math::ToRadians(60.0f); // Outer angle greater than inner angle
 		float coneOuterGain = 0.5f;
 
 		// Compute using original function
@@ -228,8 +274,8 @@ namespace JPL
 		// Inputs
 		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
-		cone.InnerAngle = DegreesToRadians(60.0f);
-		cone.OuterAngle = DegreesToRadians(90.0f);
+		cone.InnerAngle = Math::ToRadians(60.0f);
+		cone.OuterAngle = Math::ToRadians(90.0f);
 		float coneOuterGain = 0.5f;
 
 		// Compute cutoff values
@@ -389,13 +435,13 @@ namespace JPL
 	{
 		// Inputs
 		// Position at 45 degrees off the forward vector (-Z)
-		float azimuth = DegreesToRadians(45.0f);
+		float azimuth = Math::ToRadians(45.0f);
 		Vec3 position(std::sin(azimuth), 0.0f, -std::cos(azimuth));
 
 		Position<Vec3> referencePoint = GetForwardFacingIdentity();
 		AttenuationCone cone;
-		cone.InnerAngle = DegreesToRadians(60.0f);
-		cone.OuterAngle = DegreesToRadians(120.0f);
+		cone.InnerAngle = Math::ToRadians(60.0f);
+		cone.OuterAngle = Math::ToRadians(120.0f);
 		float coneOuterGain = 0.5f;
 
 		// Compute using original function
@@ -411,6 +457,170 @@ namespace JPL
 		EXPECT_TRUE(angularGainOriginal > coneOuterGain);
 		EXPECT_TRUE(angularGainOriginal < 1.0f);
 		EXPECT_NEAR(angularGainAzimuth, angularGainOriginal, tolerance);
+	}
+
+	TEST_F(ProcessDirectPath, ProcessDirectPath_ComputesCorrectDotProducts)
+	{
+		struct DirectPathTestCase
+		{
+			std::string Description;
+			Vec3 SourcePosition;
+			
+			ListenerTestCase ListenerCase;
+
+			float ExpectedDot;
+			float ExpectedInvDot;
+		};
+
+		const std::vector<DirectPathTestCase> testCases
+		{
+			// Listener facing forward
+			{
+				.Description = "Source in world forward",
+				.SourcePosition = Vec3(0.0f, 0.0f, -5.0f),
+				.ListenerCase = GetListenerCaseFor(EFacing::Forward),
+
+				.ExpectedDot = 1.0f,
+				.ExpectedInvDot = -1.0f,
+			},
+			{
+				.Description = "Source above the listener",
+				.SourcePosition = Vec3(0.0f, 5.0f, 0.0f),
+				.ListenerCase = GetListenerCaseFor(EFacing::Forward),
+
+				.ExpectedDot = 0.0f,
+				.ExpectedInvDot = 0.0f,
+			},
+			{
+				.Description = "Source in world left",
+				.SourcePosition = Vec3(-5.0f, 0.0f, 0.0f),
+				.ListenerCase = GetListenerCaseFor(EFacing::Forward),
+
+				.ExpectedDot = 0.0f,
+				.ExpectedInvDot = 0.0f,
+			},
+			{
+				.Description = "Source on top of the listener",
+				.SourcePosition = Vec3(0.0f, 0.0f, 0.0f),
+				.ListenerCase = GetListenerCaseFor(EFacing::Forward),
+				
+				.ExpectedDot = 1.0f,
+				.ExpectedInvDot = -1.0f,
+			},
+
+			// Listener facing backward
+			{
+				.Description = "Source in world forward",
+				.SourcePosition = Vec3(0.0f, 0.0f, -5.0f),
+				.ListenerCase = GetListenerCaseFor(EFacing::Backward),
+
+				.ExpectedDot = -1.0f,
+				.ExpectedInvDot = -1.0f,
+			},
+			{
+				.Description = "Source above the listener",
+				.SourcePosition = Vec3(0.0f, 5.0f, 0.0f),
+				.ListenerCase = GetListenerCaseFor(EFacing::Backward),
+
+				.ExpectedDot = 0.0f,
+				.ExpectedInvDot = 0.0f,
+			},
+			{
+				.Description = "Source in world left",
+				.SourcePosition = Vec3(-5.0f, 0.0f, 0.0f),
+				.ListenerCase = GetListenerCaseFor(EFacing::Backward),
+
+				.ExpectedDot = 0.0f,
+				.ExpectedInvDot = 0.0f,
+			},
+			{
+				.Description = "Source on top of the listener",
+				.SourcePosition = Vec3(0.0f, 0.0f, 0.0f),
+				.ListenerCase = GetListenerCaseFor(EFacing::Backward),
+
+				.ExpectedDot = 1.0f,
+				.ExpectedInvDot = 1.0f,
+			},
+
+			// Listener offset, facing fowrard
+			{
+				.Description = "Source in world forward",
+				.SourcePosition = Vec3(0.0f, 0.0f, -10.0f),
+				.ListenerCase = {
+					.Description = "Listener moved forward, facing forwawrd",
+					.Position = {.Location = Vec3(0, 0, -5), .Orientation = OrientForward(Vec3(0, 0, -1)) }
+				},
+
+				.ExpectedDot = 1.0f,
+				.ExpectedInvDot = -1.0f,
+			},
+			{
+				.Description = "Source in world diagonal fowrard-right",
+				.SourcePosition = Vec3(10.0f, 0.0f, -10.0f),
+				.ListenerCase = {
+					.Description = "Listener left of the source, facing forwawrd",
+					.Position = {.Location = Vec3(0, 0, -10), .Orientation = OrientForward(Vec3(0, 0, -1)) }
+				},
+
+				.ExpectedDot = 0.0f,
+				.ExpectedInvDot = 0.0f,
+			},
+			{
+				.Description = "Source in world diagonal forward-left",
+				.SourcePosition = Vec3(-10.0f, 0.0f, -10.0f),
+				.ListenerCase = {
+					.Description = "Listener diagonal forward-right of the source, facing forwawrd",
+					.Position = {.Location = Vec3(0, 0, -20), .Orientation = OrientForward(Vec3(0, 0, -1)) }
+				},
+
+				.ExpectedDot = -0.7071f,
+				.ExpectedInvDot = 0.7071f,
+			},
+
+			// Listener offset, facing source
+			{
+				.Description = "Source in world diagonal forward-right",
+				.SourcePosition = Vec3(10.0f, 0.0f, -10.0f),
+				.ListenerCase = {
+					.Description = "Listener diagonal back-left of the source, facing source",
+					.Position = {.Location = Vec3(5, 0, -5), .Orientation = OrientForward(Normalized(Vec3(1, 0, -1))) }
+				},
+
+				.ExpectedDot = 1.0f,
+				.ExpectedInvDot = -0.7071f,
+			},
+			{
+				.Description = "Source in world diagonal forward-left",
+				.SourcePosition = Vec3(-10.0f, 0.0f, -10.0f),
+				.ListenerCase = {
+					.Description = "Listener diagonal fowrard-right of the source, facing source",
+					.Position = {.Location = Vec3(0, 0, -20), .Orientation = OrientForward(Normalized(Vec3(-1, 0, 1))) }
+				},
+
+				.ExpectedDot = 1.0f,
+				.ExpectedInvDot = 0.7071f,
+			},
+		};
+
+		static constexpr float tolerance = 1e-5f;
+
+		for (const DirectPathTestCase& testCase : testCases)
+		{
+			const Position<Vec3>& listenerPosition = testCase.ListenerCase.Position;
+
+			SCOPED_TRACE(testCase.ListenerCase.Description);
+			SCOPED_TRACE(testCase.Description);
+
+			const Position<Vec3> sourcePosition{
+				.Location = testCase.SourcePosition,
+				.Orientation = Orientation<Vec3>::IdentityForward()
+			};
+
+			const DirectPathResult<Vec3> result = DirectPathService<>::ProcessDirectPath(sourcePosition, listenerPosition);
+
+			EXPECT_NEAR(result.DirectionDot, testCase.ExpectedDot, tolerance);
+			EXPECT_NEAR(result.InvDirectionDot, testCase.ExpectedInvDot, tolerance);
+		}
 	}
 
 } // namespace JPL

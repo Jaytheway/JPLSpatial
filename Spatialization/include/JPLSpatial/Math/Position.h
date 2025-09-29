@@ -22,6 +22,7 @@
 #include "JPLSpatial/Core.h"
 #include "JPLSpatial/Math/MinimalQuat.h"
 #include "JPLSpatial/Math/MinimalBasis.h"
+#include "JPLSpatial/Math/Vec3Traits.h"
 
 namespace JPL
 {
@@ -41,25 +42,35 @@ namespace JPL
 			return { .Up = Vec3Type(0, 1, 0), .Forward = Vec3Type(0, 0, 1) };
 		}
 
+		/// Identity facing forward as per right-handed rotation
+		[[nodiscard]] JPL_INLINE static Orientation<Vec3Type> IdentityForward() noexcept
+		{
+			return { .Up = Vec3Type(0, 1, 0), .Forward = Vec3Type(0, 0, -1) };
+		}
+
 		[[nodiscard]] JPL_INLINE Basis<Vec3Type> ToBasis() const noexcept
 		{
-			return Math::MakeBasis(Forward, Up);
+			//! Flip forward to accomodate right-handed rotatation
+			return Math::MakeBasis(-Forward, Up);
 		}
 
 		// Use this if Up and Forward are guaranteed to be orthogonal
 		[[nodiscard]] JPL_INLINE Basis<Vec3Type> ToBasisUnsafe() const
 		{
-			JPL_ASSERT(Math::IsNearlyZero(DotProduct(Up, Forward)));
+			//! Flip forward to accomodate right-handed rotatation
+			const Vec3Type forward = -Forward;
+			JPL_ASSERT(Math::IsNearlyZero(DotProduct(Up, forward)));
 			return Basis<Vec3Type>{
-				.X = CrossProduct(Up, Forward),
+				.X = CrossProduct(Up, forward),
 				.Y = Up,
-				.Z = Forward
+				.Z = forward
 			};
 		}
 
 		[[nodiscard]] JPL_INLINE Quat<Vec3Type> ToQuat() const noexcept
 		{
-			return Math::QuatFromUpAndForward(Up, Forward);
+			//! Flip forward to accomodate right-handed rotatation
+			return Math::QuatFromUpAndForward(Up, -Forward);
 		}
 	};
 
