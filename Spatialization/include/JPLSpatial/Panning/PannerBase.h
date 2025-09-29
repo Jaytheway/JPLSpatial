@@ -51,7 +51,7 @@
 namespace JPL
 {
 	/// Forward declaration
-	template<CVec3Accessible Vec3, template<class> class AllocatorType = std::allocator>
+	template<CVec3 Vec3, template<class> class AllocatorType = std::allocator>
 	struct VBAPBaseTraits;
 
 	//======================================================================
@@ -60,7 +60,7 @@ namespace JPL
 	//======================================================================
 	/// Customization. You can either inherit from this and shadow some types
 	/// and functions, or use a completely separate traits type with VBAP API.
-	template<CVec3Accessible Vec3, template<class> class Allocator>
+	template<CVec3 Vec3, template<class> class Allocator>
 	struct VBAPBaseTraits
 	{
 		template<class T>

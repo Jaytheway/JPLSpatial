@@ -109,7 +109,7 @@ namespace JPL
 
     [[nodiscard]] static JPL_INLINE constexpr MinimalVec3 Abs(const MinimalVec3& V) noexcept { return { Math::Abs(V.X), Math::Abs(V.Y), Math::Abs(V.Z) }; }
 
-    // CVec3Accessible interface
+    // CVec3 interface
     template<>
     struct Vec3Access<MinimalVec3>
     {

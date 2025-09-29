@@ -72,7 +72,7 @@ namespace JPH
 	JPL_INLINE [[nodiscard]] float Length(const JPH::Vec3& V) { return V.Length(); }
 }
 
-static_assert(JPL::CVec3Accessible<JPH::Vec3>);
+static_assert(JPL::CVec3<JPH::Vec3>);
 #endif
 
 namespace glm

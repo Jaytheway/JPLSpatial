@@ -126,7 +126,7 @@ namespace JPL
 	};
 
 	//==========================================================================
-	template<CVec3Accessible Vec3Type, template<class> class Allocator = std::allocator>
+	template<CVec3 Vec3Type, template<class> class Allocator = std::allocator>
 	class PanningService
 	{
 		template<class T>
@@ -264,7 +264,7 @@ namespace JPL
 //==============================================================================
 namespace JPL
 {
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE auto PanningService<Vec3Type, AllocatorType>::CreatePannerFor(ChannelMap targetChannelMap) -> const PannerType*
 	{
 		if (!targetChannelMap.IsValid())
@@ -282,14 +282,14 @@ namespace JPL
 		return &panner;
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE auto PanningService<Vec3Type, AllocatorType>::GetPannerFor(ChannelMap targetChannelMap) const -> const PannerType*
 	{
 		auto it = mPanners.find(targetChannelMap);
 		return it != mPanners.end() ? &(it->second) : nullptr;
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE auto PanningService<Vec3Type, AllocatorType>::CreatePanningDataFor(SourceLayoutKey layout, PanEffectHandle source /*= {}*/)
 		-> std::shared_ptr<const SourceLayout>
 	{
@@ -319,7 +319,7 @@ namespace JPL
 		return sourceLayout;
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE auto PanningService<Vec3Type, AllocatorType>::GetPanningDataFor(SourceLayoutKey layout) const -> std::shared_ptr<const SourceLayout>
 	{
 		auto sourceLayout = mInitializedSourceLayouts.find(layout);
@@ -329,7 +329,7 @@ namespace JPL
 		return nullptr;
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::CreateChannelGainsFor(ChannelMap targetChannelMap,
 																				   ChannelMap sourceChannelMap,
 																				   std::vector<ChannelGains>& outChannelGains) const
@@ -344,7 +344,7 @@ namespace JPL
 		return true;
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::CreateChannelGainsFor(ChannelMap targetChannelMap, PanEffectHandle source)
 	{
 		if (!targetChannelMap.IsValid() || !source.IsValid() || !mSourceLayouts.contains(source))
@@ -367,7 +367,7 @@ namespace JPL
 			return true;
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE auto PanningService<Vec3Type, AllocatorType>::GetChannelGainsFor(PanEffectHandle source, ChannelMap targetChannelMap) const
 		-> std::span<const ChannelGains>
 	{
@@ -383,7 +383,7 @@ namespace JPL
 		return {};
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE PanEffectHandle PanningService<Vec3Type, AllocatorType>::InitializePanningEffect(const PanEffectInitParameters& initParameters)
 	{
 		if (!initParameters.SourceChannelMap.IsValid())
@@ -427,7 +427,7 @@ namespace JPL
 		return {};
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::ReleasePanningEffect(PanEffectHandle source)
 	{
 		return mSourceLayouts.erase(source)
@@ -438,7 +438,7 @@ namespace JPL
 		});
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::AddSourceTargets(PanEffectHandle source, std::span<const ChannelMap> targetChannelMaps)
 	{
 		if (!source.IsValid())
@@ -464,13 +464,13 @@ namespace JPL
 		return hasAnyTargetInitialized;
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::AddSourceTargets(PanEffectHandle source, std::initializer_list<const ChannelMap> targetChannelMaps)
 	{
 		return AddSourceTargets(source, std::span(targetChannelMaps));
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::EvaluateDirection(PanEffectHandle source, const Position<Vec3Type>& position, ESpatializationType spatialziationType)
 	{
 		if (!source.IsValid())
@@ -537,14 +537,14 @@ namespace JPL
 		return true;
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE auto PanningService<Vec3Type, AllocatorType>::GetSourceLayoutFor(PanEffectHandle source) const -> std::shared_ptr<const SourceLayout>
 	{
 		auto data = mSourceLayouts.find(source);
 		return data == mSourceLayouts.end() ? nullptr : data->second;
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::SetPanningEffectParameters(PanEffectHandle effect, const PanEffectParameters& parameters)
 	{
 		if (!effect.IsValid())
@@ -554,7 +554,7 @@ namespace JPL
 		return true;
 	}
 
-	template<CVec3Accessible Vec3Type, template<class> class AllocatorType>
+	template<CVec3 Vec3Type, template<class> class AllocatorType>
 	JPL_INLINE bool JPL::PanningService<Vec3Type, AllocatorType>::SetPanningEffectSpread(PanEffectHandle effect, float spread)
 	{
 		if (!effect.IsValid())

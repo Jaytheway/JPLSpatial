@@ -28,13 +28,13 @@
 
 namespace JPL::Internal
 {
-	template<CVec3Accessible Vec3>
+	template<CVec3 Vec3>
 	using FloatOf = std::remove_cvref_t<decltype(GetX(std::declval<Vec3>()))>;
 }
 
 namespace JPL::Math
 {
-	template<CVec3Accessible Vec3>
+	template<CVec3 Vec3>
 	[[nodiscard]] JPL_INLINE constexpr bool IsNearlyEqual(const Vec3& a,
 														  const Vec3& b,
 														  Internal::FloatOf<Vec3> tolerance = JPL_FLOAT_EPS_V<Internal::FloatOf<Vec3>>) noexcept
@@ -44,14 +44,14 @@ namespace JPL::Math
 			&& IsNearlyEqual(GetZ(a), GetZ(b), tolerance);
 	}
 
-	template<CVec3Accessible Vec3>
+	template<CVec3 Vec3>
 	[[nodiscard]] JPL_INLINE constexpr bool IsNearlyZero(const Vec3& a,
 														 Internal::FloatOf<Vec3> tolerance = JPL_FLOAT_EPS_V<Internal::FloatOf<Vec3>>) noexcept
 	{
 		return IsNearlyEqual(a, Vec3(0, 0, 0));
 	}
 
-	template<CVec3Accessible Vec3>
+	template<CVec3 Vec3>
 	[[nodiscard]] JPL_INLINE bool HasNans(const Vec3& vec)
 	{
 		return std::isnan(GetX(vec))
@@ -59,7 +59,7 @@ namespace JPL::Math
 			|| std::isnan(GetZ(vec));
 	}
 
-	template<CVec3Accessible Vec3>
+	template<CVec3 Vec3>
 	[[nodiscard]] inline Vec3 GetNormalizedPerpendicular(const Vec3& vec) noexcept
 	{
 		using FloatType = Internal::FloatOf<Vec3>;
@@ -76,7 +76,7 @@ namespace JPL::Math
 		}
 	};
 
-	template<CVec3Accessible Vec3>
+	template<CVec3 Vec3>
 	inline void CreateOrthonormalBasis(const Vec3& normal, Vec3& tangent, Vec3& bitangent) noexcept
 	{
 		using FloatType = Internal::FloatOf<Vec3>;
@@ -99,7 +99,7 @@ namespace JPL::Math
 	/// @param v : vector to rotate
 	/// @param k : axis to rotate 'v' around
 	/// @param theta : angle to rotate 'v' around 'k' axis
-	template<CVec3Accessible Vec3>
+	template<CVec3 Vec3>
 	[[nodiscard]] JPL_INLINE Vec3 RotateVector(const Vec3& vector, const Vec3& rotationAxis, float angleRad) noexcept
 	{
 		const auto [sinTheta, cosTheta] = Math::SinCos(angleRad);
@@ -108,7 +108,7 @@ namespace JPL::Math
 			+ rotationAxis * DotProduct(rotationAxis, vector) * (1.0f - cosTheta);
 	}
 
-	template<CVec3Accessible Vec3>
+	template<CVec3 Vec3>
 	[[nodiscard]] JPL_INLINE Vec3 Lerp(const Vec3& v0, const Vec3& v1, float t) noexcept
 	{
 		return v0 + t * (v1 - v0);
@@ -116,14 +116,14 @@ namespace JPL::Math
 
 	/// Linearly interpolate v0 towards v1 and normalize.
 	/// Input vectors must be normalized
-	template<CVec3Accessible Vec3>
+	template<CVec3 Vec3>
 	[[nodiscard]] JPL_INLINE Vec3 Nlerp(const Vec3& v0, const Vec3& v1, float t) noexcept
 	{
 		return Normalized(Lerp(v0, v1, t));
 	}
 
 	/// Input vectors must be normalized
-	template<CVec3Accessible Vec3>
+	template<CVec3 Vec3>
 	[[nodiscard]] inline Vec3 Slerp(const Vec3& v0, const Vec3& v1, float t) noexcept
 	{
 		using FloatType = Internal::FloatOf<Vec3>;

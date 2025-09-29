@@ -77,7 +77,7 @@ namespace JPL::Math
     };
 
     /// Minimal 3x3 matrix interface
-    template<CVec3Accessible Vec3>
+    template<CVec3 Vec3>
     struct Mat3
     {
         using Float =  Internal::FloatOf<Vec3>;

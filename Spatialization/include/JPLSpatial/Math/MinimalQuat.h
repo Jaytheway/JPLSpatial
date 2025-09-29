@@ -33,7 +33,7 @@ namespace JPL
 {
     //======================================================================
     ///  Minimal quaternion  (w + xi + yj + zk)
-    template<CVec3Accessible Vec3>
+    template<CVec3 Vec3>
     struct Quat
     {
         using Float = Internal::FloatOf<Vec3>;
@@ -222,11 +222,11 @@ namespace JPL
 
     };
 
-    template<CVec3Accessible Vec3>
+    template<CVec3 Vec3>
     std::ostream& operator<<(std::ostream& os, const Quat<Vec3>& quat) { os << "V ={ " << GetX(quat.V) << ", " << GetY(quat.V) << ", " << GetZ(quat.V) << " }, W = " << quat.W; return os; }
 
     /// Slerp two Quats based on `t`
-    template<CVec3Accessible Vec3>
+    template<CVec3 Vec3>
     [[nodiscard]] static inline Quat<Vec3> Slerp(const Quat<Vec3>& a, const Quat<Vec3>& b, typename Quat<Vec3>::Float t) noexcept
     {
         using F = typename Quat<Vec3>::Float;
@@ -255,37 +255,37 @@ namespace JPL
     {
         // Mainly just some helpers for template argument deduction
 
-        template<CVec3Accessible Vec3>
+        template<CVec3 Vec3>
         [[nodiscard]] static JPL_INLINE Quat<Vec3> GetDeltaQuat(const Quat<Vec3>& a, const Quat<Vec3> b) noexcept
         {
             return a * b.Conjugated();
         }
 
-        template<CVec3Accessible Vec3>
+        template<CVec3 Vec3>
         [[nodiscard]] static JPL_INLINE Quat<Vec3> QuatRotation(const Vec3& axis, Internal::FloatOf<Vec3> angleRad) noexcept
         {
             return Quat<Vec3>::Rotation(axis, angleRad);
         }
 
-        template<CVec3Accessible Vec3>
+        template<CVec3 Vec3>
         [[nodiscard]] static JPL_INLINE Quat<Vec3> QuatFromTo(const Vec3& from, const Vec3& to) noexcept
         {
             return Quat<Vec3>::FromTo(from, to);
         }
 
-        template<CVec3Accessible Vec3>
+        template<CVec3 Vec3>
         [[nodiscard]] static JPL_INLINE Quat<Vec3> QuatFromBasis(const Basis<Vec3>& basis) noexcept
         {
             return Quat<Vec3>::FromBasis(basis);
         }
 
-        template<CVec3Accessible Vec3>
+        template<CVec3 Vec3>
         [[nodiscard]] static JPL_INLINE Quat<Vec3> QuatFromUpAndForward(const Vec3& up, const Vec3& forward) noexcept
         {
             return Quat<Vec3>::FromUpAndForward(up, forward);
         }
 
-        template<CVec3Accessible Vec3>
+        template<CVec3 Vec3>
         [[nodiscard]] static JPL_INLINE Quat<Vec3> QuatLookAt(const Vec3& direction, const Vec3& up) noexcept
         {
             return Quat<Vec3>::LookAt(direction, up);

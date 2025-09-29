@@ -38,7 +38,7 @@
 namespace JPL
 {
 	//==========================================================================
-	template<CVec3Accessible Vec3Type>
+	template<CVec3 Vec3Type>
 	struct DirectPathResult
 	{
 		float Distance;					//< Distance from source to listener
@@ -115,10 +115,10 @@ namespace JPL
 		/// @param referencePoint		reference point to compute parameters from, in world space
 		/// 
 		/// @returns					paramteres of the position relative to the reference point
-		template<CVec3Accessible Vec3Type>
+		template<CVec3 Vec3Type>
 		static JPL_INLINE DirectPathResult<Vec3Type> ProcessDirectPath(const Position<Vec3Type>& source,
 															 const Position<Vec3Type>& listener);
-		template<CVec3Accessible Vec3Type>
+		template<CVec3 Vec3Type>
 		static JPL_INLINE float ProcessAngleAttenuation(const Vec3Type& position,
 														const Position<Vec3Type>& referencePoint,
 														AttenuationCone cone);
@@ -286,7 +286,7 @@ namespace JPL
 	}
 
 	template<template<class> class AllocatorType>
-	template<CVec3Accessible Vec3Type>
+	template<CVec3 Vec3Type>
 	JPL_INLINE DirectPathResult<Vec3Type> DirectPathService<AllocatorType>::ProcessDirectPath(const Position<Vec3Type>& source, const Position<Vec3Type>& listener)
 	{
 		static const Vec3Type cForwardAxis(0, 0, -1); // TODO: this is very assuming
@@ -391,7 +391,7 @@ namespace JPL
 	}
 
 	template<template<class> class AllocatorType>
-	template<CVec3Accessible Vec3Type>
+	template<CVec3 Vec3Type>
 	JPL_INLINE float DirectPathService<AllocatorType>::ProcessAngleAttenuation(const Vec3Type& position,
 																const Position<Vec3Type>& referencePoint,
 																AttenuationCone cone)

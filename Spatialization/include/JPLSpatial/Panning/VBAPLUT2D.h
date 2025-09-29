@@ -88,7 +88,7 @@ namespace JPL::VBAP
         /// Function to query LUT gains for a direction.
         /// @param direction : has to be normalized unit vector
         /// @param outGains : must be of size at least number of target speakers the LUT was built for
-        template<CVec3Accessible Vec3Type>
+        template<CVec3 Vec3Type>
         JPL_INLINE void GainsFor(const Vec3Type& direction, std::span<float> outGains) const
         {
             LUT.GetSpeakerGains({ GetX(direction), GetZ(direction) }, outGains);

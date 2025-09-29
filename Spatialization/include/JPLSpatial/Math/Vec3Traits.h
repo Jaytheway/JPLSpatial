@@ -38,7 +38,7 @@ namespace JPL
 	template<class Vec3Type> JPL_INLINE void SetZ(Vec3Type& v, float value) noexcept { Vec3Access<Vec3Type>::SetZ(v, value); }
 
 	template<class T>
-	concept CVec3Accessible = requires (T& v)
+	concept CVec3 = requires (T& v)
 	{
 		// Note: Getters and Setters should be noexcept
 

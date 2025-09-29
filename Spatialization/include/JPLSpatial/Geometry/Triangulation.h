@@ -74,7 +74,7 @@ namespace JPL
         // Perform an ear-clipping triangulation that always clips the ear
         // whose triangle has the largest minimum interior angle
         // - a cheap heuristic that strongly discourages long, skinny slivers.
-        template<CVec3Accessible Vec3, class Vec3i>
+        template<CVec3 Vec3, class Vec3i>
         void TriangulatePoly(std::span<const Vec3> inPositions, std::span<int> poly, std::vector<Vec3i>& outTris)
         {
             using IndexType = std::remove_cvref_t<decltype(std::declval<Vec3i>()[0])>;

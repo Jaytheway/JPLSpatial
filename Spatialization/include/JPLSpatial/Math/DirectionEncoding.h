@@ -136,7 +136,7 @@ namespace JPL
         /// 
         /// @param direction    : direction vector to be encoded, must be normalized and non-zero
         /// @returns            : integer encoded representation of the input direction vector
-        template<CVec3Accessible Vec3>
+        template<CVec3 Vec3>
         static constexpr EncodedType Encode(const Vec3& direction);
 
         /// Decodes octahedron encoded direction back to a vector.
@@ -144,7 +144,7 @@ namespace JPL
         ///
         /// @param encodedDirection : the octahedron integer to be decoded back to a direction vector.
         /// @returns : direction vector represented by the input octahedron.
-        template<CVec3Accessible Vec3>
+        template<CVec3 Vec3>
         static constexpr Vec3 Decode(EncodedType encodedDirection);
 
         /// Check if 'code' falls within valid range of the encoder's precision,
@@ -172,7 +172,7 @@ namespace JPL
     /// 
     /// @param direction : direction vector to be encoded, must be normalized and non-zero
     /// @returns : encoded representation of the input direction vector
-    template<CVec3Accessible Vec3>
+    template<CVec3 Vec3>
     JPL_INLINE constexpr uint32 ToOctahedron32(const Vec3& direction) { return Octahedron32Bit::Encode(direction); }
 
     /// Decode octahedron encoded direction back to a vector.
@@ -180,7 +180,7 @@ namespace JPL
     ///
     /// @param encodedDirection : the octahedron integer to be decoded back to a direction vector.
     /// @returns : direction vector represented by the input octahedron.
-    template<CVec3Accessible Vec3>
+    template<CVec3 Vec3>
     JPL_INLINE constexpr Vec3 FromOctahedron32(uint32 encodedDirection) { return Octahedron32Bit::Decode<Vec3>(encodedDirection); }
 
     //==========================================================================
@@ -260,7 +260,7 @@ namespace JPL
     }
 
     template<Octahedron::CPrecision Precision>
-    template<CVec3Accessible Vec3>
+    template<CVec3 Vec3>
     constexpr OctahedronEncoding<Precision>::EncodedType OctahedronEncoding<Precision>::Encode(const Vec3& direction)
     {
         using FloatType = Internal::FloatOf<Vec3>;
@@ -316,7 +316,7 @@ namespace JPL
     }
 
     template<Octahedron::CPrecision Precision>
-    template<CVec3Accessible Vec3>
+    template<CVec3 Vec3>
     constexpr Vec3 JPL::OctahedronEncoding<Precision>::Decode(EncodedType encodedDirection)
     {
         using FloatType = Internal::FloatOf<Vec3>;

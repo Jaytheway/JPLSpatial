@@ -27,7 +27,7 @@
 namespace JPL
 {
 	/// Minimum data required to do our orientation math
-	template<CVec3Accessible Vec3Type>
+	template<CVec3 Vec3Type>
 	struct Orientation
 	{
 		// Note: we may just switch to Basis to store all three axes at some point,
@@ -75,20 +75,20 @@ namespace JPL
 	};
 
 	/// Location and orientation in one place
-	template<CVec3Accessible Vec3Type>
+	template<CVec3 Vec3Type>
 	struct Position
 	{
 		Vec3Type Location;
 		Orientation<Vec3Type> Orientation;
 	};
 
-	template<CVec3Accessible Vec3Type>
+	template<CVec3 Vec3Type>
 	[[nodiscard]] JPL_INLINE bool operator==(const Orientation<Vec3Type>& lhs, const Orientation<Vec3Type>& rhs) noexcept
 	{
 		return lhs.Up== rhs.Up && lhs.Forward == rhs.Forward;
 	}
 
-	template<CVec3Accessible Vec3Type>
+	template<CVec3 Vec3Type>
 	[[nodiscard]] JPL_INLINE bool operator==(const Position<Vec3Type>& lhs, const Position<Vec3Type>& rhs) noexcept
 	{
 		return lhs.Location == rhs.Location && lhs.Orientation == rhs.Orientation;

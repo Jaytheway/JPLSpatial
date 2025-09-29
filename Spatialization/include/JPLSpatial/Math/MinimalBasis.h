@@ -29,7 +29,7 @@
 namespace JPL
 {
 	/// Orthonormal basis (column-major)
-	template<CVec3Accessible Vec3>
+	template<CVec3 Vec3>
 	struct Basis
 	{
 		using Float = Internal::FloatOf<Vec3>;
@@ -136,7 +136,7 @@ namespace JPL
 	{
 		/// Creates a basis from the given forward (normal vector).
 		/// @param n : normal vector, must be normalized
-		template<CVec3Accessible Vec3>
+		template<CVec3 Vec3>
 		[[nodiscard]] JPL_INLINE static Basis<Vec3> MakeBasis(const Vec3& forward) noexcept
 		{
 			return Basis<Vec3>::MakeFrom(forward);
@@ -144,7 +144,7 @@ namespace JPL
 
 		/// Creates a basis from the given forward (normal vector).
 		/// @param n : normal vector, must be normalized
-		template<CVec3Accessible Vec3>
+		template<CVec3 Vec3>
 		[[nodiscard]] JPL_INLINE static Basis<Vec3> MakeBasis(const Vec3& forward, const Vec3& up) noexcept
 		{
 			return Basis<Vec3>::FromUpAndForward(up, forward);

@@ -26,7 +26,7 @@ namespace JPL
 	/// Compute barycentric coordinates of closest point to origin for infinite line defined by (inA, inB)
 	/// Point can then be computed as inA * outU + inB * outV
 	/// Returns false if the points inA, inB do not form a line (are at the same point)
-	template<CVec3Accessible Vec3>
+	template<CVec3 Vec3>
 	inline bool GetBaryCentricCoordinates(const Vec3& inA, const Vec3& inB, float& outU, float& outV)
 	{
 		const Vec3 ab = inB - inA;
@@ -58,7 +58,7 @@ namespace JPL
 
 	/// Get the closest point to the origin of line (inA, inB)
 	/// outSet describes which features are closest: 1 = a, 2 = b, 3 = line segment ab
-	template<CVec3Accessible Vec3>
+	template<CVec3 Vec3>
 	inline Vec3	GetClosestPointOnLine(const Vec3& inA, const Vec3& inB, uint32_t& outSet)
 	{
 		float u, v;

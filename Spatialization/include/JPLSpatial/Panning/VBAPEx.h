@@ -42,7 +42,7 @@ namespace JPL
 	/// Compute 3-dimentional VBAP for a point within triangle of speaker directions.
 	/// @param sourceDirection : normalized direction from listener towards the source
 	/// @returns : gain factors for the three speakers, not normalized
-	template<CVec3Accessible Vec3Type>
+	template<CVec3 Vec3Type>
 	[[nodiscard]] inline Vec3Type ComputeVBAP(const Vec3Type& sourceDirection, const Vec3Type& triPointA, const Vec3Type& triPointB, const Vec3Type& triPointC)
 	{
 		const auto L = Math::Mat3<Vec3Type>::FromColumns(triPointA, triPointB, triPointC);
@@ -132,7 +132,7 @@ namespace JPL
 			return true;
 		}
 
-		template< template<class> class AllocatorType, CVec3Accessible Vec3Type, class Vec3iContainerType>
+		template< template<class> class AllocatorType, CVec3 Vec3Type, class Vec3iContainerType>
 		inline bool TriangulateSpeakerLayout(std::span<const Vec3Type> speakerVectors, Vec3iContainerType& outIndices)
 		{
 			const auto& vertices = speakerVectors;
@@ -169,7 +169,7 @@ namespace JPL
 			return true;
 		}
 
-		template<auto GetSpeakerVectorFunction, CVec3Accessible Vec3Type, class Vec3ContainerType, class Vec3iContainerType, template<class> class AllocatorType = std::allocator>
+		template<auto GetSpeakerVectorFunction, CVec3 Vec3Type, class Vec3ContainerType, class Vec3iContainerType, template<class> class AllocatorType = std::allocator>
 		inline bool TriangulateSpeakerLayout(ChannelMap channelMap, Vec3ContainerType& outVertices, Vec3iContainerType& outIndices)
 		{
 			if (!channelMap.IsValid())
