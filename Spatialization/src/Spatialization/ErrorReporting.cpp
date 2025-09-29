@@ -30,7 +30,7 @@ namespace JPL
 		std::cout << message << "\n";
 	};
 
-	TraceFunction Trace = DummyTrace;
+	TraceFunction SpatialTrace = DummyTrace;
 
 #if defined(JPL_ENABLE_ASSERTS) || defined(JPL_ENABLE_ENSURE)
 

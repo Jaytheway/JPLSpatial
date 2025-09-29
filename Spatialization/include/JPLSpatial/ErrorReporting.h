@@ -32,7 +32,7 @@ namespace JPL
 {
 /// Trace function, needs to be overridden by application. This should output a line of text to the log / TTY.
 using TraceFunction = void (*)(const char* message);
-JPL_EXPORT extern TraceFunction Trace;
+JPL_EXPORT extern TraceFunction SpatialTrace;
 
 // Always turn on asserts in Debug mode
 #if defined(JPL_DEBUG)
@@ -78,15 +78,15 @@ inline bool AssertFailedParamHelper(const char* inExpression, const char* inFile
 #endif // !JPL_ENSURE
 
 #ifndef JPL_TRACE_TAG
-#define JPL_TRACE_TAG(tag, message) Trace(std::format("[{}]: Trace: {}", tag, message).c_str())
+#define JPL_TRACE_TAG(tag, message) SpatialTrace(std::format("[{}]: Trace: {}", tag, message).c_str())
 #endif // !JPL_TRACE_TAG
 
 #ifndef JPL_INFO_TAG
-#define JPL_INFO_TAG(tag, message) Trace(std::format("[{}]: Trace: {}", tag, message).c_str())
+#define JPL_INFO_TAG(tag, message) SpatialTrace(std::format("[{}]: Trace: {}", tag, message).c_str())
 #endif // !JPL_INFO_TAG
 
 #ifndef JPL_ERROR_TAG
-#define JPL_ERROR_TAG(tag, message) Trace(std::format("[{}]: Trace: {}", tag, message).c_str())
+#define JPL_ERROR_TAG(tag, message) SpatialTrace(std::format("[{}]: Trace: {}", tag, message).c_str())
 #endif // !JPL_ERROR_TAG
 
 } // namespace JPL
