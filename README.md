@@ -7,14 +7,74 @@ Functional WIP
 
 ## Where it's used
 JPLSpatial library is used as a sound spatialization solution in [Hazel Engine](https://hazelengine.com/).
-If you have access to Hazel Engine code, you can check how JPLSpatial is integrated on the `audio` branch.
+If you have access to Hazel Engine code, you can check how JPLSpatial is integrated on `dev` or `audio` branch.
 ## Features
 - Vector-Base Amplitude Panning (VBAP) / Multi-Direction Amplitude Panning (MDAP)
-	- Single-channel sources
-	- Multi-channel sources
-	- Virtual Sources per source channel
-	- Most of the common target/output channel layouts
-	- Elevation / Height channels
+	- Source elevation / Height channels
+
+	- <details>
+		<summary>Supported/tested source channel layouts</summary>
+		<ul>
+		<li>Mono</li>
+		<li>Stereo</li>
+		<li>LCR</li>
+		<li>Quad</li>
+		<li>Surround 4.1</li>
+		<li>Surround 5.0</li>
+		<li>Surround 5.1</li>
+		<li>Surround 6.0</li>
+		<li>Surround 6.1</li>
+		<li>Surround 7.0</li>
+		<li>Surround 7.1</li>
+		<li>Octagonal</li>
+		</ul>
+	</details>
+
+	- <details>
+		<summary>Supported/tested target/output channel layouts</summary>
+		<ul>
+		<br>
+		<b>VBAPanner2D</b>
+
+		---
+		
+		<li>Stereo</li>
+		<li>LCR</li>
+		<li>Quad</li>
+		<li>Surround 4.1</li>
+		<li>Surround 5.0</li>
+		<li>Surround 6.0</li>
+		<li>Surround 5.1</li>
+		<li>Surround 6.1</li>
+		<li>Surround 7.0</li>
+		<li>Surround 7.1</li>
+		<li>Octagonal</li>
+
+		<br>
+		<b>VBAPanner3D</b> <i>(layouts with top channels)</i>
+
+		---
+		
+		<li>Surround 5.0.2</li>
+		<li>Surround 5.1.2</li>
+		<li>Surround 5.0.4</li>
+		<li>Surround 5.1.4</li>
+		<br>		
+		<i>(as per Dolby Atmos surround, but LFE is always 4th channel)</i>
+
+		<li>Surround 7.0.2</li>
+		<li>Surround 7.1.2</li>
+		<li>Surround 7.0.4</li>
+		<li>Surround 7.1.4</li>
+		<li>Surround 7.0.6</li>
+		<li>Surround 7.1.6</li>
+		<li>Surround 9.0.4</li>
+		<li>Surround 9.1.4</li>
+		<li>Surround 9.0.6</li>
+		<li>Surround 9.1.6</li>
+		</ul>
+	</details>
+
 - Distance Attenuation
 	- Custom function
 	- Curves
@@ -22,97 +82,61 @@ If you have access to Hazel Engine code, you can check how JPLSpatial is integra
 		- Inverse
 		- Linear
 		- Exponential
-- Angle Attenuation
+- Angle Attenuation / Cone-based attenuation
 - **High level sound source API**:
 	- Spatial Manager (top level interface managing Sources and Services)
 		- Panning Service
 		- Direct Path Service (for now handles just distance and angle attenuation)
 ## Examples
-The simplest use-case is channel panning using `VBAPPanner`.
-`VBAPPanner` or Vector Based Amplitude Panner handles panning from any source channel map to any target/output channel map.
-
-The simplest, least efficient, way to just use `VBAPanner<>::ProcessAngle` static function:
+Initializing `VBAPPanner`, `SourceLayout` and querying target channel gains for a source direction:
 ```cpp
 #include "JPLSpatial/ChannelMap.h"
-#include "JPLSpatial/VBAP.h"
+#include "JPLSpatial/Panning/VBAPanning2D.h"
 
 #include <span>
 ...
 
-void CalculateChannelGains(float sourceToListenerAngleRadians,
- std::span<const float> speakerAnglesRadians,
- std::span<float> outGains)
-{
-	// Process gains based on simple cos/sin rule	
-	JPL::VBAPanner<>::ProcessAngle(sourceToListenerAngleRadians, speakerAnglesRadians, outGains);
-}
-```
-
-The most efficient way to use `VBAPPanner` is with LUT:
-```cpp
-#include "JPLSpatial/ChannelMap.h"
-#include "JPLSpatial/VBAP.h"
-
-#include <span>
-...
-
-JPL::VBAPanner panner;
+using PannerType = typename JPL::VBAPanner2D<>;
+using SourceLayout = typename PannerType::SourceLayoutType;
+using ChannelGains = typename JPL::VBAPStandartTraits::ChannelGains;
 
 const auto targetChannelMap = JPL::ChannelMap::FromChannelMask(JPL::ChannelMask::Stereo)
+const auto sourceChannelMap = JPL::ChannelMap::FromChannelMask(JPL::ChannelMask::Mono)
 
+PannerType panner;
 panner.InitializeLUT(targetChannelMap);
+
+SourceLayout sourceLayout;
+panner.InitializeSourceLayout(sourceChannelMap, sourceLayout)
 
 ...
 
-// outGains.size() must be <= number of channels of the `targetChannelMap`,
-// in this case of Stereo channel map, number of channels is 2
-void GetChannelGains(float sourceToListenerAngleRadians,
- std::span<float> outGains)
+// `outGains` is going to be filled with the computed panning gains
+// based on input parameters
+void GetChannelGains(
+	const SourceLayout& sourceLayout,
+ 	Vec3 sourceDirection,
+  	float focus, float spread
+ 	ChannelGains& outGains)
 {
 	if (panner.IsInitialized())
 	{
-		panner.GetSpeakerGains(sourceToListenerAngelInRadians, outGains);
+		typename PannerType::PanUpdateData positionData
+		{
+			.SourceDirection = sourceDirection,
+			.Focus = focus,
+			.Spread = spread
+		};
+
+		panner.ProcessVBAPData(
+			sourceLayout,
+			positionData,
+			[&gains](uint32 channel) -> auto& { return gains; });
 	}
 }
 
 ```
----
-A more advanced use cases using `VirtualSource`s, or sometimes they're called Virtual Positions, can be handled manually using low level API of `VBAPPaner`, or higher level API of `PanningService`.
 
----
-Simple example of `VirtualSource`s API with single-channel sound source and quad panner:
-```cpp
-
-#include "JPLSpatial/ChannelMap.h"
-#include "JPLSpatial/VBAP.h"
-
-#include <array>
-#include <vector>
-#include <span>
-...
-
-static constexpr uint32_t NUM_QUAD_CHANNELS = 4;
-
-// Initialize panner for a quad channel map
-JPL::VBAPanner panner;
-
-std::array<float, NUM_QUAD_CHANNELS> quadGains;
-
-panner.InitializeLUT(JPL::ChannelMap::FromNumChannels(static_cast<uint32_t>(quadGains.size())));
-
-...
-
-std::vector<JPL::VirtualSource<>> virtualSources;
-
-// ..assign angles to virtual sources relative to the listener, e.g. based on sound source extent
-for (JPL::VirtualSource<>& vs : virtualSources)
-	vs.Angle = ... // agnle relative to listener in radians
-
-...
-
-panner.ProcessVirtualSources(virtualSources, quadGains);
-
-```
 ## Folder structure
 - **Spatialization** - source code for the library
 - **SpatializationTests** - a set of tests to validate the behavior of the features and interfaces
@@ -139,6 +163,7 @@ As much of the library as possible is header-only.
 	- **ChannelMap.h**
 	- **VBAP.h**
 	- **DistanceAttenuation.h**
+	- **Panning/VBAPEx.h**
 ## Documentation
 - Most of the things annotated in code.
 - For more examples check out tests.
@@ -146,7 +171,7 @@ As much of the library as possible is header-only.
 ## Compiling
 - Some includes can be used as is as a single header include in your project.
 - Depends only on the standard template library.
-- Tests optionally can be ran with Jolt passing `-DTEST_WITH_JOLT=ON` flag.
+- Tests fetch `glm` to validate `glm::vec3` type working with library's interfaces, and optionally can be ran with `JoltPhysics`'s `JPH::Vec3` by passing `-DTEST_WITH_JOLT=ON` flag to test project generator.
 - Compiles with Visual Studio 2022, other compiles haven't been tested.
 - Uses C++20
 ## Updates
