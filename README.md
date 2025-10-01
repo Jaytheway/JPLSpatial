@@ -200,6 +200,54 @@ current frame.
 	</p>
 </details>
 
+### DirectPathService walkthrough
+
+`DirectPathService` owns the distance and cone attenuation caches that the high-level `SpatialManager` queries every update frame. A typical low-level setup is:
+
+```cpp
+#include "JPLSpatial/DistanceAttenuation.h"
+#include "JPLSpatial/Math/Math.h"
+#include "JPLSpatial/Math/MinimalVec3.h"
+#include "JPLSpatial/Services/DirectPathService.h"
+
+using DirectPath = JPL::DirectPathService<>;
+using Vec3 = JPL::MinimalVec3;
+
+DirectPath directPath;
+JPL::DirectEffectInitParameters initParams{
+        .BaseCurve = nullptr,
+        .AttenuationCone = {.InnerAngle = JPL::Math::ToRadians(60.0f), .OuterAngle = JPL::Math::ToRadians(120.0f)}
+};
+JPL::DirectEffectHandle handle = directPath.InitializeDirrectEffect(initParams);
+
+auto* curve = new JPL::AttenuationCurve();
+curve->Points = {
+        {.Distance = 0.0f, .Value = 1.0f, .FunctionType = JPL::Curve::EType::Linear},
+        {.Distance = 20.0f, .Value = 0.25f, .FunctionType = JPL::Curve::EType::Linear}
+};
+curve->SortPoints();
+auto curveRef = directPath.AssignAttenuationCurve(handle, curve);
+
+// Immediate evaluation against a single curve handle
+const float preview = DirectPath::EvaluateDistance(5.0f, curveRef);
+
+// Frame update path: evaluate and cache
+JPL::Position<Vec3> source{{10.0f, 0.0f, -10.0f}, JPL::Orientation<Vec3>::IdentityForward()};
+JPL::Position<Vec3> listener{{0.0f, 0.0f, 0.0f}, JPL::Orientation<Vec3>::IdentityForward()};
+const auto directPathResult = DirectPath::ProcessDirectPath(source, listener);
+directPath.EvaluateDistance(handle, directPathResult.Distance);
+directPath.EvaluateDirection(handle, directPathResult.DirectionDot);
+
+const float cachedDistanceFactor = directPath.GetDistanceAttenuation(handle, curveRef);
+const float cachedConeFactor = directPath.GetDirectionAttenuation(handle);
+```
+
+`ProcessDirectPath` returns both `DirectionDot` (listener-forward alignment) and `InvDirectionDot` (source-forward alignment) so you can decide whether to reuse the listener-facing or source-facing cosine in subsequent frames—the [DirectPathService API](Spatialization/include/JPLSpatial/Services/DirectPathService.h) documents these fields, and [`DirectPathServiceTest`](SpatializationTests/src/Tests/DirectPathServiceTest.h) exercises scenarios such as a listener standing behind a source and validates the expected values. Once the per-frame `EvaluateDistance`/`EvaluateDirection` calls run, the cached values retrieved via `GetDistanceAttenuation`/`GetDirectionAttenuation` stay valid until the next evaluation, letting you keep the mixing hot-path free of curve traversals.
+
+### Tuning angle-based roll-off
+
+`AttenuationCone` contains the inner and outer angles in radians. The dot product fed into `EvaluateDirection` is compared against the cosines of half-angles: values above the inner threshold return a factor of `0.0f`, values below the outer threshold return `1.0f`, and everything in between linearly interpolates so you can remap that factor to any outer parameter you want (e.g., `std::lerp(1.0f, coneOuterFactor, filterCutoff)`). See the [DirectPathService header](Spatialization/include/JPLSpatial/Services/DirectPathService.h) for implementation details and [`DirectPathServiceTest`](SpatializationTests/src/Tests/DirectPathServiceTest.h) for usage examples. To tighten a spotlight-style emitter, reduce `OuterAngle` toward `InnerAngle`; to create a broad ambience, expand both toward `2π` so every direction yields the full gain of `1.0f` without angular attenuation. When paired with the cached cone gain above, this lets you reason in “forward energy” terms: the listener inside the inner cone hears the unattenuated signal, the outer region gradually blends toward your chosen tail gain, and anything behind the source sits at the outer gain floor.
+
 ## Folder structure
 - **Spatialization** - source code for the library
 - **SpatializationTests** - a set of tests to validate the behavior of the features and interfaces
