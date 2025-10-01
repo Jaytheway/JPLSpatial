@@ -131,7 +131,7 @@ void GetChannelGains(
 		panner.ProcessVBAPData(
 			sourceLayout,
 			positionData,
-			[&gains](uint32 channel) -> auto& { return gains; });
+			[&outGains](uint32 /*channel*/) -> auto& { return outGains; });
 	}
 }
 
