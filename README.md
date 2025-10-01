@@ -137,6 +137,52 @@ void GetChannelGains(
 
 ```
 
+### SpatialManager quickstart
+A typical `SpatialManager` workflow wires together high-level constructs such as `SourceInitParameters` for allocating the source,
+`Position` for spatial placement, and an `AttenuationCurve` for distance rolloff.
+
+```cpp
+#include "JPLSpatial/ChannelMap.h"
+#include "JPLSpatial/Math/MinimalVec3.h"
+#include "JPLSpatial/SpatialManager.h"
+
+using Vec3 = JPL::MinimalVec3;
+using Spatializer = JPL::Spatial::SpatialManager<Vec3>;
+
+Spatializer spatializer;
+const auto targetChannels = JPL::ChannelMap::FromChannelMask(JPL::ChannelMask::Quad);
+
+SourceInitParameters initParams{
+        .NumChannels = 1,
+        .NumTargetChannels = targetChannels.GetNumChannels()
+};
+const SourceId source = spatializer.CreateSource(initParams);
+
+Position<Vec3> sourcePosition{
+        .Location = Vec3(0.0f, 0.0f, -5.0f),
+        .Orientation = Orientation<Vec3>::Identity()
+};
+spatializer.SetSourcePosition(source, sourcePosition);
+
+auto* curve = new AttenuationCurve();
+curve->Points = {
+        {.Distance = 0.0f, .Value = 1.0f, .FunctionType = Curve::EType::Linear},
+        {.Distance = 10.0f, .Value = 0.5f, .FunctionType = Curve::EType::Linear}
+};
+curve->SortPoints();
+const auto curveHandle = spatializer.GetDirectPathService().AssignAttenuationCurve(
+        spatializer.GetDirectEffectHandle(source), curve);
+
+spatializer.AdvanceSimulation();
+
+const float distanceAttenuation = spatializer.GetDistanceAttenuation(source, curveHandle);
+const auto channelGains = spatializer.GetChannelGains(source, targetChannels);
+```
+
+Once `AdvanceSimulation` has processed the scene, `GetLastUpdatedSource` exposes which sources were touched, and the cached
+results retrieved through `GetDistanceAttenuation` and `GetChannelGains` can be fed directly into the audio mix for the
+current frame.
+
 ## Folder structure
 - **Spatialization** - source code for the library
 - **SpatializationTests** - a set of tests to validate the behavior of the features and interfaces
