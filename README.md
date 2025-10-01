@@ -84,10 +84,11 @@ If you have access to Hazel Engine code, you can check how JPLSpatial is integra
 		- Exponential
 - Angle Attenuation / Cone-based attenuation
 - **High level sound source API**:
+
 	- Spatial Manager (top level interface managing Sources and Services)
-		- Panning Service
-		- Direct Path Service (for now handles just distance and angle attenuation)
-## Examples
+	- Panning Service
+	- Direct Path Service (for now handles just distance and angle attenuation)
+## Examples & Usage
 Initializing `VBAPPanner`, `SourceLayout` and querying target channel gains for a source direction:
 ```cpp
 #include "JPLSpatial/ChannelMap.h"
@@ -182,6 +183,22 @@ const auto channelGains = spatializer.GetChannelGains(source, targetChannels);
 Once `AdvanceSimulation` has processed the scene, `GetLastUpdatedSource` exposes which sources were touched, and the cached
 results retrieved through `GetDistanceAttenuation` and `GetChannelGains` can be fed directly into the audio mix for the
 current frame.
+
+### Manual <code>PanningService</code> usage
+
+- <details>
+	<p>
+	When working directly with the panning layer you start by creating the source and target <code>ChannelMap</code> objects that describe each layout you want to support. Those maps are passed to <code>InitializePanningEffect</code>, which returns a <code>PanEffectHandle</code> representing the source's cached panning state. Hold on to that handle for subsequent updates, and query the cached gains after evaluation through <code>GetChannelGainsFor</code>. See <a href="Spatialization/include/JPLSpatial/Services/PanningService.h">PanningService.h</a> and the sequence in <a href="SpatializationTests/src/Tests/PanningServiceTest.h">PanningServiceTest</a> for a full example.
+	</p>
+
+	<p>
+	A typical update loop mirrors the sequence covered in <code>PanningServiceTest</code>: set the focus/spread shaping via <code>SetPanningEffectParameters</code> (or adjust spread alone with <code>SetPanningEffectSpread</code>) and then call <code>EvaluateDirection</code> with the latest <code>Position</code> to refresh the cached gain buffers. This flow keeps directional data and spread control in sync before the gains are read back for mixing.
+	</p>
+
+	<p>
+	Remember to release handles that are no longer needed by calling <code>ReleasePanningEffect</code>; consult <a href="Spatialization/include/JPLSpatial/Services/PanningService.h">Services/PanningService.h</a> for the full API surface, including helpers for advanced caching scenarios.
+	</p>
+</details>
 
 ## Folder structure
 - **Spatialization** - source code for the library
