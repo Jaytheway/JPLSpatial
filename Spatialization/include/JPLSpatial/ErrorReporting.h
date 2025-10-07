@@ -27,6 +27,7 @@
 
 #include "Core.h"
 #include <format>
+#include <source_location>
 
 namespace JPL
 {
@@ -46,18 +47,24 @@ JPL_EXPORT extern TraceFunction SpatialTrace;
 
 #if defined(JPL_ENABLE_ASSERTS) || defined(JPL_ENABLE_ENSURE)
 /// Function called when an assertion fails. This function should return true if a breakpoint needs to be triggered
-using AssertFailedFunction = bool(*)(const char* inExpression, const char* inMessage, const char* inFile, uint inLine);
+using AssertFailedFunction = bool(*)(const char* inExpression, const char* inMessage, const std::source_location);
 JPL_EXPORT extern AssertFailedFunction AssertFailed;
 
 // Helper functions to pass message on to failed function
-struct AssertLastParam {};
-inline bool AssertFailedParamHelper(const char* inExpression, const char* inFile, uint inLine, AssertLastParam) { return AssertFailed(inExpression, nullptr, inFile, inLine); }
-inline bool AssertFailedParamHelper(const char* inExpression, const char* inFile, uint inLine, const char* inMessage, AssertLastParam) { return AssertFailed(inExpression, inMessage, inFile, inLine); }
+inline bool AssertFailedParamHelper(const char* inExpression, const std::source_location location)
+{
+	return AssertFailed(inExpression, nullptr, location);
+}
+
+inline bool AssertFailedParamHelper(const char* inExpression, const std::source_location location, const char* inMessage)
+{
+	return AssertFailed(inExpression, inMessage, location);
+}
 #endif
 
 #ifdef JPL_ENABLE_ASSERTS
 /// Main assert macro, usage: JPL_ASSERT(condition, message) or JPL_ASSERT(condition)
-#define JPL_ASSERT(inExpression, ...)	do { if (!(inExpression) && AssertFailedParamHelper(#inExpression, __FILE__, JPL::uint(__LINE__), ##__VA_ARGS__, JPL::AssertLastParam())) JPL_BREAKPOINT; } while (false)
+#define JPL_ASSERT(inExpression, ...)	do { if (!(inExpression) && AssertFailedParamHelper(#inExpression, std::source_location::current(), ##__VA_ARGS__)) JPL_BREAKPOINT; } while (false)
 
 #define JPL_IF_ENABLE_ASSERTS(...)		__VA_ARGS__
 #else
@@ -71,7 +78,7 @@ inline bool AssertFailedParamHelper(const char* inExpression, const char* inFile
 #ifndef JPL_ENSURE
 #ifdef JPL_ENABLE_ENSURE
 
-#define JPL_ENSURE(inExpression, ...) [&]{ if(!(inExpression)  && AssertFailedParamHelper(#inExpression, __FILE__, JPL::uint(__LINE__), ##__VA_ARGS__, JPL::AssertLastParam())) { JPL_BREAKPOINT; } return (inExpression); }()
+#define JPL_ENSURE(inExpression, ...) [&]{ if(!(inExpression)  && AssertFailedParamHelper(#inExpression, std::source_location::current(), ##__VA_ARGS__)) { JPL_BREAKPOINT; } return (inExpression); }()
 #else
 #define JPL_ENSURE(inExpression, ...) (inExpression)
 #endif

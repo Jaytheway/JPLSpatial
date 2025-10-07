@@ -34,7 +34,7 @@ namespace JPL
 
 #if defined(JPL_ENABLE_ASSERTS) || defined(JPL_ENABLE_ENSURE)
 
-	static bool DummyAssertFailed(const char* /*inExpression*/, const char* /*inMessage*/, const char* /*inFile*/, uint /*inLine*/)
+	static bool DummyAssertFailed(const char* /*inExpression*/, const char* /*inMessage*/, const std::source_location)
 	{
 		return true; // Trigger breakpoint
 	};
