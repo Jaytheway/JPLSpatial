@@ -27,6 +27,8 @@
 #include "JPLSpatial/Math/MinimalQuat.h"
 #include "JPLSpatial/Math/Position.h"
 
+#include "../Utility/TestMemoryLeakDetector.h"
+
 #include <gtest/gtest.h>
 #include <cmath>
 #include <random>
@@ -47,6 +49,18 @@ namespace JPL
 				.Location = Vec3(0, 0, 0),
 				.Orientation = Orientation<Vec3>::IdentityForward()
 			};
+		}
+
+		TestLeakDetector mLeakDetector;
+
+		void SetUp() override
+		{
+			mLeakDetector.SetUp();
+		}
+
+		void TearDown() override
+		{
+			mLeakDetector.TearDown();
 		}
 	};
 	
@@ -97,6 +111,18 @@ namespace JPL
 				};
 			}
 		}
+
+		TestLeakDetector mLeakDetector;
+
+		void SetUp() override
+		{
+			mLeakDetector.SetUp();
+		}
+
+		void TearDown() override
+		{
+			mLeakDetector.TearDown();
+		}
 	};
 
 	TEST_F(ProcessAngleAttenuationTest, InsideInnerCone)
@@ -114,7 +140,7 @@ namespace JPL
 		float expectedAngularGain = 1.0f;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Assertions
@@ -135,7 +161,7 @@ namespace JPL
 		float coneOuterGain = 0.5f;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Assertions
@@ -158,7 +184,7 @@ namespace JPL
 		float expectedAngularGain = coneOuterGain;
 
 		// Compute using original function
-		float angularGain = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGain = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGain = std::lerp(1.0f, coneOuterGain, angularGain);
 
 		// Assertions
@@ -177,7 +203,7 @@ namespace JPL
 		float coneOuterGain = 0.5f;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Assertions
@@ -199,7 +225,7 @@ namespace JPL
 		float expectedAngularGain = coneOuterGain;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Assertions
@@ -221,7 +247,7 @@ namespace JPL
 		float expectedAngularGain = 1.0f;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Assertions
@@ -242,7 +268,7 @@ namespace JPL
 		float expectedAngularGain = 1.0f;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Since negative angles may not be valid, ensure both functions handle them consistently
@@ -261,7 +287,7 @@ namespace JPL
 		float coneOuterGain = 0.5f;
 
 		// Compute using original function
-		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Assertions
@@ -294,12 +320,12 @@ namespace JPL
 		Vec3 positionOuter(std::sin(angleOuter), 0.0f, -std::cos(angleOuter));
 
 		// Compute using original function for cutoffInner
-		float angularGainOriginalInner = DirectPathService<>::ProcessAngleAttenuation(positionInner, referencePoint, cone);
+		float angularGainOriginalInner = DirectPathService::ProcessAngleAttenuation(positionInner, referencePoint, cone);
 		angularGainOriginalInner = std::lerp(1.0f, coneOuterGain, angularGainOriginalInner);
 
 
 		// Compute using original function for cutoffOuter
-		float angularGainOriginalOuter = DirectPathService<>::ProcessAngleAttenuation(positionOuter, referencePoint, cone);
+		float angularGainOriginalOuter = DirectPathService::ProcessAngleAttenuation(positionOuter, referencePoint, cone);
 		angularGainOriginalOuter = std::lerp(1.0f, coneOuterGain, angularGainOriginalOuter);
 
 		// Assertions
@@ -340,11 +366,11 @@ namespace JPL
 				std::swap(cone.InnerAngle, cone.OuterAngle);
 
 			// Compute using azimuth overload
-			float angularGainAzimuth = DirectPathService<>::ProcessAngleAttenuation(azimuth, cone);
+			float angularGainAzimuth = DirectPathService::ProcessAngleAttenuation(azimuth, cone);
 			angularGainAzimuth = std::lerp(1.0f, coneOuterGain, angularGainAzimuth);
 
 			// Compute using original function
-			float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
+			float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
 			angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 			EXPECT_NEAR(angularGainAzimuth, angularGainOriginal, toleranse) << "Mismatch at iteration " << i;
@@ -416,7 +442,7 @@ namespace JPL
 					std::swap(cone.InnerAngle, cone.OuterAngle);
 
 				// Compute using SIMD function
-				volatile float angularGainSIMD = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
+				volatile float angularGainSIMD = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
 				//angularGainSIMD = 
 				auto l = [angularGainSIMD] {};
 			}
@@ -445,10 +471,10 @@ namespace JPL
 		float coneOuterGain = 0.5f;
 
 		// Compute using original function
-		float angularGainAzimuth = DirectPathService<>::ProcessAngleAttenuation(azimuth, cone);
+		float angularGainAzimuth = DirectPathService::ProcessAngleAttenuation(azimuth, cone);
 		angularGainAzimuth = std::lerp(1.0f, coneOuterGain, angularGainAzimuth);
 
-		float angularGainOriginal = DirectPathService<>::ProcessAngleAttenuation(position, referencePoint, cone);
+		float angularGainOriginal = DirectPathService::ProcessAngleAttenuation(position, referencePoint, cone);
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 
@@ -616,7 +642,7 @@ namespace JPL
 				.Orientation = Orientation<Vec3>::IdentityForward()
 			};
 
-			const DirectPathResult<Vec3> result = DirectPathService<>::ProcessDirectPath(sourcePosition, listenerPosition);
+			const DirectPathResult<Vec3> result = DirectPathService::ProcessDirectPath(sourcePosition, listenerPosition);
 
 			EXPECT_NEAR(result.DirectionDot, testCase.ExpectedDot, tolerance);
 			EXPECT_NEAR(result.InvDirectionDot, testCase.ExpectedInvDot, tolerance);

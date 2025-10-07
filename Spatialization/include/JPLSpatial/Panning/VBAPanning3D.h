@@ -26,11 +26,12 @@
 
 #include "JPLSpatial/Math/DirectionEncoding.h"
 #include "JPLSpatial/Memory/Bits.h"
+#include "JPLSpatial/Memory/Memory.h"
 
+#include <vector>
 #include <ranges>
 #include <utility>
 #include <limits>
-
 
 namespace JPL
 {
@@ -60,7 +61,6 @@ namespace JPL
             using Base = VBAPannerBase<Panning3D<Traits, cLUTType>, Traits>;
         public:
             using Vec3Type = typename Base::Vec3Type;
-            template<class T> using Array = Base::template Array<T>;
 
             //======================================================================
             using LUTCodec = Octahedron16Bit;
@@ -68,14 +68,13 @@ namespace JPL
 
             /// Packed look-up table of speaker triplets and corresponding gains.
             /// Index into the table is an octahedron-encoded direction vector.
-            using LUTType = VBAP::LUT<cLUTType, cLUTSize, Vec3Type, typename Traits::template AllocatorType>;
+            using LUTType = VBAP::LUT<cLUTType, cLUTSize, Vec3Type>;
 
             using LUTInterface =
                 VBAP::LUTInterface<
                 &Traits::GetChannelVector,
                 LUTCodec,
-                LUTType,
-                typename Traits::template AllocatorType
+                LUTType
                 >;
 
             //======================================================================
@@ -131,7 +130,9 @@ namespace JPL
                 float mNominalChannelCapSpread;                 // Cached nominal per cap spread for given channel count
                 Dimensions mDimensions;                         // Dimensions for virtual source distribution for a spread cap
                 float mPhiTerm;                                 // Cached term to generate spread cap
-                Array<std::pair<float, float>> mSamplesSinCos;  // Cached sin/cos to generate spread cap
+
+                // Cached sin/cos to generate spread cap
+                std::pmr::vector<std::pair<float, float>> mSamplesSinCos{ GetDefaultMemoryResource() };
             };
 
             //======================================================================

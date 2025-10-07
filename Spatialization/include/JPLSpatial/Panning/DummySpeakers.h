@@ -21,25 +21,26 @@
 
 #include "JPLSpatial/Core.h"
 #include "JPLSpatial/ChannelMap.h"
-#include "JPLSpatial/Math/Vec3Math.h"
+#include "JPLSpatial/Memory/Memory.h"
 
 #include <type_traits>
 #include <vector>
 #include <algorithm>
-#include <memory>
 
 namespace JPL::VBAP
 {
     //==========================================================================
    /// Utility class to encapsulate dummy speaker handling while building a LUT
-    template<auto GetChannelVectorFunction, template<class> class AllocatorType = std::allocator>
+    template<auto GetChannelVectorFunction>
     class DummySpeakers
     {
     public:
         using Vec3Type = std::remove_cvref_t<decltype(GetChannelVectorFunction(EChannel{}))>;
 
-        JPL_INLINE constexpr DummySpeakers(ChannelMap channelMap, std::vector<Vec3Type>& speakerVectors) noexcept
-            : mMap(channelMap), mVectors(speakerVectors)
+        JPL_INLINE constexpr DummySpeakers(ChannelMap channelMap, std::pmr::vector<Vec3Type>& speakerVectors) noexcept
+            : mMap(channelMap)
+            , mVectors(speakerVectors)
+            , mDummyIndices(GetDefaultMemoryResource())
         {
         }
 
@@ -76,7 +77,7 @@ namespace JPL::VBAP
 
     private:
         ChannelMap mMap;
-        std::vector<Vec3Type, AllocatorType<Vec3Type>>& mVectors;
-        std::vector<uint32, AllocatorType<uint32>> mDummyIndices;
+        std::pmr::vector<Vec3Type>& mVectors;
+        std::pmr::vector<uint32> mDummyIndices;
     };
 } // namespace JPL::VBAP

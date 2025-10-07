@@ -65,13 +65,12 @@ namespace JPL
             using Vec3Type = typename Base::Vec3Type;
 
             //==================================================================
-            using LUTType = VBAP::LUT2D<typename Traits::template Array>;
+            using LUTType = VBAP::LUT2D;
 
             using LUTInterface =
                 VBAP::LUTInterface2D<
                 &Traits::GetChannelVector,
-                &Traits::GetChannelAngle,
-                typename Traits::template Array
+                &Traits::GetChannelAngle
                 >;
 
             //=================================================================

@@ -25,6 +25,7 @@
 #include "JPLSpatial/Math/MinimalVec2.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
 #include "JPLSpatial/Math/MinimalMat.h"
+#include "JPLSpatial/Memory/Memory.h"
 
 #include "JPLSpatial/Geometry/ConvexHullBuilder.h"
 #include "JPLSpatial/Panning/DummySpeakers.h"
@@ -132,7 +133,7 @@ namespace JPL
 			return true;
 		}
 
-		template< template<class> class AllocatorType, CVec3 Vec3Type, class Vec3iContainerType>
+		template<CVec3 Vec3Type, class Vec3iContainerType>
 		inline bool TriangulateSpeakerLayout(std::span<const Vec3Type> speakerVectors, Vec3iContainerType& outIndices)
 		{
 			const auto& vertices = speakerVectors;
@@ -152,7 +153,7 @@ namespace JPL
 						vbap object finds the nearmost triangle and it applies the sound to it.
 			*/
 
-			using HullBuilderType = JPL::ConvexHullBuilder<Vec3Type, AllocatorType>;
+			using HullBuilderType = JPL::ConvexHullBuilder<Vec3Type>;
 
 			HullBuilderType builder(vertices);
 
@@ -169,7 +170,7 @@ namespace JPL
 			return true;
 		}
 
-		template<auto GetSpeakerVectorFunction, CVec3 Vec3Type, class Vec3ContainerType, class Vec3iContainerType, template<class> class AllocatorType = std::allocator>
+		template<auto GetSpeakerVectorFunction, CVec3 Vec3Type, class Vec3ContainerType, class Vec3iContainerType>
 		inline bool TriangulateSpeakerLayout(ChannelMap channelMap, Vec3ContainerType& outVertices, Vec3iContainerType& outIndices)
 		{
 			if (!channelMap.IsValid())
@@ -185,12 +186,12 @@ namespace JPL
 			if (numChannels < 3)
 				return false;
 
-			std::vector<Vec3Type, AllocatorType<Vec3Type>> vertices;
+			std::pmr::vector<Vec3Type> vertices(GetDefaultMemoryResource());
 
 			// TODO: do we want to use indices of the channel map?
 			GetSpeakerVectors<GetSpeakerVectorFunction>(channelMap, vertices);
 
-			VBAP::DummySpeakers<GetSpeakerVectorFunction, AllocatorType> dummySpeakers(channelMap, vertices);
+			VBAP::DummySpeakers<GetSpeakerVectorFunction> dummySpeakers(channelMap, vertices);
 
 			// Since at the moment ChannelMap doesn't support speakers on the bottom,
 			// we at least need to add a dummy speaker there for a better topology
@@ -217,7 +218,7 @@ namespace JPL
 				JPL_ASSERT(numTopChannels == 2);
 			}
 
-			if (TriangulateSpeakerLayout<AllocatorType>(std::span<const Vec3Type>(vertices), outIndices))
+			if (TriangulateSpeakerLayout(std::span<const Vec3Type>(vertices), outIndices))
 			{
 				outVertices = std::move(vertices);
 				return true;

@@ -22,6 +22,8 @@
 #include "JPLSpatial/ChannelMap.h"
 #include "JPLSpatial/Containers/FlatMap.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
+#include "JPLSpatial/Math/Position.h"
+#include "JPLSpatial/Memory/Memory.h"
 #include "JPLSpatial/Panning/PannerBase.h"
 #include "JPLSpatial/Panning/VBAPanning2D.h"
 #include "JPLSpatial/Utilities/IDType.h"
@@ -30,7 +32,9 @@
 #include <span>
 #include <memory>
 #include <vector>
+#include <initializer_list>
 #include <utility>
+#include <memory_resource>
 
 namespace JPL
 {
@@ -126,17 +130,16 @@ namespace JPL
 	};
 
 	//==========================================================================
-	template<CVec3 Vec3Type, template<class> class Allocator = std::allocator>
+	template<class VBAPTraits>
 	class PanningService
 	{
-		template<class T>
-		using AllocatorType = Allocator<T>;
 	public:
 		// Alias to override allocator for the internal FlatMap we use
 		template<class Key, class T>
-		using FlatMapType = FlatMapWithAllocator<Key, T, AllocatorType>;
+		using FlatMapType = FlatMapWithAllocator<Key, T, std::pmr::polymorphic_allocator>;
 		
-		using PannerTraits = VBAPBaseTraits<Vec3Type, AllocatorType>;
+		using Vec3Type = typename VBAPTraits::Vec3Type;
+		using PannerTraits = VBAPTraits;
 
 		using PannerType = VBAPanner2D<PannerTraits>;
 		using SourceLayout = typename PannerType::SourceLayoutType;
@@ -221,7 +224,7 @@ namespace JPL
 		// Initialize channel gains for source channel map.
 		// Returned gains must be managed by the user.
 		// This overload is meant for the case when using Panners directly.
-		JPL_INLINE bool CreateChannelGainsFor(ChannelMap targetChannelMap, ChannelMap sourceChannelMap, std::vector<ChannelGains>& outChannelGains) const;
+		JPL_INLINE bool CreateChannelGainsFor(ChannelMap targetChannelMap, ChannelMap sourceChannelMap, std::pmr::vector<ChannelGains>& outChannelGains) const;
 
 		// Initialize channel gains for source. This is called internally in AddSourceTargets function.
 		// The gains are manaded by PanningService and used to cache results of the last call to EvaluateDirection
@@ -235,23 +238,23 @@ namespace JPL
 
 		/// Standard panners and VBAPs, shared between sources,
 		/// only created for the requested ChannelMaps
-		FlatMapType<ChannelMap, PannerType> mPanners;
+		FlatMapType<ChannelMap, PannerType> mPanners{ GetDefaultMemoryResource() };
 
 		//std::unordered_map<ChannelMap, std::shared_ptr<SourceLayout>> mInitializedSourceLayouts;
 		// TODO: maybe we could use number of channels everywhere instead of ChannelMap?
 		//		In that case we could use simple static arrays here instead of maps
-		FlatMapType<SourceLayoutKey, std::shared_ptr<SourceLayout>> mInitializedSourceLayouts;
+		FlatMapType<SourceLayoutKey, std::shared_ptr<SourceLayout>> mInitializedSourceLayouts{ GetDefaultMemoryResource() };
 		// TODO: we should probably delete unused/unreferenced source layouts at some point, right?
 
 		// Static association VBAPs with handles
-		FlatMapType<PanEffectHandle, std::shared_ptr<SourceLayout>> mSourceLayouts;
+		FlatMapType<PanEffectHandle, std::shared_ptr<SourceLayout>> mSourceLayouts{ GetDefaultMemoryResource() };
 
 		// Dynamic parameters that can be changed at runtime
-		FlatMapType<PanEffectHandle, PanEffectParameters> mPanningParams;
+		FlatMapType<PanEffectHandle, PanEffectParameters> mPanningParams{ GetDefaultMemoryResource() };
 
 		// Per target map - store ChannelGains of each source channel
 		// vector size = number of source channels
-		FlatMapType<PanningCacheKey, std::vector<ChannelGains, AllocatorType<ChannelGains>>> mPanningCache;
+		FlatMapType<PanningCacheKey, std::pmr::vector<ChannelGains>> mPanningCache{ GetDefaultMemoryResource() };
 	};
 } // namespace JPL
 
@@ -264,8 +267,8 @@ namespace JPL
 //==============================================================================
 namespace JPL
 {
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE auto PanningService<Vec3Type, AllocatorType>::CreatePannerFor(ChannelMap targetChannelMap) -> const PannerType*
+	template<class VBAPTraits>
+	JPL_INLINE auto PanningService<VBAPTraits>::CreatePannerFor(ChannelMap targetChannelMap) -> const PannerType*
 	{
 		if (!targetChannelMap.IsValid())
 			return nullptr;
@@ -282,15 +285,15 @@ namespace JPL
 		return &panner;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE auto PanningService<Vec3Type, AllocatorType>::GetPannerFor(ChannelMap targetChannelMap) const -> const PannerType*
+	template<class VBAPTraits>
+	JPL_INLINE auto PanningService<VBAPTraits>::GetPannerFor(ChannelMap targetChannelMap) const -> const PannerType*
 	{
 		auto it = mPanners.find(targetChannelMap);
 		return it != mPanners.end() ? &(it->second) : nullptr;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE auto PanningService<Vec3Type, AllocatorType>::CreatePanningDataFor(SourceLayoutKey layout, PanEffectHandle source /*= {}*/)
+	template<class VBAPTraits>
+	JPL_INLINE auto PanningService<VBAPTraits>::CreatePanningDataFor(SourceLayoutKey layout, PanEffectHandle source /*= {}*/)
 		-> std::shared_ptr<const SourceLayout>
 	{
 		if (!layout.SourceMap.IsValid())
@@ -300,7 +303,7 @@ namespace JPL
 
 		if (!sourceLayout)
 		{
-			sourceLayout = std::make_shared<SourceLayout>();
+			sourceLayout = make_pmr_shared<SourceLayout>();
 
 			// We have to initialize source for a specific target output channel layout
 			const auto* panner = CreatePannerFor(layout.TargetMap);
@@ -308,7 +311,7 @@ namespace JPL
 			if (!panner || !panner->InitializeSourceLayout(layout.SourceMap, *sourceLayout))
 			{
 				JPL_ERROR_TAG("PanningService", "Failed to initialize SourceLayout");
-				sourceLayout.reset();
+				reset_pmr_shared(sourceLayout);
 				mInitializedSourceLayouts.erase(layout);
 			}
 		}
@@ -319,8 +322,8 @@ namespace JPL
 		return sourceLayout;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE auto PanningService<Vec3Type, AllocatorType>::GetPanningDataFor(SourceLayoutKey layout) const -> std::shared_ptr<const SourceLayout>
+	template<class VBAPTraits>
+	JPL_INLINE auto PanningService<VBAPTraits>::GetPanningDataFor(SourceLayoutKey layout) const -> std::shared_ptr<const SourceLayout>
 	{
 		auto sourceLayout = mInitializedSourceLayouts.find(layout);
 		if (sourceLayout != mInitializedSourceLayouts.end())
@@ -329,10 +332,10 @@ namespace JPL
 		return nullptr;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::CreateChannelGainsFor(ChannelMap targetChannelMap,
-																				   ChannelMap sourceChannelMap,
-																				   std::vector<ChannelGains>& outChannelGains) const
+	template<class VBAPTraits>
+	JPL_INLINE bool PanningService<VBAPTraits>::CreateChannelGainsFor(ChannelMap targetChannelMap,
+																	   ChannelMap sourceChannelMap,
+																	   std::pmr::vector<ChannelGains>& outChannelGains) const
 	{
 		if (!targetChannelMap.IsValid() || !sourceChannelMap.IsValid())
 			return false;
@@ -344,8 +347,8 @@ namespace JPL
 		return true;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::CreateChannelGainsFor(ChannelMap targetChannelMap, PanEffectHandle source)
+	template<class VBAPTraits>
+	JPL_INLINE bool PanningService<VBAPTraits>::CreateChannelGainsFor(ChannelMap targetChannelMap, PanEffectHandle source)
 	{
 		if (!targetChannelMap.IsValid() || !source.IsValid() || !mSourceLayouts.contains(source))
 			return false;
@@ -367,8 +370,8 @@ namespace JPL
 			return true;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE auto PanningService<Vec3Type, AllocatorType>::GetChannelGainsFor(PanEffectHandle source, ChannelMap targetChannelMap) const
+	template<class VBAPTraits>
+	JPL_INLINE auto PanningService<VBAPTraits>::GetChannelGainsFor(PanEffectHandle source, ChannelMap targetChannelMap) const
 		-> std::span<const ChannelGains>
 	{
 		auto cache = mPanningCache.find(
@@ -383,8 +386,8 @@ namespace JPL
 		return {};
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE PanEffectHandle PanningService<Vec3Type, AllocatorType>::InitializePanningEffect(const PanEffectInitParameters& initParameters)
+	template<class VBAPTraits>
+	JPL_INLINE PanEffectHandle PanningService<VBAPTraits>::InitializePanningEffect(const PanEffectInitParameters& initParameters)
 	{
 		if (!initParameters.SourceChannelMap.IsValid())
 			return {};
@@ -427,19 +430,19 @@ namespace JPL
 		return {};
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::ReleasePanningEffect(PanEffectHandle source)
+	template<class VBAPTraits>
+	JPL_INLINE bool PanningService<VBAPTraits>::ReleasePanningEffect(PanEffectHandle source)
 	{
 		return mSourceLayouts.erase(source)
 			+ mPanningParams.erase(source)
-			+ mPanningCache.erase_if([source](const std::pair<const PanningCacheKey, std::vector<ChannelGains>>& pair)
+			+ mPanningCache.erase_if([source](const std::pair<const PanningCacheKey, std::pmr::vector<ChannelGains>>& pair)
 		{
 			return pair.first.Handle == source;
 		});
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::AddSourceTargets(PanEffectHandle source, std::span<const ChannelMap> targetChannelMaps)
+	template<class VBAPTraits>
+	JPL_INLINE bool PanningService<VBAPTraits>::AddSourceTargets(PanEffectHandle source, std::span<const ChannelMap> targetChannelMaps)
 	{
 		if (!source.IsValid())
 			return false;
@@ -464,14 +467,14 @@ namespace JPL
 		return hasAnyTargetInitialized;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::AddSourceTargets(PanEffectHandle source, std::initializer_list<const ChannelMap> targetChannelMaps)
+	template<class VBAPTraits>
+	JPL_INLINE bool PanningService<VBAPTraits>::AddSourceTargets(PanEffectHandle source, std::initializer_list<const ChannelMap> targetChannelMaps)
 	{
 		return AddSourceTargets(source, std::span(targetChannelMaps));
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::EvaluateDirection(PanEffectHandle source, const Position<Vec3Type>& position, ESpatializationType spatialziationType)
+	template<class VBAPTraits>
+	JPL_INLINE bool PanningService<VBAPTraits>::EvaluateDirection(PanEffectHandle source, const Position<Vec3Type>& position, ESpatializationType spatialziationType)
 	{
 		if (!source.IsValid())
 			return false;
@@ -537,15 +540,15 @@ namespace JPL
 		return true;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE auto PanningService<Vec3Type, AllocatorType>::GetSourceLayoutFor(PanEffectHandle source) const -> std::shared_ptr<const SourceLayout>
+	template<class VBAPTraits>
+	JPL_INLINE auto PanningService<VBAPTraits>::GetSourceLayoutFor(PanEffectHandle source) const -> std::shared_ptr<const SourceLayout>
 	{
 		auto data = mSourceLayouts.find(source);
 		return data == mSourceLayouts.end() ? nullptr : data->second;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool PanningService<Vec3Type, AllocatorType>::SetPanningEffectParameters(PanEffectHandle effect, const PanEffectParameters& parameters)
+	template<class VBAPTraits>
+	JPL_INLINE bool PanningService<VBAPTraits>::SetPanningEffectParameters(PanEffectHandle effect, const PanEffectParameters& parameters)
 	{
 		if (!effect.IsValid())
 			return false;
@@ -554,8 +557,8 @@ namespace JPL
 		return true;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool JPL::PanningService<Vec3Type, AllocatorType>::SetPanningEffectSpread(PanEffectHandle effect, float spread)
+	template<class VBAPTraits>
+	JPL_INLINE bool JPL::PanningService<VBAPTraits>::SetPanningEffectSpread(PanEffectHandle effect, float spread)
 	{
 		if (!effect.IsValid())
 			return false;

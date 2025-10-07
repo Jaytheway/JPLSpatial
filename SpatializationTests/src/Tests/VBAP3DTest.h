@@ -23,6 +23,7 @@
 #include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/MinimalVec3.h"
 #include "JPLSpatial/Math/MinimalQuat.h"
+#include "JPLSpatial/Memory/Memory.h"
 
 #include "JPLSpatial/Panning/PannerBase.h"
 #include "JPLSpatial/Panning/VBAPanning2D.h"
@@ -290,8 +291,8 @@ namespace JPL
 		{
 			SCOPED_TRACE(test.Name);
 
-			std::vector<Vec3> vertices;
-			std::vector<Vec3i> triangles;
+			std::pmr::vector<Vec3> vertices(GetDefaultMemoryResource());
+			std::pmr::vector<Vec3i> triangles(GetDefaultMemoryResource());
 
 			const bool bSuccess = SpeakerTriangulation::TriangulateSpeakerLayout<&VBAPStandartTraits::GetChannelVector, Vec3>(test.Layout, vertices, triangles);
 
@@ -323,7 +324,8 @@ namespace JPL
 	{
 		auto testLUTFor = [this](ChannelMap targetLayout)
 		{
-			using PannerType = VBAPanner3D<VBAPStandartTraitsBaseBAP::ELUTSize::KB_983>>;
+			using PannerType = VBAPanner3D<>;
+			using CodecType = typename PannerType::PanType::LUTCodec;
 
 			PannerType panner;
 
@@ -342,10 +344,10 @@ namespace JPL
 
 			auto isValidIndex = [](uint32 i)
 			{
-				PannerType::LUTCodec::EncodedType dx = i & VBAPanner3D<>::LUTCodec::cAxisMask;
-				PannerType::LUTCodec::EncodedType dy = (i >> VBAPanner3D<>::LUTCodec::cBitsPerAxis) & VBAPanner3D<>::LUTCodec::cAxisMask;
+				CodecType::EncodedType dx = i & CodecType::cAxisMask;
+				CodecType::EncodedType dy = (i >> CodecType::cBitsPerAxis) & CodecType::cAxisMask;
 
-				return dx != VBAPanner3D<>::LUTCodec::cAxisMask && dy != VBAPanner3D<>::LUTCodec::cAxisMask;
+				return dx != CodecType::cAxisMask && dy != CodecType::cAxisMask;
 			};
 
 			for (uint32 i = 0; i < LUT->Speakers.size(); ++i)
@@ -360,7 +362,7 @@ namespace JPL
 					speakers[1] == speakers[2] ||
 					speakers[2] == speakers[0];
 
-				const Vec3 direction = VBAPanner3D<>::LUTCodec::Decode<Vec3>(i);
+				const Vec3 direction = CodecType::Decode<Vec3>(i);
 
 				EXPECT_FALSE(bDuplicateSpeakers)
 					<< std::format("Found duplicate speakers {{{}, {}, {}}} in triplet for LUT index [{}], direction: {}, {}, {}",
@@ -382,7 +384,7 @@ namespace JPL
 
 				const auto& gains = LUT->Gains[i];
 
-				const Vec3 direction = VBAPanner3D<>::LUTCodec::Decode<Vec3>(i);
+				const Vec3 direction = CodecType::Decode<Vec3>(i);
 
 				const bool bGainNearlyZero = Math::IsNearlyZero(gains[0] + gains[1] + gains[2]);
 				const bool bHasNegativeGains = gains[0] < 0.0f || gains[1] < 0.0f || gains[2] < 0.0f;

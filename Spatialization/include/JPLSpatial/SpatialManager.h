@@ -20,10 +20,13 @@
 #pragma once
 
 #include "JPLSpatial/Core.h"
+#include "JPLSpatial/ChannelMap.h"
 #include "JPLSpatial/Containers/FlatMap.h"
 #include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/MinimalQuat.h"
 #include "JPLSpatial/Math/Position.h"
+#include "JPLSpatial/Memory/Memory.h"
+#include "JPLSpatial/Panning/PannerBase.h"
 #include "JPLSpatial/Services/DirectPathService.h"
 #include "JPLSpatial/Services/PanningService.h"
 #if JPL_HAS_ENV_PROPAGATION
@@ -42,6 +45,7 @@
 #include <span>
 #include <vector>
 #include <unordered_set>
+#include <memory_resource>
 
 #if 1
 namespace JPL
@@ -53,8 +57,6 @@ namespace JPL
 
 namespace JPL::Spatial
 {
-	// TODO: CUSTOMIZATION TRAITS
-
 	struct SpatialManagerIDTag {};
 	using SourceId = IDType<SpatialManagerIDTag>;
 
@@ -86,13 +88,13 @@ namespace JPL::Spatial
 		uint64 ObjectId;
 
 		/// Pan parameters used if panning effect is initialized for the source
-		PanEffectParameters PanParameters;
+		PanEffectParameters PanParameters{ .Focus = 0.0f, .Spread = 1.0f };
 
 		/// If set, Spread value is calculated from ObjectSize based on distance to the listener
 		std::optional<float> ObjectSize;
 		
 		/// Base distance attenuation curve
-		AttenuationCurveRef DistanceAttenuationCurve; 
+		AttenuationCurveRef DistanceAttenuationCurve = make_pmr_shared<AttenuationCurve>(); 
 
 		/// Source directivity cone
 		AttenuationCone AttenuationCone;
@@ -159,7 +161,7 @@ namespace JPL::Spatial
 	//==========================================================================
 	/// High level interface to manage spatialized sources.
 	/// It holds an instance of each spatialization service.
-	template<CVec3 Vec3Type, template<class> class AllocatorType = std::allocator>
+	template<CVec3 Vec3Type, class VBAPTraits = VBAPBaseTraits<Vec3Type>>
 	class SpatialManager
 	{
 	private:
@@ -168,10 +170,10 @@ namespace JPL::Spatial
 	public:
 		// Alias to override allocator for the internal FlatMap we use
 		template<class Key, class T>
-		using FlatMapType = FlatMapWithAllocator<Key, T, AllocatorType>;
+		using FlatMapType = FlatMapWithAllocator<Key, T, std::pmr::polymorphic_allocator>;
 
 		template<class Key>
-		using SetType = std::unordered_set<Key, std::hash<Key>, std::equal_to<Key>, AllocatorType<Key>>;
+		using SetType = std::pmr::unordered_set<Key, std::hash<Key>, std::equal_to<Key>>;
 
 	public:
 		SpatialManager() = default;
@@ -183,10 +185,10 @@ namespace JPL::Spatial
 		// Evaluate all the updated parametesr to all the spatial effects.
 		// Process sound propagation simulation.
 
-		JPL_INLINE const DirectPathService<AllocatorType>& GetDirectPathService() const { return mDirectPathService; }
-		JPL_INLINE DirectPathService<AllocatorType>& GetDirectPathService() { return mDirectPathService; }
-		JPL_INLINE const PanningService<Vec3Type, AllocatorType>& GetPanningService() const { return mPanningService; }
-		JPL_INLINE PanningService<Vec3Type, AllocatorType>& GetPanningService() { return mPanningService; }
+		JPL_INLINE const DirectPathService& GetDirectPathService() const { return mDirectPathService; }
+		JPL_INLINE DirectPathService& GetDirectPathService() { return mDirectPathService; }
+		JPL_INLINE const PanningService<VBAPTraits>& GetPanningService() const { return mPanningService; }
+		JPL_INLINE PanningService<VBAPTraits>& GetPanningService() { return mPanningService; }
 
 		/// Process all the parameters of the modified sources.
 		/// E.g. this can be called at the end of an update frame
@@ -247,40 +249,40 @@ namespace JPL::Spatial
 
 	private:
 		// Services
-		DirectPathService<AllocatorType> mDirectPathService;
-		PanningService<Vec3Type, AllocatorType> mPanningService;
+		DirectPathService mDirectPathService;
+		PanningService<VBAPTraits> mPanningService;
 #if JPL_HAS_ENV_PROPAGATION
 		EnvironmentService mEnvironmentService;
 #endif
 		// TODO: we may or may not whant flat set instead of std::unordered_set
 
 		// Sources to be updated at next call to AdvanceSimulation()
-		SetType<SourceId> mDirtySources;		///< Sources to update paths for
+		SetType<SourceId> mDirtySources{ GetDefaultMemoryResource() };		///< Sources to update paths for
 #if JPL_HAS_ENV_PROPAGATION
-		SetType<SourceId> mSourcesMoved;		///< Sources to update room containment for
-		SetType<ListenerId> mListenersMoved;	///< Listeners to update room containment for
+		SetType<SourceId> mSourcesMoved{ GetDefaultMemoryResource() };		///< Sources to update room containment for
+		SetType<ListenerId> mListenersMoved{ GetDefaultMemoryResource() };	///< Listeners to update room containment for
 #endif
 		// Object that have changed during last update.
 		// User or mixing engine may need this information.
-		std::vector<SourceId, AllocatorType<SourceId>> mLastUpdatedSources;
+		std::pmr::vector<SourceId> mLastUpdatedSources{ GetDefaultMemoryResource() };
 #if JPL_HAS_ENV_PROPAGATION
-		std::vector<SourceId, AllocatorType<SourceId>> mLastSourceRoomsChanged;
-		std::vector<ListenerId, AllocatorType<ListenerId>> mLastListenerRoomsChanged;
+		std::pmr::vector<SourceId> mLastSourceRoomsChanged{ GetDefaultMemoryResource() };
+		std::pmr::vector<ListenerId> mLastListenerRoomsChanged{ GetDefaultMemoryResource() };
 #endif
 
 		// Per source data
-		FlatMapType<SourceId, SourceData<Vec3Type>> mSourceStuff;
+		FlatMapType<SourceId, SourceData<Vec3Type>> mSourceStuff{ GetDefaultMemoryResource() };
 
 		// Intermediate data processed for the position the sources were at
 		// at the last call to AdvanceSimulation()
-		FlatMapType<SourceId, PositionData> mPositionData; // TODO: this is weird, it assumes single listener per source
+		FlatMapType<SourceId, PositionData> mPositionData{ GetDefaultMemoryResource() }; // TODO: this is weird, it assumes single listener per source
 
 		// Default listener
 		const ListenerId mDefaultListener = ListenerId::New();
 
 		// Map of listeners
 		FlatMapType<ListenerId, ListenerMock<Vec3Type>> mListeners
-		{
+		{ {
 			{ mDefaultListener, ListenerMock<Vec3Type>{
 				.Id = mDefaultListener,
 				.Position = {
@@ -288,7 +290,7 @@ namespace JPL::Spatial
 					.Orientation = Orientation<Vec3Type>::IdentityForward()
 				}}
 			}
-		};
+		}, GetDefaultMemoryResource() };
 	};
 
 } // namespace JPL::Spatialziation
@@ -300,8 +302,8 @@ namespace JPL::Spatial
 //==============================================================================
 namespace JPL::Spatial
 {
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE void SpatialManager<Vec3Type, AllocatorType>::AdvanceSimulation()
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE void SpatialManager<Vec3Type, VBAPTraits>::AdvanceSimulation()
 	{
 		// TODO: before processing distance attenuation we need to process propagation paths,
 		//		since sources may not have direct path, also we need to process distance attenuation
@@ -427,14 +429,14 @@ namespace JPL::Spatial
 #endif
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE std::span<const SourceId> SpatialManager<Vec3Type, AllocatorType>::GetLastUpdatedSource() const
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE std::span<const SourceId> SpatialManager<Vec3Type, VBAPTraits>::GetLastUpdatedSource() const
 	{
 		return mLastUpdatedSources;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE ListenerId SpatialManager<Vec3Type, AllocatorType>::CreateListener()
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE ListenerId SpatialManager<Vec3Type, VBAPTraits>::CreateListener()
 	{
 		const auto listenerId = ListenerId::New();
 		mListeners.emplace(listenerId,
@@ -448,8 +450,8 @@ namespace JPL::Spatial
 		return listenerId;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool SpatialManager<Vec3Type, AllocatorType>::DeleteListener(ListenerId listener)
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE bool SpatialManager<Vec3Type, VBAPTraits>::DeleteListener(ListenerId listener)
 	{
 		if (!mListeners.contains(listener) || listener == mDefaultListener)
 			return false;
@@ -463,8 +465,8 @@ namespace JPL::Spatial
 		return true;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE SourceId SpatialManager<Vec3Type, AllocatorType>::CreateSource(const SourceInitParameters& options)
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE SourceId SpatialManager<Vec3Type, VBAPTraits>::CreateSource(const SourceInitParameters& options)
 	{
 		// Source has to be initialized with target channel count
 		JPL_ASSERT(options.NumTargetChannels > 0);
@@ -513,8 +515,8 @@ namespace JPL::Spatial
 		return newId;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool SpatialManager<Vec3Type, AllocatorType>::DeleteSource(SourceId source)
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE bool SpatialManager<Vec3Type, VBAPTraits>::DeleteSource(SourceId source)
 	{
 		if (!source.IsValid())
 			return false;
@@ -535,8 +537,8 @@ namespace JPL::Spatial
 		return true;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool SpatialManager<Vec3Type, AllocatorType>::SetListener(SourceId source, ListenerId listener)
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE bool SpatialManager<Vec3Type, VBAPTraits>::SetListener(SourceId source, ListenerId listener)
 	{
 		if (!source || !listener)
 			return false;
@@ -548,8 +550,8 @@ namespace JPL::Spatial
 		return true;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool SpatialManager<Vec3Type, AllocatorType>::SetListenerPosition(ListenerId listener, const Position<Vec3Type>& newPosition)
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE bool SpatialManager<Vec3Type, VBAPTraits>::SetListenerPosition(ListenerId listener, const Position<Vec3Type>& newPosition)
 	{
 		auto it = mListeners.find(listener);
 		if (it == mListeners.end())
@@ -574,8 +576,8 @@ namespace JPL::Spatial
 		return true;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE std::optional<Position<Vec3Type>> SpatialManager<Vec3Type, AllocatorType>::GetListenerPosition(ListenerId listener) const
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE std::optional<Position<Vec3Type>> SpatialManager<Vec3Type, VBAPTraits>::GetListenerPosition(ListenerId listener) const
 	{
 		auto it = mListeners.find(listener);
 		if (it != mListeners.end())
@@ -583,8 +585,8 @@ namespace JPL::Spatial
 		return {};
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool SpatialManager<Vec3Type, AllocatorType>::SetSourcePosition(SourceId source, const Position<Vec3Type>& newPosition)
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE bool SpatialManager<Vec3Type, VBAPTraits>::SetSourcePosition(SourceId source, const Position<Vec3Type>& newPosition)
 	{
 		auto it = mSourceStuff.find(source);
 		if (it == mSourceStuff.end())
@@ -603,16 +605,16 @@ namespace JPL::Spatial
 		return true;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE bool SpatialManager<Vec3Type, AllocatorType>::SetSourceFocusAndSpread(SourceId source, PanEffectParameters focusAndSpread)
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE bool SpatialManager<Vec3Type, VBAPTraits>::SetSourceFocusAndSpread(SourceId source, PanEffectParameters focusAndSpread)
 	{
 		return mPanningService.SetPanningEffectParameters(
 			GetPanEffectHandle(source),
 			focusAndSpread);
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE float SpatialManager<Vec3Type, AllocatorType>::GetSpreadFromSourceSize(float sourceSize, float distance)
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE float SpatialManager<Vec3Type, VBAPTraits>::GetSpreadFromSourceSize(float sourceSize, float distance)
 	{
 		if (distance <= 0.0f)
 			return 1.0f;
@@ -620,20 +622,20 @@ namespace JPL::Spatial
 		return std::atan((0.5f * sourceSize) / distance) * JPL_INV_PI;
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE float SpatialManager<Vec3Type, AllocatorType>::GetDistanceAttenuation(SourceId source, const AttenuationCurveRef& curve) const
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE float SpatialManager<Vec3Type, VBAPTraits>::GetDistanceAttenuation(SourceId source, const AttenuationCurveRef& curve) const
 	{
 		return mDirectPathService.GetDistanceAttenuation(mSourceStuff.at(source).DirectEffectHandle, curve);
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE float SpatialManager<Vec3Type, AllocatorType>::GetConeAttenuation(SourceId source) const
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE float SpatialManager<Vec3Type, VBAPTraits>::GetConeAttenuation(SourceId source) const
 	{
 		return mDirectPathService.GetDirectionAttenuation(mSourceStuff.at(source).DirectEffectHandle);
 	}
 
-	template<CVec3 Vec3Type, template<class> class AllocatorType>
-	JPL_INLINE std::span<const StandartChannelGains> SpatialManager<Vec3Type, AllocatorType>::GetChannelGains(SourceId source, ChannelMap targetChannelMap) const
+	template<CVec3 Vec3Type, class VBAPTraits>
+	JPL_INLINE std::span<const StandartChannelGains> SpatialManager<Vec3Type, VBAPTraits>::GetChannelGains(SourceId source, ChannelMap targetChannelMap) const
 	{
 		return mPanningService.GetChannelGainsFor(mSourceStuff.at(source).PanEffectHandle, targetChannelMap);
 	}

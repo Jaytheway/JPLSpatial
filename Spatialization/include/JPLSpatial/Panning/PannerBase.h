@@ -30,6 +30,7 @@
 #include "JPLSpatial/Math/MinimalQuat.h"
 #include "JPLSpatial/Math/MinimalBasis.h"
 #include "JPLSpatial/Math/Position.h"
+#include "JPLSpatial/Memory/Memory.h"
 
 #include "JPLSpatial/Algo/Algorithm.h"
 
@@ -51,7 +52,7 @@
 namespace JPL
 {
 	/// Forward declaration
-	template<CVec3 Vec3, template<class> class AllocatorType = std::allocator>
+	template<CVec3 Vec3>
 	struct VBAPBaseTraits;
 
 	//======================================================================
@@ -60,17 +61,10 @@ namespace JPL
 	//======================================================================
 	/// Customization. You can either inherit from this and shadow some types
 	/// and functions, or use a completely separate traits type with VBAP API.
-	template<CVec3 Vec3, template<class> class Allocator>
+	template<CVec3 Vec3>
 	struct VBAPBaseTraits
 	{
-		template<class T>
-		using AllocatorType = Allocator<T>;
-
 		using Vec3Type = Vec3;
-
-		/// Can be shadowed by the user
-		template<class T>
-		using Array = std::vector<T, AllocatorType<T>>;
 
 		/// Can be useful to override to save a tiny bit of memory if max number
 		/// of channels ever used is known at compile time. Or to handle larger
@@ -85,74 +79,82 @@ namespace JPL
 		static float GetChannelAngle(EChannel channel)
 		{
 			/// Standard channel vectors converted to angles
-			static const std::map<EChannel, float> gChannelAngles
-			{
-				{ FrontLeft,       -0.785398f },
-				{ FrontRight,      0.785398f },
-				{ FrontCenter,     0.0f },
-				{ LFE,             0.0f },
-				{ BackLeft,        -2.35619f },
-				{ BackRight,       2.35619f },
-				{ FrontLeftCenter, -0.321719f },
-				{ FrontRightCenter,0.321719f },
-				{ BackCenter,      3.14159f },
-				{ SideLeft,        -1.5708f },
-				{ SideRight,       1.5708f },
+			static constexpr auto gChannelAngles
+				= std::to_array({
+					std::pair<EChannel, float>{ FrontLeft,       -0.785398f },
+					std::pair<EChannel, float>{ FrontRight,      0.785398f },
+					std::pair<EChannel, float>{ FrontCenter,     0.0f },
+					std::pair<EChannel, float>{ LFE,             0.0f },
+					std::pair<EChannel, float>{ BackLeft,        -2.35619f },
+					std::pair<EChannel, float>{ BackRight,       2.35619f },
+					std::pair<EChannel, float>{ FrontLeftCenter, -0.321719f },
+					std::pair<EChannel, float>{ FrontRightCenter,0.321719f },
+					std::pair<EChannel, float>{ BackCenter,      3.14159f },
+					std::pair<EChannel, float>{ SideLeft,        -1.5708f },
+					std::pair<EChannel, float>{ SideRight,       1.5708f },
 
-				{ TopCenter,       3.14159f },
-				{ TopFrontLeft,    -0.785398f },
-				{ TopFrontCenter,  0.0f },
-				{ TopFrontRight,   0.785398f },
+					std::pair<EChannel, float>{ TopCenter,       3.14159f },
+					std::pair<EChannel, float>{ TopFrontLeft,    -0.785398f },
+					std::pair<EChannel, float>{ TopFrontCenter,  0.0f },
+					std::pair<EChannel, float>{ TopFrontRight,   0.785398f },
 
-				{ TopSideLeft,      -1.5708f },
-				{ TopSideRight,     1.5708f },
+					std::pair<EChannel, float>{ TopSideLeft,      -1.5708f },
+					std::pair<EChannel, float>{ TopSideRight,     1.5708f },
 
-				{ TopBackLeft,     -2.35619f },
-				{ TopBackCenter,   3.14159f },
-				{ TopBackRight,    2.35619f },
+					std::pair<EChannel, float>{ TopBackLeft,     -2.35619f },
+					std::pair<EChannel, float>{ TopBackCenter,   3.14159f },
+					std::pair<EChannel, float>{ TopBackRight,    2.35619f },
 
-				{ WideLeft,       -1.0472f },
-				{ WideRight,       1.0472f }
-			};
+					std::pair<EChannel, float>{ WideLeft,       -1.0472f },
+					std::pair<EChannel, float>{ WideRight,       1.0472f }
+				});
 
-			return gChannelAngles.at(channel);
+			return std::find_if(gChannelAngles.begin(), gChannelAngles.end(),
+								[channel](const std::pair<EChannel, float>& p)
+								{
+									return p.first == channel;
+								})->second;
 		}
 
 		static Vec3Type GetChannelVector(EChannel channel)
 		{
 			/// Standard channel vectors converted to angles
-			static const std::map<EChannel, Vec3Type> gChannelAngles
-			{
-				{ FrontLeft,        { -0.7071f, 0.0f,       -0.7071f } },
-				{ FrontRight,       { 0.7071f,  0.0f,       -0.7071f } },
-				{ FrontCenter,      { 0.0f,     0.0f,       -1.0f } },
-				{ LFE,              { 0.0f,     0.0f,       -1.0f } },
-				{ BackLeft,         { -0.7071f, 0.0f,       0.7071f } },
-				{ BackRight,        { 0.7071f,  0.0f,       0.7071f } },
-				{ FrontLeftCenter,  { -0.3162f, 0.0f,       -0.9487f } },
-				{ FrontRightCenter, { 0.3162f,  0.0f,       -0.9487f } },
-				{ BackCenter,       { 0.0f,     0.0f,       1.0f } },
-				{ SideLeft,         { -1.0f,    0.0f,       0.0f } },
-				{ SideRight,        { 1.0f,     0.0f,       0.0f } },
+			static constexpr auto gChannelVectors =
+				std::to_array({
+					std::pair<EChannel, Vec3Type>{ FrontLeft,        { -0.7071f, 0.0f,       -0.7071f } },
+					std::pair<EChannel, Vec3Type>{ FrontRight,       { 0.7071f,  0.0f,       -0.7071f } },
+					std::pair<EChannel, Vec3Type>{ FrontCenter,      { 0.0f,     0.0f,       -1.0f } },
+					std::pair<EChannel, Vec3Type>{ LFE,              { 0.0f,     0.0f,       -1.0f } },
+					std::pair<EChannel, Vec3Type>{ BackLeft,         { -0.7071f, 0.0f,       0.7071f } },
+					std::pair<EChannel, Vec3Type>{ BackRight,        { 0.7071f,  0.0f,       0.7071f } },
+					std::pair<EChannel, Vec3Type>{ FrontLeftCenter,  { -0.3162f, 0.0f,       -0.9487f } },
+					std::pair<EChannel, Vec3Type>{ FrontRightCenter, { 0.3162f,  0.0f,       -0.9487f } },
+					std::pair<EChannel, Vec3Type>{ BackCenter,       { 0.0f,     0.0f,       1.0f } },
+					std::pair<EChannel, Vec3Type>{ SideLeft,         { -1.0f,    0.0f,       0.0f } },
+					std::pair<EChannel, Vec3Type>{ SideRight,        { 1.0f,     0.0f,       0.0f } },
 
-				{ TopCenter,        { 0.0f,     1.0f,       0.0f } },
-				{ TopFrontLeft,     { -0.5774f, 0.5774f,    -0.5774f } },
-				{ TopFrontCenter,   { 0.0f,     0.7071f,    -0.7071f } },
-				{ TopFrontRight,    { 0.5774f,  0.5774f,    -0.5774f } },
+					std::pair<EChannel, Vec3Type>{ TopCenter,        { 0.0f,     1.0f,       0.0f } },
+					std::pair<EChannel, Vec3Type>{ TopFrontLeft,     { -0.5774f, 0.5774f,    -0.5774f } },
+					std::pair<EChannel, Vec3Type>{ TopFrontCenter,   { 0.0f,     0.7071f,    -0.7071f } },
+					std::pair<EChannel, Vec3Type>{ TopFrontRight,    { 0.5774f,  0.5774f,    -0.5774f } },
 
-				{ TopSideLeft,      { -0.7071f, 0.7071f,    0.0f } },
-				{ TopSideRight,     { 0.7071f,  0.7071f,    0.0f } },
+					std::pair<EChannel, Vec3Type>{ TopSideLeft,      { -0.7071f, 0.7071f,    0.0f } },
+					std::pair<EChannel, Vec3Type>{ TopSideRight,     { 0.7071f,  0.7071f,    0.0f } },
 
-				{ TopBackLeft,      { -0.5774f, 0.5774f,    0.5774f } },
-				{ TopBackCenter,    { 0.0f,     0.7071f,    0.7071f } },
-				{ TopBackRight,     { 0.5774f,  0.5774f,    0.5774f } },
+					std::pair<EChannel, Vec3Type>{ TopBackLeft,      { -0.5774f, 0.5774f,    0.5774f } },
+					std::pair<EChannel, Vec3Type>{ TopBackCenter,    { 0.0f,     0.7071f,    0.7071f } },
+					std::pair<EChannel, Vec3Type>{ TopBackRight,     { 0.5774f,  0.5774f,    0.5774f } },
 
-				{ WideLeft,         { -0.866f,  0.0f,       -0.5f } },
-				{ WideRight,        { 0.866f,   0.0f,       -0.5f } },
+					std::pair<EChannel, Vec3Type>{ WideLeft,         { -0.866f,  0.0f,       -0.5f } },
+					std::pair<EChannel, Vec3Type>{ WideRight,        { 0.866f,   0.0f,       -0.5f } },
 
-			};
+				});
 
-			return gChannelAngles.at(channel);
+			return std::find_if(gChannelVectors.begin(), gChannelVectors.end(),
+								[channel](const std::pair<EChannel, Vec3Type>& p)
+								{
+									return p.first == channel;
+								})->second;
 		}
 	};
 
@@ -197,7 +199,7 @@ namespace JPL
 	public:
 		/// Aliases to avoid typing wordy templates
 		using Vec3Type = typename Traits::Vec3Type;
-		template<class T> using Array = Traits::template Array<T>;
+		template<class T> using Array = std::pmr::vector<T>;
 		using ChannelGainsRef = typename Traits::ChannelGains&;
 
 		//======================================================================
@@ -252,7 +254,7 @@ namespace JPL
 		struct VBAPLayoutBase
 		{
 			/// Groups of virtual sources associated with source channels
-			Array<ChannelGroup> ChannelGroups;
+			Array<ChannelGroup> ChannelGroups{ GetDefaultMemoryResource()};
 
 			[[nodiscard]] JPL_INLINE bool IsInitialized() const noexcept { return !ChannelGroups.empty(); }
 			[[nodiscard]] JPL_INLINE ChannelMap GetTargetChannelMap() const noexcept { return mTargetChannelMap; }
@@ -385,7 +387,7 @@ namespace JPL
 		static JPL_INLINE void SlerpChannelCap(std::span<Vec3Type> virtualSources, const Vec3Type& targetDirection, float t);
 
 	private:
-		std::unique_ptr<LUTType> mLUT;
+		pmr_unique_ptr<LUTType> mLUT;
 
 		ChannelMap mChannelMap;     // Target channel map
 		uint32 mNumChannels = 0;  // Number of channels in target channel map
@@ -394,6 +396,7 @@ namespace JPL
 		// Used to determine number of virtual sources required to leave no gaps in the target channel layout
 		float mShortestEdgeAperture = std::numeric_limits<float>::max();
 	};
+
 
 	//==============================================================================
 	//
@@ -429,7 +432,7 @@ namespace JPL
 		}
 
 		// Create LUT
-		mLUT = std::make_unique<LUTType>();
+		mLUT = JPL::make_pmr_unique<LUTType>();
 
 		// Construct LUT builder
 		auto lutBuilder = LUTInterface::MakeBuilder(channelMap, *mLUT);
@@ -828,7 +831,7 @@ namespace JPL
 
 		// Source channel map is unsorted, we need to sort it
 		// to make our lives easier
-		Array<VBAP::ChannelAngle> sourceChannelsSorted;
+		Array<VBAP::ChannelAngle> sourceChannelsSorted(GetDefaultMemoryResource());
 		VBAP::ChannelAngle::GetSortedChannelAngles(channelMap, sourceChannelsSorted, &Traits::GetChannelAngle);
 
 		// Width of a singe source channel in radians

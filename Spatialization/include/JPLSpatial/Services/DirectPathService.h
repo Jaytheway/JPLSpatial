@@ -26,6 +26,7 @@
 #include "JPLSpatial/Math/MinimalBasis.h"
 #include "JPLSpatial/Math/Position.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
+#include "JPLSpatial/Memory/Memory.h"
 #include "JPLSpatial/Utilities/IDType.h"
 
 #include <algorithm>
@@ -33,7 +34,7 @@
 #include <memory>
 #include <iterator>
 #include <vector>
-#include <unordered_map>
+#include <memory_resource>
 
 namespace JPL
 {
@@ -79,13 +80,12 @@ namespace JPL
 	};
 
 	//==========================================================================
-	template<template<class> class AllocatorType = std::allocator>
 	class DirectPathService
 	{
 	public:
 		// Alias to override allocator for the internal FlatMap we use
 		template<class Key, class T>
-		using FlatMapType = FlatMapWithAllocator<Key, T, AllocatorType>;
+		using FlatMapType = FlatMapWithAllocator<Key, T, std::pmr::polymorphic_allocator>;
 
 	public:
 		DirectPathService() = default;
@@ -104,7 +104,8 @@ namespace JPL
 
 		/// Assign attenuation curve to source.
 		/// The curve should not be owned by the user.
-		JPL_INLINE AttenuationCurveRef AssignAttenuationCurve(DirectEffectHandle source, AttenuationFunction* attenuationFunction);
+		/// `attenuationFunction` must be constructed with make_pmr_shared
+		JPL_INLINE AttenuationCurveRef AssignAttenuationCurve(DirectEffectHandle source, AttenuationCurveRef attenuationFunction);
 
 		/// Compute direct path parameters based on position of the soruce and listener.
 		/// This can be used to compute parameters for position of a source
@@ -179,11 +180,11 @@ namespace JPL
 		static JPL_INLINE float ProcessAngleAttenuationImpl(float azimutCos, const AttenuationCone& cone);
 
 	private:
-		using CurveAttenuationCacheArray = std::vector<CurveAttenuationCache, AllocatorType<CurveAttenuationCache>>;
+		using CurveAttenuationCacheArray = std::pmr::vector<CurveAttenuationCache>;
 
 		// TODO: can we store cache for more efficient access?
-		FlatMapType<DirectEffectHandle, CurveAttenuationCacheArray> mAttenuationCache;
-		FlatMapType<DirectEffectHandle, ConeAttenuationCache> mDirectionAttenuationCache;
+		FlatMapType<DirectEffectHandle, CurveAttenuationCacheArray> mAttenuationCache{ GetDefaultMemoryResource() };
+		FlatMapType<DirectEffectHandle, ConeAttenuationCache> mDirectionAttenuationCache{ GetDefaultMemoryResource() };
 	};
 } // namespace JPL
 
@@ -194,14 +195,13 @@ namespace JPL
 //==============================================================================
 namespace JPL
 {
-	template<template<class> class AllocatorType>
-	JPL_INLINE DirectEffectHandle DirectPathService<AllocatorType>::InitializeDirrectEffect(const DirectEffectInitParameters& initParameters)
+	JPL_INLINE DirectEffectHandle DirectPathService::InitializeDirrectEffect(const DirectEffectInitParameters& initParameters)
 	{
 		const auto handle = DirectEffectHandle::New();
 		mAttenuationCache.emplace(handle,
 								  initParameters.BaseCurve
-								  ? CurveAttenuationCacheArray{ {.Curve = initParameters.BaseCurve, .AttenuationValue = 1.0f } }
-		: CurveAttenuationCacheArray{});
+								  ? CurveAttenuationCacheArray({ {.Curve = initParameters.BaseCurve, .AttenuationValue = 1.0f } }, GetDefaultMemoryResource())
+								  : CurveAttenuationCacheArray(GetDefaultMemoryResource()));
 
 		mDirectionAttenuationCache.emplace(handle,
 			ConeAttenuationCache{ .Cone = initParameters.AttenuationCone, .AttenuationValue = 1.0f });
@@ -209,27 +209,23 @@ namespace JPL
 		return handle;
 	}
 
-	template<template<class> class AllocatorType>
-	JPL_INLINE bool DirectPathService<AllocatorType>::ReleaseEffectData(DirectEffectHandle source)
+	JPL_INLINE bool DirectPathService::ReleaseEffectData(DirectEffectHandle source)
 	{
 		return mAttenuationCache.erase(source) + mDirectionAttenuationCache.erase(source);
 	}
 
-	template<template<class> class AllocatorType>
-	JPL_INLINE AttenuationCurveRef DirectPathService<AllocatorType>::AssignAttenuationCurve(DirectEffectHandle source, AttenuationFunction* attenuationFunction)
+	JPL_INLINE AttenuationCurveRef DirectPathService::AssignAttenuationCurve(DirectEffectHandle source, AttenuationCurveRef attenuationFunction)
 	{
 		if (!source.IsValid() || !attenuationFunction)
 			return nullptr;
 
-		std::shared_ptr<AttenuationFunction> curve;
-		curve.reset(attenuationFunction);
+		//std::shared_ptr<AttenuationFunction> curve = make_pmr_shared(attenuationFunction);
 		auto& cache = mAttenuationCache[source];
-		cache.emplace_back(CurveAttenuationCache{ curve, 1.0f });
-		return curve;
+		return cache.emplace_back(attenuationFunction, 1.0f).Curve;
+		//return curve;
 	}
 
-	template<template<class> class AllocatorType>
-	JPL_INLINE float DirectPathService<AllocatorType>::GetDistanceAttenuation(DirectEffectHandle source, const AttenuationCurveRef& curve) const
+	JPL_INLINE float DirectPathService::GetDistanceAttenuation(DirectEffectHandle source, const AttenuationCurveRef& curve) const
 	{
 		auto it = mAttenuationCache.find(source);
 		if (it == mAttenuationCache.end())
@@ -242,8 +238,7 @@ namespace JPL
 		return 1.0f;
 	}
 
-	template<template<class> class AllocatorType>
-	JPL_INLINE float DirectPathService<AllocatorType>::GetDirectionAttenuation(DirectEffectHandle source) const
+	JPL_INLINE float DirectPathService::GetDirectionAttenuation(DirectEffectHandle source) const
 	{
 		auto it = mDirectionAttenuationCache.find(source);
 		if (it == mDirectionAttenuationCache.end())
@@ -252,14 +247,12 @@ namespace JPL
 		return it->second.AttenuationValue;
 	}
 
-	template<template<class> class AllocatorType>
-	JPL_INLINE float DirectPathService<AllocatorType>::EvaluateDistance(float distance, const AttenuationCurveRef& attenuationCurve)
+	JPL_INLINE float DirectPathService::EvaluateDistance(float distance, const AttenuationCurveRef& attenuationCurve)
 	{
 		return attenuationCurve->Evaluate(distance);
 	}
 
-	template<template<class> class AllocatorType>
-	JPL_INLINE bool DirectPathService<AllocatorType>::EvaluateDistance(DirectEffectHandle source, float distance)
+	JPL_INLINE bool DirectPathService::EvaluateDistance(DirectEffectHandle source, float distance)
 	{
 		auto it = mAttenuationCache.find(source);
 		if (it == mAttenuationCache.end())
@@ -271,8 +264,7 @@ namespace JPL
 		return true;
 	}
 
-	template<template<class> class AllocatorType>
-	JPL_INLINE bool DirectPathService<AllocatorType>::EvaluateDirection(DirectEffectHandle source, float directionDot)
+	JPL_INLINE bool DirectPathService::EvaluateDirection(DirectEffectHandle source, float directionDot)
 	{
 		auto it = mDirectionAttenuationCache.find(source);
 		if (it == mDirectionAttenuationCache.end())
@@ -285,9 +277,8 @@ namespace JPL
 		return true;
 	}
 
-	template<template<class> class AllocatorType>
 	template<CVec3 Vec3Type>
-	JPL_INLINE DirectPathResult<Vec3Type> DirectPathService<AllocatorType>::ProcessDirectPath(const Position<Vec3Type>& source, const Position<Vec3Type>& listener)
+	JPL_INLINE DirectPathResult<Vec3Type> DirectPathService::ProcessDirectPath(const Position<Vec3Type>& source, const Position<Vec3Type>& listener)
 	{
 		static const Vec3Type cForwardAxis(0, 0, -1); // TODO: this is very assuming
 		static const Vec3Type cUpAxis(0, 1, 0); // TODO: this is very assuming
@@ -352,8 +343,7 @@ namespace JPL
 		};
 	}
 
-	template<template<class> class AllocatorType>
-	JPL_INLINE float DirectPathService<AllocatorType>::ProcessAngleAttenuationImpl(float azimutCos, const AttenuationCone& cone)
+	JPL_INLINE float DirectPathService::ProcessAngleAttenuationImpl(float azimutCos, const AttenuationCone& cone)
 	{
 		// Compute cosines of half of the cone sectors
 		const float cutoffInner = std::cos(cone.InnerAngle * 0.5f); // TODO: can we cache actual dot isntead of angles?
@@ -378,8 +368,7 @@ namespace JPL
 		return factor;
 	}
 
-	template<template<class> class AllocatorType>
-	JPL_INLINE float DirectPathService<AllocatorType>::ProcessAngleAttenuation(float azimuth, AttenuationCone cone)
+	JPL_INLINE float DirectPathService::ProcessAngleAttenuation(float azimuth, AttenuationCone cone)
 	{
 		if (cone.InnerAngle >= JPL_TWO_PI)
 		{
@@ -390,9 +379,8 @@ namespace JPL
 		return ProcessAngleAttenuationImpl(std::cos(azimuth), cone);
 	}
 
-	template<template<class> class AllocatorType>
 	template<CVec3 Vec3Type>
-	JPL_INLINE float DirectPathService<AllocatorType>::ProcessAngleAttenuation(const Vec3Type& position,
+	JPL_INLINE float DirectPathService::ProcessAngleAttenuation(const Vec3Type& position,
 																const Position<Vec3Type>& referencePoint,
 																AttenuationCone cone)
 	{
@@ -410,55 +398,6 @@ namespace JPL
 		const float dot = DotProduct(referenceForward, sourceDirection);
 
 		return ProcessAngleAttenuationImpl(dot, cone);
-
-#if 0 // Branchless vercorized version turned out to be actually slower
-
-		const JPH::Vec3 listenerForward = referencePoint.GetRotation().GetAxisZ().Normalized();
-		const JPH::Vec3 sourceDirection = (position - referencePoint.GetTranslation()).Normalized();
-		const float d = listenerForward.Dot(sourceDirection);
-
-		const float cutoffInner = std::cos(cone.InnerAngle * 0.5f);
-		const float cutoffOuter = std::cos(cone.OuterAngle * 0.5f);
-
-		// Prepare SIMD vectors
-		const JPH::Vec4 dVec = JPH::Vec4::sReplicate(d);
-		const JPH::Vec4 cutoffInnerVec = JPH::Vec4::sReplicate(cutoffInner);
-		const JPH::Vec4 cutoffOuterVec = JPH::Vec4::sReplicate(cutoffOuter);
-		const JPH::Vec4 outerGainVec = JPH::Vec4::sReplicate(cone.OuterGain);
-		const JPH::Vec4 oneVec = JPH::Vec4::sReplicate(1.0f);
-		const JPH::Vec4 zeroVec = JPH::Vec4::sZero();
-
-		// Compute denominator and handle division by zero
-		JPH::Vec4 denominatorVec = cutoffInnerVec - cutoffOuterVec;
-		const float epsilon = 1e-6f;
-		const JPH::Vec4 epsilonVec = JPH::Vec4::sReplicate(epsilon);
-		denominatorVec = JPH::Vec4::sMax(denominatorVec, epsilonVec);
-
-		// Compute tVec = (d - cutoffOuter) / (cutoffInner - cutoffOuter)
-		JPH::Vec4 tVec = (dVec - cutoffOuterVec) / denominatorVec;
-
-		// Clamp tVec to [0, 1] without branches
-		tVec = JPH::Vec4::sMax(zeroVec, JPH::Vec4::sMin(tVec, oneVec));
-
-		// Compute interpolated angular gain
-		const JPH::Vec4 interpolatedGainVec = outerGainVec + (oneVec - outerGainVec) * tVec;
-
-		// Compute masks
-		const JPH::UVec4 mask_d_gt_cutoffInner = JPH::Vec4::sGreater(dVec, cutoffInnerVec);
-		const JPH::UVec4 mask_d_gt_cutoffOuter = JPH::Vec4::sGreater(dVec, cutoffOuterVec);
-
-		// Initialize angularGainVec with cone.OuterGain
-		JPH::Vec4 angularGainVec = outerGainVec;
-
-		// If d > cutoffOuter, select interpolatedGainVec
-		angularGainVec = JPH::Vec4::sSelect(angularGainVec, interpolatedGainVec, mask_d_gt_cutoffOuter);
-
-		// If d > cutoffInner, select oneVec (angularGain = 1.0f)
-		angularGainVec = JPH::Vec4::sSelect(angularGainVec, oneVec, mask_d_gt_cutoffInner);
-
-		// Extract the scalar result
-		return angularGainVec.GetX();
-#endif
 	}
 
 } // namespace JPL

@@ -28,6 +28,7 @@
 #include <utility>
 #include <functional>
 #include <stdexcept>
+#include <initializer_list>
 #endif
 
 namespace JPL
@@ -48,6 +49,8 @@ namespace JPL
 	class FlatMap
 	{
 	public:
+		using allocator_type = KeyContainer::allocator_type;
+
 		using key_type = Key;
 		using mapped_type = T;
 		using value_type = std::pair<key_type, mapped_type>;
@@ -78,11 +81,13 @@ namespace JPL
 
 		FlatMap() = default;
 
-		explicit FlatMap(Equals eq) : eq(std::move(eq)) {}
+		explicit FlatMap(const allocator_type& allocator) : cont(allocator) {}
+		FlatMap(Equals eq, const allocator_type& allocator = {}) : eq(std::move(eq)), cont(allocator) {}
 
 		template<class InputIter>
-		FlatMap(InputIter first, InputIter last, Equals eq = {})
+		FlatMap(InputIter first, InputIter last, Equals eq = {}, const allocator_type& allocator = {})
 			: eq(std::move(eq))
+			, cont(allocator)
 		{
 			const auto n = static_cast<size_type>(std::distance(first, last));
 			cont.keys.reserve(n);
@@ -94,8 +99,8 @@ namespace JPL
 			}
 		}
 
-		explicit FlatMap(std::initializer_list<value_type> init)
-			: FlatMap(init.begin(), init.end())
+		explicit FlatMap(std::initializer_list<value_type> init, const allocator_type& allocator = {})
+			: FlatMap(init.begin(), init.end(), {}, allocator)
 		{
 		}
 
@@ -336,6 +341,13 @@ namespace JPL
 			{
 				key_container_type    keys;
 				mapped_container_type values;
+
+				containers() = default;
+				containers(const allocator_type& allocator)
+					: keys(allocator)
+					, values(allocator)
+				{
+				}
 			} cont;
 
 			[[no_unique_address]] Equals eq;

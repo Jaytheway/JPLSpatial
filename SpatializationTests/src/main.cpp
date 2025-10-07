@@ -46,6 +46,7 @@
 #include "Tests/DirectionEncodingTest.h"
 
 #include "Tests/FlatMapTest.h"
+#include "Tests/MemoryTest.h"
 
 #undef max
 #undef min

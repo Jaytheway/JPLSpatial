@@ -423,7 +423,8 @@ namespace JPL
             const uint32_t McMask = M_corr - 1u;
 
             // Build correction LUT (p -> uhat in [0,1) with 0 degrees at +Z)
-            std::vector<float> corrU = VBAP::LUT2D<std::vector>::BuildDiamondToAngleNormLUT(M_corr);
+            typename VBAP::LUT2D::template Array<float> corrU;
+            VBAP::LUT2D::BuildDiamondToAngleNormLUT(corrU, M_corr);
             
             ASSERT_EQ(corrU.size(), M_corr);
 

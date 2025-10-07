@@ -22,22 +22,16 @@
 #include "JPLSpatial/Core.h"
 #include "JPLSpatial/ChannelMap.h"
 #include "JPLSpatial/SpatialManager.h"
-#include "JPLSpatial/TypeUtilities.h"
-//#include "JPLSpatial/Operations.h"
-//#include "JPLSpatial/GenericOperation.h"
 #include "JPLSpatial/DistanceAttenuation.h"
 #include "JPLSpatial/Math/MinimalVec3.h"
+#include "JPLSpatial/Memory/Memory.h"
 
-#include "../Utility/Vec3Types.h"
+#include "../Utility/TestMemoryLeakDetector.h"
 
-//#include <nsimd/nsimd-all.hpp>
 #include <gtest/gtest.h>
 
 #include <format>
-#include <set>
 #include <vector>
-#include <ranges>
-#include <tuple>
 
 namespace JPL
 {
@@ -51,6 +45,17 @@ namespace JPL
 		SpatializationTest() = default;
 
 	protected:
+		TestLeakDetector mLeakDetector;
+
+		void SetUp() override
+		{
+			mLeakDetector.SetUp();
+		}
+
+		void TearDown() override
+		{
+			mLeakDetector.TearDown();
+		}
 	};
 
 #if 0
@@ -406,18 +411,18 @@ namespace JPL
 		{
 			std::string Description;
 			Vec3Type SourcePosition;
-			const std::vector<typename AttenuationCurve::Point> AttenuationCurvePoints
+			const std::pmr::vector<typename AttenuationCurve::Point> AttenuationCurvePoints
 			{
 					{.Distance = 0.0f, .Value = 1.0f, .FunctionType = Curve::EType::Linear},
 					{.Distance = 10.0f, .Value = 0.5f, .FunctionType = Curve::EType::Linear}
 			};
 			float ExpectedAttenuationValue;
-			std::vector<float> ExpectedGains;
+			std::pmr::vector<float> ExpectedGains;
 
 			SourceId Source;
 			AttenuationCurveRef AttenuationCurve;
 		};
-
+	
 		std::vector<AdvanceSimTestCase> testCases
 		{
 			{
@@ -451,18 +456,25 @@ namespace JPL
 
 		for (auto& testCase : testCases)
 		{
-			SourceId source = spatializer.CreateSource(SourceInitParameters{ .NumChannels = 1, .NumTargetChannels = quadChannels.GetNumChannels() });
+
+			SourceId source = spatializer.CreateSource(
+				SourceInitParameters{
+					.NumChannels = 1,
+					.NumTargetChannels = quadChannels.GetNumChannels(),
+					.PanParameters = {.Focus = 0.0f, .Spread = 0.0f }
+				});
+	
 			ASSERT_TRUE(source.IsValid());
 			testCase.Source = source;
 
 			Position<Vec3Type> sourcePos{
 				.Location = testCase.SourcePosition,
-				.Orientation = Orientation<Vec3Type>::Identity() //Quat<Vec3Type>::Identity()
+				.Orientation = Orientation<Vec3Type>::Identity()
 			};
 			ASSERT_TRUE(spatializer.SetSourcePosition(source, sourcePos));
 
 			// Prepare attenuation
-			auto* curve = new AttenuationCurve();
+			auto curve = make_pmr_shared<AttenuationCurve>();
 			curve->Points = testCase.AttenuationCurvePoints;
 			curve->SortPoints();
 			testCase.AttenuationCurve = spatializer.GetDirectPathService().AssignAttenuationCurve(spatializer.GetDirectEffectHandle(source), curve);
@@ -482,18 +494,19 @@ namespace JPL
 		spatializer.AdvanceSimulation();
 
 		static constexpr float tolerance = 1e-5f;
-
 		for (const auto& testCase : testCases)
 		{
-			SCOPED_TRACE(testCase.Description);
+			//! Note: SCOPED_TRACE allocate and messes up our leak detector,
+			//! just print the description on failed EXPECT/ASSERT as a workaround
+			// SCOPED_TRACE(testCase.Description);
 
 			// Test attenuation
 			const float attenuation = spatializer.GetDistanceAttenuation(testCase.Source, testCase.AttenuationCurve);
-			EXPECT_NEAR(attenuation, testCase.ExpectedAttenuationValue, tolerance);
+			EXPECT_NEAR(attenuation, testCase.ExpectedAttenuationValue, tolerance) << testCase.Description;
 
 			// Test panning
 			const auto channelGains = spatializer.GetChannelGains(testCase.Source, quadChannels);
-			ASSERT_FALSE(channelGains.empty());
+			ASSERT_FALSE(channelGains.empty()) << testCase.Description;
 
 			static constexpr uint32 sourceChannel = 0;
 
@@ -501,7 +514,7 @@ namespace JPL
 
 			for (uint32 targetChannel = 0; targetChannel < testCase.ExpectedGains.size(); ++targetChannel)
 			{
-				EXPECT_NEAR(channelGainsRef[sourceChannel][targetChannel], testCase.ExpectedGains[targetChannel], tolerance) << "Target channel: " << targetChannel;
+				EXPECT_NEAR(channelGainsRef[sourceChannel][targetChannel], testCase.ExpectedGains[targetChannel], tolerance) << testCase.Description << "\n Target channel: " << targetChannel;
 			}
 		}
 	}

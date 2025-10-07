@@ -22,11 +22,13 @@
 #include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/MinimalVec2.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
+#include "JPLSpatial/Memory/Memory.h"
 
 #include <vector>
 #include <span>
 #include <cmath>
 #include <algorithm>
+#include <memory>
 
 namespace JPL
 {
@@ -74,10 +76,11 @@ namespace JPL
         // Perform an ear-clipping triangulation that always clips the ear
         // whose triangle has the largest minimum interior angle
         // - a cheap heuristic that strongly discourages long, skinny slivers.
-        template<CVec3 Vec3, class Vec3i>
-        void TriangulatePoly(std::span<const Vec3> inPositions, std::span<int> poly, std::vector<Vec3i>& outTris)
+        template<CVec3 Vec3, template<class...> class ContainerType, class Vec3i, class ...Args>
+        void TriangulatePoly(std::span<const Vec3> inPositions, std::span<int> poly, ContainerType<Vec3i, Args...>& outTris)
         {
             using IndexType = std::remove_cvref_t<decltype(std::declval<Vec3i>()[0])>;
+            using AllocatorType = typename ContainerType<Vec3i, Args...>::allocator_type;
 
             // 1. Build projection basis
 
@@ -120,7 +123,7 @@ namespace JPL
                return { DotProduct(p, u),  DotProduct(p, v) };
            };
 #endif
-            std::vector<Vec2> pts2;
+            std::pmr::vector<Vec2> pts2(GetDefaultMemoryResource());
             pts2.reserve(poly.size());
             for (int idx : poly)
                 pts2.push_back(project(inPositions[idx]));
@@ -141,7 +144,7 @@ namespace JPL
                 Vec2 P;           // projected coords
                 int Prev, Next;   // doubly-linked list in 'nodes'
             };
-            std::vector<Node> nodes;
+            std::pmr::vector<Node> nodes(GetDefaultMemoryResource());
             nodes.reserve(poly.size());
             for (size_t i = 0; i < poly.size(); ++i)
             {

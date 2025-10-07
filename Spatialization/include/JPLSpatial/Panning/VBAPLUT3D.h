@@ -24,6 +24,7 @@
 #include "JPLSpatial/Panning/VBAPEx.h"
 #include "JPLSpatial/Panning/DummySpeakers.h"
 #include "JPLSpatial/Math/MinimalMat.h"
+#include "JPLSpatial/Memory/Memory.h"
 #include "JPLSpatial/Utilities/GainEncoding.h"
 
 #include <array>
@@ -42,7 +43,7 @@ namespace JPL::VBAP
 
     //==========================================================================
     /// Forward declarations
-    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType, template<class> class AllocatorType = std::allocator>
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
     class LUTBuilder;
 
     template<CLUT LUTType, class LUTCodec>
@@ -51,13 +52,13 @@ namespace JPL::VBAP
     //==========================================================================
     /// Interface to contsruct LUTBuilder and LUTQuery without having to
     /// retype long template parameter lists
-    template<auto GetSpeakerVectorFunction, class LUTCodec, CLUT LUTType, template<class> class AllocatorType = std::allocator>
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CLUT LUTType>
     class LUTInterface
     {
     public:
         using Vec3Type = std::remove_cvref_t<decltype(GetSpeakerVectorFunction(EChannel{}))>;
         
-        using BuilderType = LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType, AllocatorType>;
+        using BuilderType = LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>;
         using QueryType = LUTQuery<LUTType, LUTCodec>;
 
         //======================================================================
@@ -96,7 +97,7 @@ namespace JPL::VBAP
     /// Forward declaration of LUT type
     /// 'N' is the size of the LUT (e.g. indice count of octahedron direction codec)
     /// 'Vec3Type' is needed by LUT type that doesn't store precomputed gains.
-    template<CLUTType auto T, size_t N, CVec3 Vec3Type = void*, template<class> class AllocatorType = std::allocator>
+    template<CLUTType auto T, size_t N, CVec3 Vec3Type = void*>
     struct LUT;
      
     //==========================================================================
@@ -136,20 +137,20 @@ namespace JPL::VBAP
 
     using DynamicDataTypeNone = void*;
 
-    template<class DynamicDataType_, template<class> class AllocatorType>
+    template<class DynamicDataType_>
     struct DynamicDataTrait
     {
         using DynamicDataType = DynamicDataType_;
-        std::vector<DynamicDataType, AllocatorType<DynamicDataType>> Data;
+        std::pmr::vector<DynamicDataType> Data{ GetDefaultMemoryResource() };
     };
 
     template<>
-    struct DynamicDataTrait<DynamicDataTypeNone, std::allocator> {};
+    struct DynamicDataTrait<DynamicDataTypeNone> {};
 
     //==========================================================================
     /// Base to compose LUT specializations
-    template<size_t N, class GainType_, class SpeakerIndexType_, template<class> class AllocatorType, class DynamicDataType_ = DynamicDataTypeNone>
-    struct LUTBase : DynamicDataTrait<DynamicDataType_, AllocatorType>
+    template<size_t N, class GainType_, class SpeakerIndexType_, class DynamicDataType_ = DynamicDataTypeNone>
+    struct LUTBase : DynamicDataTrait<DynamicDataType_>
     {
         using GainType = GainType_;
         using SpeakerIndexType = SpeakerIndexType_;
@@ -159,8 +160,8 @@ namespace JPL::VBAP
     };
 
     /// Specialization of the base without precomputed gains
-    template<size_t N, class SpeakerIndexType_, template<class> class AllocatorType, class DynamicDataType_>
-    struct LUTBase<N, GainTypeNone, SpeakerIndexType_, AllocatorType, DynamicDataType_> : DynamicDataTrait<DynamicDataType_, AllocatorType>
+    template<size_t N, class SpeakerIndexType_, class DynamicDataType_>
+    struct LUTBase<N, GainTypeNone, SpeakerIndexType_, DynamicDataType_> : DynamicDataTrait<DynamicDataType_>
     {
         using GainType = GainTypeNone;
         using SpeakerIndexType = SpeakerIndexType_;
@@ -171,25 +172,25 @@ namespace JPL::VBAP
     //==========================================================================
     /// Available LUT specializations
         
-    template<size_t N, CVec3 Vec3Type, template<class> class AllocatorType>
-    struct LUT<ELUTSize::KB_983, N, Vec3Type, AllocatorType>
-        : LUTBase<N, float, SpeakerTripletIdx, AllocatorType> {};
+    template<size_t N, CVec3 Vec3Type>
+    struct LUT<ELUTSize::KB_983, N, Vec3Type>
+        : LUTBase<N, float, SpeakerTripletIdx> {};
     
-    template<size_t N, CVec3 Vec3Type, template<class> class AllocatorType>
-    struct LUT<ELUTSize::KB_851, N, Vec3Type, AllocatorType>
-        : LUTBase<N, float, TripletIdx, AllocatorType, DynamicDataTri> {};
+    template<size_t N, CVec3 Vec3Type>
+    struct LUT<ELUTSize::KB_851, N, Vec3Type>
+        : LUTBase<N, float, TripletIdx, DynamicDataTri> {};
     
-    template<size_t N, CVec3 Vec3Type, template<class> class AllocatorType>
-    struct LUT<ELUTSize::KB_786, N, Vec3Type, AllocatorType>
-        : LUTBase<N, Gain24Bit, SpeakerTripletIdx, AllocatorType> {};
+    template<size_t N, CVec3 Vec3Type>
+    struct LUT<ELUTSize::KB_786, N, Vec3Type>
+        : LUTBase<N, Gain24Bit, SpeakerTripletIdx> {};
     
-    template<size_t N, CVec3 Vec3Type, template<class> class AllocatorType>
-    struct LUT<ELUTSize::KB_655, N, Vec3Type, AllocatorType>
-        : LUTBase<N, Gain24Bit, TripletIdx, AllocatorType, DynamicDataTri> {};
+    template<size_t N, CVec3 Vec3Type>
+    struct LUT<ELUTSize::KB_655, N, Vec3Type>
+        : LUTBase<N, Gain24Bit, TripletIdx, DynamicDataTri> {};
     
-    template<size_t N, CVec3 Vec3Type, template<class> class AllocatorType>
-    struct LUT<ELUTSize::KB_65, N,  Vec3Type, AllocatorType>
-        : LUTBase<N, GainTypeNone, TripletIdx, AllocatorType, DynamicDataWithMat<Vec3Type>> {};
+    template<size_t N, CVec3 Vec3Type>
+    struct LUT<ELUTSize::KB_65, N,  Vec3Type>
+        : LUTBase<N, GainTypeNone, TripletIdx, DynamicDataWithMat<Vec3Type>> {};
         
 #if 0 // Note: 16-bit gains may be too noisy below -60 dB
     template<size_t N, CVec3 Vec3Type> struct LUT<ELUTSize::KB_589, N, Vec3Type> : LUTBase<N, Gain16Bit, SpeakerTripletIdx> {};
@@ -199,20 +200,20 @@ namespace JPL::VBAP
     //==========================================================================
     /// Just some more convenient aliases
 
-    template<size_t N, template<class> class AllocatorType = std::allocator>
-    using LUT_983 = LUTBase<N, float, SpeakerTripletIdx, AllocatorType>;
+    template<size_t N>
+    using LUT_983 = LUTBase<N, float, SpeakerTripletIdx>;
     
-    template<size_t N, template<class> class AllocatorType = std::allocator>
-    using LUT_851 = LUTBase<N, float, TripletIdx, AllocatorType, DynamicDataTri>;
+    template<size_t N>
+    using LUT_851 = LUTBase<N, float, TripletIdx, DynamicDataTri>;
     
-    template<size_t N, template<class> class AllocatorType = std::allocator>
-    using LUT_786 = LUTBase<N, Gain24Bit, SpeakerTripletIdx, AllocatorType>;
+    template<size_t N>
+    using LUT_786 = LUTBase<N, Gain24Bit, SpeakerTripletIdx>;
     
-    template<size_t N, template<class> class AllocatorType = std::allocator>
-    using LUT_655 = LUTBase<N, Gain24Bit, TripletIdx, AllocatorType, DynamicDataTri>;
+    template<size_t N>
+    using LUT_655 = LUTBase<N, Gain24Bit, TripletIdx, DynamicDataTri>;
     
-    template<size_t N, CVec3 Vec3Type, template<class> class AllocatorType = std::allocator>
-    using LUT_65 = LUTBase<N, GainTypeNone, TripletIdx, AllocatorType, DynamicDataWithMat<Vec3Type>>;
+    template<size_t N, CVec3 Vec3Type>
+    using LUT_65 = LUTBase<N, GainTypeNone, TripletIdx, DynamicDataWithMat<Vec3Type>>;
         
     //==========================================================================
     /// Interface to query LUT gains for a direction
@@ -259,7 +260,7 @@ namespace JPL::VBAP
 
     //==========================================================================
     /// Helper class to build a LUT for a set of directions and indices
-    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType, template<class> class AllocatorType>
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
     class LUTBuilder
     {
     public:
@@ -269,7 +270,7 @@ namespace JPL::VBAP
 
         [[nodiscard]] JPL_INLINE uint32 GetNumDummies() const noexcept{ return mDummySpeakers.GetNumDummies(); }
         [[nodiscard]] JPL_INLINE uint32 GetNumRealChannels() const noexcept { return static_cast<uint32>(mVectors.size()) - mDummySpeakers.GetNumDummies(); }
-        [[nodiscard]] JPL_INLINE const std::vector<SpeakerTripletIdx, AllocatorType<SpeakerTripletIdx>>& GetTris() const noexcept { return mTris; }
+        [[nodiscard]] JPL_INLINE const std::pmr::vector<SpeakerTripletIdx>& GetTris() const noexcept { return mTris; }
         [[nodiscard]] float FindShortestAperture() const;
 
         /// This has to be called for each direction the LUT needs to
@@ -298,16 +299,17 @@ namespace JPL::VBAP
     private:
         LUTType& mLUT;
 
-        DummySpeakers<GetSpeakerVectorFunction, AllocatorType> mDummySpeakers;
+        std::pmr::vector<Vec3Type> mVectors; // speaker direction vectors
+        
+        DummySpeakers<GetSpeakerVectorFunction> mDummySpeakers;
 
-        std::vector<Vec3Type, AllocatorType<Vec3Type>> mVectors; // speaker direction vectors
         uint32 mNumRealSpeakers = 0;
         uint32 mNumGroundSpeakers = 0;
         uint32 mNumTopSpeakers = 0;
 
         // Potential dynamic data stored in some LUT types
-        std::vector<SpeakerTripletIdx, AllocatorType<SpeakerTripletIdx>> mTris;
-        std::vector<Math::Mat3<Vec3Type>, AllocatorType<Math::Mat3<Vec3Type>>> mTrisInvMats;
+        std::pmr::vector<SpeakerTripletIdx> mTris;
+        std::pmr::vector<Math::Mat3<Vec3Type>> mTrisInvMats;
     };
 } // namespace JPL::VBAP
 
@@ -327,9 +329,12 @@ namespace JPL::VBAP
 namespace JPL::VBAP
 {
     //==========================================================================
-    template<auto GetSpeakerVectorFunction, class LUTCodec , CVec3 Vec3Type, CLUT LUTType, template<class> class AllocatorType>
-    inline LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType, AllocatorType>::LUTBuilder(ChannelMap channelMap, LUTType& outLUT)
-        : mDummySpeakers(channelMap, mVectors), mLUT(outLUT)
+    template<auto GetSpeakerVectorFunction, class LUTCodec , CVec3 Vec3Type, CLUT LUTType>
+    inline LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::LUTBuilder(ChannelMap channelMap, LUTType& outLUT)
+        : mVectors(GetDefaultMemoryResource())
+        , mDummySpeakers(channelMap, mVectors), mLUT(outLUT)
+        , mTris(GetDefaultMemoryResource())
+        , mTrisInvMats(GetDefaultMemoryResource())
     {
         // TODO: do we want to use real indices for somethin?
         channelMap.ForEachChannel([this](EChannel channel/*, uint32 index*/)
@@ -394,8 +399,8 @@ namespace JPL::VBAP
     }
 
 #if 0
-    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType, template<class> class AllocatorType>
-    JPL_INLINE void LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType, AllocatorType>::Compute2DMats()
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
+    JPL_INLINE void LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::Compute2DMats()
     {
         const ChannelMap channelMap = mDummySpeakers.GetChannelMap();
 
@@ -432,10 +437,10 @@ namespace JPL::VBAP
     }
 #endif
 
-    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType, template<class> class AllocatorType>
-    JPL_INLINE bool LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType, AllocatorType>::Triangulate()
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
+    JPL_INLINE bool LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::Triangulate()
     {
-        if (SpeakerTriangulation::TriangulateSpeakerLayout<AllocatorType>(std::span<const Vec3Type>(mVectors), mTris))
+        if (SpeakerTriangulation::TriangulateSpeakerLayout(std::span<const Vec3Type>(mVectors), mTris))
         {
             ComputeTriMatrices();
             return true;
@@ -443,8 +448,8 @@ namespace JPL::VBAP
         return false;
     }
 
-    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType, template<class> class AllocatorType>
-    JPL_INLINE void LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType, AllocatorType>::ComputeTriMatrices()
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
+    JPL_INLINE void LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::ComputeTriMatrices()
     {
         mTrisInvMats.clear();
         mTrisInvMats.reserve(mTris.size());
@@ -456,8 +461,8 @@ namespace JPL::VBAP
         }
     }
 
-    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType, template<class> class AllocatorType>
-    inline float LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType, AllocatorType>::FindShortestAperture() const
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
+    inline float LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::FindShortestAperture() const
     {
         float maxDot = -std::numeric_limits<float>::max();
         for (const SpeakerTriangulation::Vec3i& tri : mTris)
@@ -472,8 +477,8 @@ namespace JPL::VBAP
         return maxDot;
     }
 
-    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType, template<class> class AllocatorType>
-    inline bool LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType, AllocatorType>::ComputeCellFor(const Vec3Type& direction, int lutIndex)
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
+    inline bool LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::ComputeCellFor(const Vec3Type& direction, int lutIndex)
     {
         using LUTGainType = typename LUTType::GainType;
         using LUTSpeakerIdxType = typename LUTType::SpeakerIndexType;
@@ -609,8 +614,8 @@ namespace JPL::VBAP
         return false;
     }
 
-    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType, template<class> class AllocatorType>
-    inline bool LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType, AllocatorType>::BuildForAllDirections()
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
+    inline bool LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::BuildForAllDirections()
     {
         bool bAnyFailed = false;
 
@@ -636,8 +641,8 @@ namespace JPL::VBAP
     }
 
 #if JPL_VALIDATE_VBAP_LUT
-    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType, template<class> class AllocatorType>
-    void LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType, AllocatorType>::ValidateLUT() const
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
+    void LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::ValidateLUT() const
     {
         for (uint32 i = 0; i < mLUT.Speakers.size(); ++i)
         {
@@ -686,8 +691,8 @@ namespace JPL::VBAP
     }
 #endif
 
-    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType, template<class> class AllocatorType>
-    inline void LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType, AllocatorType>::ExtractDynamicData() const requires(cLUTHasDynamicData)
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
+    inline void LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::ExtractDynamicData() const requires(cLUTHasDynamicData)
     {
         mLUT.Data.resize(mTris.size());
 
@@ -720,8 +725,8 @@ namespace JPL::VBAP
         }
     }
 
-    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType, template<class> class AllocatorType>
-    JPL_INLINE uint32 LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType, AllocatorType>::FindReaplacementForDummy(const SpeakerTriangulation::Vec3i& tri) const
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
+    JPL_INLINE uint32 LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::FindReaplacementForDummy(const SpeakerTriangulation::Vec3i& tri) const
     {
         // Simply increment index until we find one not already in the 'tri'
         uint32 newI = 0;

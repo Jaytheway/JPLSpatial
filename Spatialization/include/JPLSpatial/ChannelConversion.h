@@ -22,9 +22,10 @@
 #include "JPLSpatial/Core.h"
 #include "JPLSpatial/ErrorReporting.h"
 #include "JPLSpatial/ChannelMap.h"
+#include "JPLSpatial/Memory/Memory.h"
 
 #include <array>
-#include <span>
+#include <vector>
 #include <utility>
 
 namespace JPL
@@ -86,18 +87,14 @@ namespace JPL
         return contribution;
     }
 
-    //template<template<typename...> class ArrayType, class ...Args>
-    //using ChannelConversionWeights = ArrayType<ArrayType<float, Args...>>;
-    
     /// Utility helper to access 2D array kind of weights
-    template<template<typename...> class ArrayType, class ...Args>
     class ChannelConversionWeights
     {
     public:
         ChannelConversionWeights() = default;
         ChannelConversionWeights(uint32 numOutputs, uint32 numInputs)
         {
-            Resize(numOutputs, ArrayType<float, Args...>(numInputs, 0.0f));
+            Resize(numOutputs, numInputs);
         }
 
         ChannelConversionWeights(const ChannelConversionWeights&) = default;
@@ -107,7 +104,7 @@ namespace JPL
 
         JPL_INLINE void Resize(uint32 numOutputs, uint32 numInputs)
         {
-            mWeights.resize(numOutputs, ArrayType<float, Args...>(numInputs, 0.0f));
+            mWeights.resize(numOutputs, std::pmr::vector<float>(numInputs, 0.0f, GetDefaultMemoryResource()));
         }
 
         JPL_INLINE void Clear() noexcept { mWeights.clear(); }
@@ -133,21 +130,20 @@ namespace JPL
             };
         }
 
-        JPL_INLINE ArrayType<float, Args...>& operator[](int i) { return mWeights[i]; }
-        JPL_INLINE const ArrayType<float, Args...>& operator[](int i) const { return mWeights[i]; }
+        JPL_INLINE std::pmr::vector<float>& operator[](int i) { return mWeights[i]; }
+        JPL_INLINE const std::pmr::vector<float>& operator[](int i) const { return mWeights[i]; }
 
     private:
-        ArrayType<ArrayType<float, Args...>, Args...> mWeights;
+        std::pmr::vector<std::pmr::vector<float>> mWeights{ GetDefaultMemoryResource() };
     };
 
 
     /// @param outWeights : must be at least size of `num channels in` * `num channels out`
     //template<class ChannelConversionWeightsType>
-    template<template<typename...> class ArrayType, class ...Args>
     static void ComputeChannelConversionRectangularWeights(
         ChannelMap channelMapIn,
         ChannelMap channelMapOut,
-        ChannelConversionWeights<ArrayType, Args...>& outWeights)
+        ChannelConversionWeights& outWeights)
     {
         // Unmapped input channels.
         const uint32 numChannelsIn = channelMapIn.GetNumChannels();

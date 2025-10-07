@@ -28,6 +28,7 @@
 #include "JPLSpatial/Math/MinimalVec2.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
 #include "JPLSpatial/Math/MinimalMat.h"
+#include "JPLSpatial/Memory/Memory.h"
 #include "JPLSpatial/Algo/Algorithm.h"
 #include "JPLSpatial/Math/DirectionEncoding.h"
 
@@ -37,75 +38,19 @@
 #include <span>
 #include <type_traits>
 #include <bit>
+#include <vector>
 
 namespace JPL::VBAP
 {
     //======================================================================
     /// Forward declarations
-    template<auto GetSpeakerAngleFunction, template<class...> class ArrayType, class ...Args>
+    template<auto GetSpeakerAngleFunction>
     class LUTBuilder2D;
-
-    template<template<class...> class ArrayType, class ...Args>
-    class LUT2D;
-
-    template<class LUTType>
-    class LUTQuery2D;
-
-    //======================================================================
-    /// Interface to contsruct LUTBuilder and LUTQuery without having to
-    /// retype long template parameter lists
-    template<auto GetSpeakerVectorFunction, auto GetSpeakerAngleFunction, template<class...> class ArrayType, class ...ArrayArgs>
-    class LUTInterface2D
-    {
-    public:
-        using Vec3Type = std::remove_cvref_t<decltype(GetSpeakerVectorFunction(EChannel{})) > ;
-        using LUTType = LUT2D<ArrayType, ArrayArgs...>;
-        using BuilderType = LUTBuilder2D<GetSpeakerAngleFunction, ArrayType, ArrayArgs...>;
-        using QueryType = LUTQuery2D<LUTType>;
-
-        //======================================================================
-        /// Make LUTBuilder object to build LUT for given 'channelMap' and 'LUTType'
-        [[nodiscard]] static JPL_INLINE BuilderType MakeBuilder(ChannelMap channelMap, LUTType& lut)
-        {
-            return BuilderType(channelMap, lut);
-        }
-
-        /// Make LUTQuery object to query 'LUT' for speaker gains
-        [[nodiscard]] static JPL_INLINE QueryType Query(const LUTType& LUT)
-        {
-            return QueryType(LUT);
-        }
-    };
-
-    //==========================================================================
-    /// Interface to query LUT gains for a direction
-    template<class LUTType>
-    class LUTQuery2D
-    {
-    public:
-        JPL_INLINE explicit LUTQuery2D(const LUTType& lut) noexcept : LUT(lut) {}
-
-        /// Function to query LUT gains for a direction.
-        /// @param direction : has to be normalized unit vector
-        /// @param outGains : must be of size at least number of target speakers the LUT was built for
-        template<CVec3 Vec3Type>
-        JPL_INLINE void GainsFor(const Vec3Type& direction, std::span<float> outGains) const
-        {
-            LUT.GetSpeakerGains({ GetX(direction), GetZ(direction) }, outGains);
-        }
-
-    public:
-        const LUTType& LUT;
-    };
 
     //======================================================================
     /// Look-up table containing channel gains for each direction
-    template<template<class...> class ArrayType, class ...Args>
     class LUT2D
     {
-        template<class T>
-        using Array = ArrayType<T, Args...>;
-
         //======================================================================
         /// Consts and defaults
         static constexpr int sCorrectionLUTSize = 1024;
@@ -114,6 +59,9 @@ namespace JPL::VBAP
         static constexpr uint16 sDeafultLUTResolution = 512;
 
     public:
+        template<class T>
+        using Array = std::pmr::vector<T>;
+
         LUT2D() = default;
 
         [[nodiscard]] JPL_INLINE bool IsInitialized() const noexcept { return !mData.empty(); }
@@ -164,20 +112,20 @@ namespace JPL::VBAP
 
         /// Build a table of size M_corr that maps
         /// diamond-parameter bins to 'uniform-angle' indices in [0, N_uniform).
-        [[nodiscard]] static Array<uint32> BuildDiamondToUniformIndexLUT(uint32 N_uniform, uint32 M_corr = 1024);
+        [[nodiscard]] static void BuildDiamondToUniformIndexLUT(Array<uint32>& outCorrectionLUT, uint32 N_uniform, uint32 M_corr = 1024);
 
         /// Build p -> normalized angle in [0,1)
         /// M_corr: power-of-two size
-        [[nodiscard]] static Array<float> BuildDiamondToAngleNormLUT(uint32 M_corr = 1024);
+        [[nodiscard]] static void BuildDiamondToAngleNormLUT(Array<float>& outCorrectionLUT, uint32 M_corr = 1024);
 
     private:
         void Resize(uint16 resolution, uint32 numTargetChannels);
 
     private:
-        template<auto GetSpeakerAngleFunction, template <class...> class ArrayType, class ...Args>
+        template<auto GetSpeakerAngleFunction>
         friend class LUTBuilder2D;
-        Array<float> mData;
-        Array<uint32> mDiamondCorrectionLUT; // Small LUT to correct for non-uniform diamond direction encoding
+        Array<float> mData{ GetDefaultMemoryResource() };
+        Array<uint32> mDiamondCorrectionLUT{ GetDefaultMemoryResource() }; // Small LUT to correct for non-uniform diamond direction encoding
 
         /// Total number of discreet values for 360-degrees field.
         /// The actual size of the LUT data is mLUTResolution * number of output channels.
@@ -187,15 +135,61 @@ namespace JPL::VBAP
         uint8 mNumTargetChannels = 0;
     };
 
+    //==========================================================================
+    /// Interface to query LUT gains for a direction
+    class LUTQuery2D
+    {
+    public:
+        JPL_INLINE explicit LUTQuery2D(const LUT2D& lut) noexcept : LUT(lut) {}
+
+        /// Function to query LUT gains for a direction.
+        /// @param direction : has to be normalized unit vector
+        /// @param outGains : must be of size at least number of target speakers the LUT was built for
+        template<CVec3 Vec3Type>
+        JPL_INLINE void GainsFor(const Vec3Type& direction, std::span<float> outGains) const
+        {
+            LUT.GetSpeakerGains({ GetX(direction), GetZ(direction) }, outGains);
+        }
+
+    public:
+        const LUT2D& LUT;
+    };
+
+    //======================================================================
+    /// Interface to contsruct LUTBuilder and LUTQuery without having to
+    /// retype long template parameter lists
+    template<auto GetSpeakerVectorFunction, auto GetSpeakerAngleFunction>
+    class LUTInterface2D
+    {
+    public:
+        using Vec3Type = std::remove_cvref_t<decltype(GetSpeakerVectorFunction(EChannel{}))>;
+        using LUTType = LUT2D;
+        using BuilderType = LUTBuilder2D<GetSpeakerAngleFunction>;
+        using QueryType = LUTQuery2D;
+
+        //======================================================================
+        /// Make LUTBuilder object to build LUT for given 'channelMap' and 'LUTType'
+        [[nodiscard]] static JPL_INLINE BuilderType MakeBuilder(ChannelMap channelMap, LUT2D& lut)
+        {
+            return BuilderType(channelMap, lut);
+        }
+
+        /// Make LUTQuery object to query 'LUT' for speaker gains
+        [[nodiscard]] static JPL_INLINE QueryType Query(const LUT2D& LUT)
+        {
+            return QueryType(LUT);
+        }
+    };
+
     //======================================================================
     /// Helper class to build a LUT for a set of directions and indices
-    template<auto GetSpeakerAngleFunction, template<class...> class ArrayType, class ...Args>
+    template<auto GetSpeakerAngleFunction>
     class LUTBuilder2D
     {
         template<class T>
-        using Array = ArrayType<T, Args...>;
+        using Array = std::pmr::vector<T>;
         using ChannelAngleArray = Array<ChannelAngle>;
-        using LUTType = LUT2D<ArrayType, Args...>;
+        using LUTType = LUT2D;
 
     public:
         LUTBuilder2D(ChannelMap channelMap, LUTType& LUT);
@@ -233,7 +227,7 @@ namespace JPL::VBAP
         void ApplyChannelConversion(const std::pair<uint32, uint32>& inChannelIds, const Vec2& inGains, std::span<float> outValues) const;
 
     private:
-        LUT2D<ArrayType, Args...>& mLUT;
+        LUT2D& mLUT;
 
         ChannelMap mChannelMapInternal;
         ChannelMap mChannelMapTarget;
@@ -242,9 +236,9 @@ namespace JPL::VBAP
         uint32 mNumTargetChannels;
         uint32 mLFEIndex;
 
-        Array<ChannelAngle> mChannelAngels;
+        Array<ChannelAngle> mChannelAngels{ GetDefaultMemoryResource() };
 
-        ChannelConversionWeights<Array> mChannelConversionWeights;
+        ChannelConversionWeights mChannelConversionWeights;
 
         struct ChannelPair
         {
@@ -253,7 +247,7 @@ namespace JPL::VBAP
             uint32 ChannelId2;
         };
 
-        Array<ChannelPair> mChannelPairs;
+        Array<ChannelPair> mChannelPairs{ GetDefaultMemoryResource() };
     };
 } // namespace JPL::VBAP
 
@@ -265,8 +259,7 @@ namespace JPL::VBAP
 namespace JPL::VBAP
 {
     //==========================================================================
-    template<template<class...> class ArrayType, class ...Args>
-    JPL_INLINE int LUT2D<ArrayType, Args...>::AngleNormalizedToLUTPosition(float angleNormalised) const
+    JPL_INLINE int LUT2D::AngleNormalizedToLUTPosition(float angleNormalised) const
     {
         JPL_ASSERT(IsInitialized());
 
@@ -274,8 +267,7 @@ namespace JPL::VBAP
         return pos & mLUTResolutionMask;
     }
 
-    template<template<class...> class ArrayType, class ...Args>
-    JPL_INLINE int LUT2D<ArrayType, Args...>::AngleToLUTPosition(float angleInRadians) const
+    JPL_INLINE int LUT2D::AngleToLUTPosition(float angleInRadians) const
     {
         // Normalize to [0, 2Pi]
         if (angleInRadians < float(0.0))
@@ -283,8 +275,7 @@ namespace JPL::VBAP
         return AngleNormalizedToLUTPosition(angleInRadians);
     }
 
-    template<template<class...> class ArrayType, class ...Args>
-    JPL_INLINE int LUT2D<ArrayType, Args...>::CartesianToLUTPosition(float x, float y) const
+    JPL_INLINE int LUT2D::CartesianToLUTPosition(float x, float y) const
     {
 #if 1
         JPL_ASSERT(!mDiamondCorrectionLUT.empty());
@@ -315,8 +306,7 @@ namespace JPL::VBAP
 #endif
     }
 
-    template<template<class...> class ArrayType, class ...Args>
-    inline void LUT2D<ArrayType, Args...>::Resize(uint16 resolution, uint32 numTargetChannels)
+    inline void LUT2D::Resize(uint16 resolution, uint32 numTargetChannels)
     {
         // We should not have more than 255 channels
         JPL_ASSERT(numTargetChannels <= std::numeric_limits<uint8>::max());
@@ -332,18 +322,16 @@ namespace JPL::VBAP
         mInvLUTResolution = 1.0f / mLUTResolution;
         mNumTargetChannels = static_cast<uint8>(numTargetChannels);
 
-        mDiamondCorrectionLUT = BuildDiamondToUniformIndexLUT(mLUTResolution, sCorrectionLUTSize);
+        BuildDiamondToUniformIndexLUT(mDiamondCorrectionLUT, mLUTResolution, sCorrectionLUTSize);
     }
 
-    template<template<class...> class ArrayType, class ...Args>
-    JPL_INLINE auto LUT2D<ArrayType, Args...>::LUTPositionToAngle(int pos) const -> float
+    JPL_INLINE auto LUT2D::LUTPositionToAngle(int pos) const -> float
     {
         JPL_ASSERT(IsInitialized());
         return (static_cast<float>(pos) * static_cast<float>(mInvLUTResolution)) * JPL_TWO_PI;
     }
 
-    template<template<class...> class ArrayType, class ...Args>
-    JPL_INLINE void LUT2D<ArrayType, Args...>::GetSpeakerGains(int lutPosition, std::span<float> outGains) const
+    JPL_INLINE void LUT2D::GetSpeakerGains(int lutPosition, std::span<float> outGains) const
     {
         JPL_ASSERT(outGains.size() <= mNumTargetChannels);
 
@@ -351,21 +339,19 @@ namespace JPL::VBAP
         std::memcpy(outGains.data(), speakerGain, sizeof(float) * outGains.size());
     }
 
-    template<template<class...> class ArrayType, class ...Args>
-    JPL_INLINE void LUT2D<ArrayType, Args...>::GetSpeakerGains(const Vec2& direction, std::span<float> outGains) const
+    JPL_INLINE void LUT2D::GetSpeakerGains(const Vec2& direction, std::span<float> outGains) const
     {
         GetSpeakerGains(CartesianToLUTPosition(direction.X, direction.Y), outGains);
     }
 
-    template<template<class...> class ArrayType, class ...Args>
-    inline auto LUT2D<ArrayType, Args...>::BuildDiamondToUniformIndexLUT(uint32 N_uniform, uint32 M_corr /*= 1024*/) -> Array<uint32>
+    inline void LUT2D::BuildDiamondToUniformIndexLUT(Array<uint32>& outCorrectionLut, uint32 N_uniform, uint32 M_corr /*= 1024*/)
     {
         // Require power-of-two sizes for cheap masking
         auto isPow2 = [](uint32 n) { return n && ((n & (n - 1)) == 0); };
         JPL_ASSERT(isPow2(N_uniform) && "N_uniform must be power-of-two");
         JPL_ASSERT(isPow2(M_corr) && "M_corr must be power-of-two");
 
-        Array<uint32> lut(M_corr);
+        outCorrectionLut.resize(M_corr);
 
         const float invM_Corr = 1.0f / M_corr;
 
@@ -386,18 +372,16 @@ namespace JPL::VBAP
             const float t = (theta * JPL_INV_TWO_PI) * static_cast<float>(N_uniform);
             const auto idx = static_cast<uint32>(std::llround(t)) & (N_uniform - 1);
 
-            lut[j] = idx;
+            outCorrectionLut[j] = idx;
         }
-        return lut;
     }
 
-    template<template<class...> class ArrayType, class ...Args>
-    inline auto LUT2D<ArrayType, Args...>::BuildDiamondToAngleNormLUT(uint32 M_corr) -> Array<float>
+    inline void LUT2D::BuildDiamondToAngleNormLUT(Array<float>& outCorrectionLUT, uint32 M_corr)
     {
         auto isPow2 = [](uint32_t n) { return n && ((n & (n - 1)) == 0); };
         JPL_ASSERT(isPow2(M_corr));
 
-        Array<float> lut(M_corr);
+        outCorrectionLUT.resize(M_corr);
 
         const float invM_Corr = 1.0f / M_corr;
 
@@ -413,9 +397,8 @@ namespace JPL::VBAP
             if (theta < 0.0f)
                 theta += JPL_TWO_PI; // [0, 2PI)
 
-            lut[j] = theta * JPL_INV_TWO_PI; // normalized angle
+            outCorrectionLUT[j] = theta * JPL_INV_TWO_PI; // normalized angle
         }
-        return lut;
     }
 
 #if 0
@@ -433,8 +416,8 @@ namespace JPL::VBAP
 #endif
 
     //==========================================================================
-    template<auto GetSpeakerAngleFunction, template<class...> class ArrayType, class ...Args>
-    inline LUTBuilder2D<GetSpeakerAngleFunction, ArrayType, Args...>::LUTBuilder2D(ChannelMap channelMap, LUTType& LUT)
+    template<auto GetSpeakerAngleFunction>
+    inline LUTBuilder2D<GetSpeakerAngleFunction>::LUTBuilder2D(ChannelMap channelMap, LUTType& LUT)
         : mLUT(LUT)
     {
         mChannelMapTarget = channelMap;
@@ -463,8 +446,8 @@ namespace JPL::VBAP
         mLUT.Resize(LUTType::sDeafultLUTResolution, mNumTargetChannels);
     }
 
-    template<auto GetSpeakerAngleFunction, template<class...> class ArrayType, class ...Args>
-    inline float LUTBuilder2D<GetSpeakerAngleFunction, ArrayType, Args...>::FindShortestAperture() const
+    template<auto GetSpeakerAngleFunction>
+    inline float LUTBuilder2D<GetSpeakerAngleFunction>::FindShortestAperture() const
     {
         float shortestAperture = std::numeric_limits<float>::max();
 
@@ -483,8 +466,8 @@ namespace JPL::VBAP
         return shortestAperture;
     }
 
-    template<auto GetSpeakerAngleFunction, template<class...> class ArrayType, class ...Args>
-    inline bool LUTBuilder2D<GetSpeakerAngleFunction, ArrayType, Args...>::ComputeCellFor(const Vec2& direction, int lutOffset)
+    template<auto GetSpeakerAngleFunction>
+    inline bool LUTBuilder2D<GetSpeakerAngleFunction>::ComputeCellFor(const Vec2& direction, int lutOffset)
     {
         // Assign speaker contribution values
         for (const ChannelPair& pair : mChannelPairs)
@@ -516,8 +499,8 @@ namespace JPL::VBAP
         return false;
     }
 
-    template<auto GetSpeakerAngleFunction, template<class...> class ArrayType, class ...Args>
-    inline bool LUTBuilder2D<GetSpeakerAngleFunction, ArrayType, Args...>::BuildForAllDirections()
+    template<auto GetSpeakerAngleFunction>
+    inline bool LUTBuilder2D<GetSpeakerAngleFunction>::BuildForAllDirections()
     {
         bool bAnyFailed = false;
         // Build a LUT with uniform angle steps
@@ -538,8 +521,8 @@ namespace JPL::VBAP
         return bAnyFailed;
     }
 
-    template<auto GetSpeakerAngleFunction, template<class...> class ArrayType, class ...Args>
-    inline void LUTBuilder2D<GetSpeakerAngleFunction, ArrayType, Args...>::ComputePairMatrices()
+    template<auto GetSpeakerAngleFunction>
+    inline void LUTBuilder2D<GetSpeakerAngleFunction>::ComputePairMatrices()
     {
         auto makeInvMat = [&](const ChannelAngle& cha1, const ChannelAngle& cha2)
         {
@@ -567,9 +550,9 @@ namespace JPL::VBAP
         ForEachChannelAnglePair(*this, makeInvMat);
     }
 
-    template<auto GetSpeakerAngleFunction, template<class...> class ArrayType, class ...Args>
+    template<auto GetSpeakerAngleFunction>
     template<class ThisType, class CallbackType>
-    inline void LUTBuilder2D<GetSpeakerAngleFunction, ArrayType, Args...>::ForEachChannelAnglePair(ThisType& self,
+    inline void LUTBuilder2D<GetSpeakerAngleFunction>::ForEachChannelAnglePair(ThisType& self,
                                                                                                    CallbackType&& callback)
     {
         auto sanitizeLFEIndex = [&self](uint32 idx)
@@ -597,8 +580,8 @@ namespace JPL::VBAP
         }
     }
 
-    template<auto GetSpeakerAngleFunction, template<class...> class ArrayType, class ...Args>
-    JPL_INLINE void LUTBuilder2D<GetSpeakerAngleFunction, ArrayType, Args...>::StoreChannelGainsConverted(uint32 channelId1,
+    template<auto GetSpeakerAngleFunction>
+    JPL_INLINE void LUTBuilder2D<GetSpeakerAngleFunction>::StoreChannelGainsConverted(uint32 channelId1,
                                                                                                           uint32 channelId2,
                                                                                                           const Vec2& gains,
                                                                                                           uint32 lutOffset)
@@ -614,8 +597,8 @@ namespace JPL::VBAP
         Algo::NormalizeL2(targetGains);
     }
 
-    template<auto GetSpeakerAngleFunction, template<class...> class ArrayType, class ...Args>
-    inline void LUTBuilder2D<GetSpeakerAngleFunction, ArrayType, Args...>::ApplyChannelConversion(const std::pair<uint32, uint32>& inChannelIds,
+    template<auto GetSpeakerAngleFunction>
+    inline void LUTBuilder2D<GetSpeakerAngleFunction>::ApplyChannelConversion(const std::pair<uint32, uint32>& inChannelIds,
                                                                                                   const Vec2& inGains,
                                                                                                   std::span<float> outValues) const
     {
@@ -630,8 +613,8 @@ namespace JPL::VBAP
     }
 
 #if JPL_VALIDATE_VBAP_LUT
-    template<auto GetSpeakerAngleFunction, template<class...> class ArrayType, class ...Args>
-    void LUTBuilder2D<GetSpeakerAngleFunction, ArrayType, Args...>::ValidateLUT() const
+    template<auto GetSpeakerAngleFunction>
+    void LUTBuilder2D<GetSpeakerAngleFunction>::ValidateLUT() const
     {
         
 #if 0   // TODO: implement for 2D

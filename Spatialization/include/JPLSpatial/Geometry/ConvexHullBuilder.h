@@ -24,6 +24,7 @@
 #include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
 #include "JPLSpatial/Math/ClosestPoint.h"
+#include "JPLSpatial/Memory/Memory.h"
 #include "JPLSpatial/Geometry/Triangulation.h"
 
 #include <vector>
@@ -49,13 +50,13 @@ namespace JPL
 	/// 
 	/// Note: This is a slightly modified version of ConvexHullBuilder
 	/// from JoltPhysics library
-	template<CVec3 Vec3Type, template<class> class VectorAllocatorType = std::allocator>
+	template<CVec3 Vec3Type>
 	class ConvexHullBuilder
 	{
 		using Vec3 = Vec3Type;
 
 		template<class T>
-		using Array = std::vector<T, VectorAllocatorType<T>>;
+		using Array = std::pmr::vector<T>;
 
 		ConvexHullBuilder(const ConvexHullBuilder&) = delete;
 		ConvexHullBuilder& operator=(const ConvexHullBuilder&) = delete;
@@ -69,6 +70,7 @@ namespace JPL
 			Edge(const Edge&) = delete;
 			Edge& operator =(const Edge&) = delete;
 		public:
+
 			Edge(Face* inFace, int inStartIdx);
 
 			/// Get the previous edge
@@ -80,6 +82,7 @@ namespace JPL
 			int	mStartIdx;					///< Vertex index in mPositions that indicates the start vertex of this edge
 		};
 
+	public:
 		using ConflictList = Array<int>;
 
 		/// Class that holds the information of one face
@@ -112,13 +115,17 @@ namespace JPL
 #ifdef JPL_CONVEX_BUILDER_DEBUG
 			int	mIteration;							///< Iteration that this face was created
 #endif
+
+		private:
+			Edge* AllocateEdge(int inStartIdx);
+			void FreeEdge(Edge* edge);
 		};
 
 		// Typedefs
 		using Positions = std::span<const Vec3>;
 		using Faces = Array<Face*>;
 
-		explicit ConvexHullBuilder(Positions inPositions);
+		ConvexHullBuilder(Positions inPositions);
 		~ConvexHullBuilder();
 
 		/// Result enum that indicates how the hull got created
@@ -312,14 +319,14 @@ namespace JPL
 namespace JPL
 {
 	//==========================================================================
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline ConvexHullBuilder<Vec3Type, VectorAllocator>::Edge::Edge(ConvexHullBuilder<Vec3Type, VectorAllocator>::Face* inFace, int inStartIdx)
+	template<CVec3 Vec3Type>
+	inline ConvexHullBuilder<Vec3Type>::Edge::Edge(ConvexHullBuilder<Vec3Type>::Face* inFace, int inStartIdx)
 		: mFace(inFace), mStartIdx(inStartIdx)
 	{
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline ConvexHullBuilder<Vec3Type, VectorAllocator>::Edge* ConvexHullBuilder<Vec3Type, VectorAllocator>::Edge::GetPreviousEdge()
+	template<CVec3 Vec3Type>
+	inline ConvexHullBuilder<Vec3Type>::Edge* ConvexHullBuilder<Vec3Type>::Edge::GetPreviousEdge()
 	{
 		Edge* prev_edge = this;
 		while (prev_edge->mNextEdge != this)
@@ -327,8 +334,8 @@ namespace JPL
 		return prev_edge;
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline ConvexHullBuilder<Vec3Type, VectorAllocator>::Face::~Face()
+	template<CVec3 Vec3Type>
+	inline ConvexHullBuilder<Vec3Type>::Face::~Face()
 	{
 		// Free all edges
 		if (Edge* e = mFirstEdge)
@@ -336,23 +343,23 @@ namespace JPL
 			do
 			{
 				Edge* next = e->mNextEdge;
-				delete e;
+				FreeEdge(e);
 				e = next;
 			} while (e != mFirstEdge);
 		}
 	}
 
 	//==========================================================================
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::Face::Initialize(int inIdx0, int inIdx1, int inIdx2, std::span<const Vec3> inPositions)
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::Face::Initialize(int inIdx0, int inIdx1, int inIdx2, std::span<const Vec3> inPositions)
 	{
 		JPL_ASSERT(mFirstEdge == nullptr);
 		JPL_ASSERT(inIdx0 != inIdx1 && inIdx0 != inIdx2 && inIdx1 != inIdx2);
 
 		// Create 3 edges
-		auto* e0 = new Edge(this, inIdx0);
-		auto* e1 = new Edge(this, inIdx1);
-		auto* e2 = new Edge(this, inIdx2);
+		auto* e0 = AllocateEdge(inIdx0);
+		auto* e1 = AllocateEdge(inIdx1);
+		auto* e2 = AllocateEdge(inIdx2);
 
 		// Link edges
 		e0->mNextEdge = e1;
@@ -363,8 +370,20 @@ namespace JPL
 		CalculateNormalAndCentroid(inPositions);
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::Face::CalculateNormalAndCentroid(std::span<const Vec3> inPositions)
+	template<CVec3 Vec3Type>
+	inline auto ConvexHullBuilder<Vec3Type>::Face::AllocateEdge(int inStartIdx) -> Edge*
+	{
+		return DefaultNew<Edge>(this, inStartIdx);
+	}
+
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::Face::FreeEdge(Edge* edge)
+	{
+		DefaultDelete(edge);
+	}
+
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::Face::CalculateNormalAndCentroid(std::span<const Vec3> inPositions)
 	{
 		// Get point that we use to construct a triangle fan
 		Edge* e = mFirstEdge;
@@ -410,9 +429,9 @@ namespace JPL
 		mCentroid /= float(n);
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
+	template<CVec3 Vec3Type>
 	template<class Vec3i>
-	inline bool ConvexHullBuilder<Vec3Type, VectorAllocator>::Face::Triangulate(std::span<const Vec3> inPositions, Array<Vec3i>& outTris) const
+	inline bool ConvexHullBuilder<Vec3Type>::Face::Triangulate(std::span<const Vec3> inPositions, Array<Vec3i>& outTris) const
 	{
 		using IndexType = std::remove_cvref_t<decltype(std::declval<Vec3i>()[0])>;
 
@@ -445,17 +464,19 @@ namespace JPL
 		return true;
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline bool ConvexHullBuilder<Vec3Type, VectorAllocator>::Face::IsFacing(const Vec3& inPosition) const
+	template<CVec3 Vec3Type>
+	inline bool ConvexHullBuilder<Vec3Type>::Face::IsFacing(const Vec3& inPosition) const
 	{
 		JPL_ASSERT(!mRemoved);
 		return DotProduct(mNormal, (inPosition - mCentroid)) > 0.0f;
 	}
 
 	//==========================================================================
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline ConvexHullBuilder<Vec3Type, VectorAllocator>::ConvexHullBuilder(Positions inPositions)
+	template<CVec3 Vec3Type>
+	inline ConvexHullBuilder<Vec3Type>::ConvexHullBuilder(Positions inPositions)
 		: mPositions(inPositions)
+		, mFaces(GetDefaultMemoryResource())
+		, mCoplanarList(GetDefaultMemoryResource())
 	{
 #ifdef JPL_CONVEX_BUILDER_DEBUG
 		mIteration = 0;
@@ -483,14 +504,14 @@ namespace JPL
 #endif
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline ConvexHullBuilder<Vec3Type, VectorAllocator>::~ConvexHullBuilder()
+	template<CVec3 Vec3Type>
+	inline ConvexHullBuilder<Vec3Type>::~ConvexHullBuilder()
 	{
 		FreeFaces();
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline ConvexHullBuilder<Vec3Type, VectorAllocator>::EResult ConvexHullBuilder<Vec3Type, VectorAllocator>::Initialize(int inMaxVertices, float inTolerance, const char*& outError)
+	template<CVec3 Vec3Type>
+	inline ConvexHullBuilder<Vec3Type>::EResult ConvexHullBuilder<Vec3Type>::Initialize(int inMaxVertices, float inTolerance, const char*& outError)
 	{
 		// Free the faces possibly left over from an earlier hull
 		FreeFaces();
@@ -696,7 +717,7 @@ namespace JPL
 		sLinkFace(t3->mFirstEdge, t4->mFirstEdge);
 
 		// Build the initial conflict lists
-		Faces faces{ t1, t2, t3, t4 };
+		Faces faces({ t1, t2, t3, t4 }, GetDefaultMemoryResource());
 		for (int idx = 0; idx < (int)mPositions.size(); ++idx)
 			if (idx != idx1 && idx != idx2 && idx != idx3 && idx != idx4)
 				AssignPointToFace(idx, faces, tolerance_sq);
@@ -737,7 +758,7 @@ namespace JPL
 			else if (!mCoplanarList.empty())
 			{
 				// Try to assign points to faces (this also recalculates the distance to the hull for the coplanar vertices)
-				CoplanarList coplanar;
+				CoplanarList coplanar(GetDefaultMemoryResource());
 				mCoplanarList.swap(coplanar);
 				bool added = false;
 				for (const Coplanar& c : coplanar)
@@ -801,7 +822,7 @@ namespace JPL
 			++num_vertices_used;
 
 			// Add the point to the hull
-			Faces new_faces;
+			Faces new_faces(GetDefaultMemoryResource());
 			AddPoint(face_with_furthest_point, furthest_point_idx, coplanar_tolerance_sq, new_faces);
 
 			// Redistribute points on conflict lists belonging to removed faces
@@ -832,8 +853,8 @@ namespace JPL
 		return EResult::Success;
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline int ConvexHullBuilder<Vec3Type, VectorAllocator>::GetNumVerticesUsed() const
+	template<CVec3 Vec3Type>
+	inline int ConvexHullBuilder<Vec3Type>::GetNumVerticesUsed() const
 	{
 		std::unordered_set<int> used_verts;
 		for (const Face* f : mFaces)
@@ -848,8 +869,8 @@ namespace JPL
 		return (int)used_verts.size();
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline bool ConvexHullBuilder<Vec3Type, VectorAllocator>::ContainsFace(const Array<int>& inIndices) const
+	template<CVec3 Vec3Type>
+	inline bool ConvexHullBuilder<Vec3Type>::ContainsFace(const Array<int>& inIndices) const
 	{
 		for (Face* f : mFaces)
 		{
@@ -885,9 +906,9 @@ namespace JPL
 		return false;
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
+	template<CVec3 Vec3Type>
 	template<class Vec3i>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::GetTriangles(Array<Vec3i>& outTris)
+	inline void ConvexHullBuilder<Vec3Type>::GetTriangles(Array<Vec3i>& outTris)
 	{
 		outTris.clear();
 		outTris.reserve(mFaces.size());
@@ -896,8 +917,8 @@ namespace JPL
 			f->Triangulate(mPositions, outTris);
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline float ConvexHullBuilder<Vec3Type, VectorAllocator>::DetermineCoplanarDistance() const
+	template<CVec3 Vec3Type>
+	inline float ConvexHullBuilder<Vec3Type>::DetermineCoplanarDistance() const
 	{
 		auto vec3max = [](const Vec3& a, const Vec3& b)
 		{
@@ -915,8 +936,8 @@ namespace JPL
 		return 3.0f * FLT_EPSILON * (GetX(vmax) + GetY(vmax) + GetZ(vmax));
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::GetFaceForPoint(const Vec3& inPoint, const Faces& inFaces, Face*& outFace, float& outDistSq) const
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::GetFaceForPoint(const Vec3& inPoint, const Faces& inFaces, Face*& outFace, float& outDistSq) const
 	{
 		outFace = nullptr;
 		outDistSq = 0.0f;
@@ -940,8 +961,8 @@ namespace JPL
 		}
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline float ConvexHullBuilder<Vec3Type, VectorAllocator>::GetDistanceToEdgeSq(const Vec3& inPoint, const Face* inFace) const
+	template<CVec3 Vec3Type>
+	inline float ConvexHullBuilder<Vec3Type>::GetDistanceToEdgeSq(const Vec3& inPoint, const Face* inFace) const
 	{
 		bool all_inside = true;
 		float edge_dist_sq = FLT_MAX;
@@ -968,8 +989,8 @@ namespace JPL
 		return all_inside ? 0.0f : edge_dist_sq;
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline bool ConvexHullBuilder<Vec3Type, VectorAllocator>::AssignPointToFace(int inPositionIdx, const Faces& inFaces, float inToleranceSq)
+	template<CVec3 Vec3Type>
+	inline bool ConvexHullBuilder<Vec3Type>::AssignPointToFace(int inPositionIdx, const Faces& inFaces, float inToleranceSq)
 	{
 		Vec3 point = mPositions[inPositionIdx];
 
@@ -1013,8 +1034,8 @@ namespace JPL
 		return false;
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::AddPoint(Face* inFacingFace, int inIdx, float inCoplanarToleranceSq, Faces& outNewFaces)
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::AddPoint(Face* inFacingFace, int inIdx, float inCoplanarToleranceSq, Faces& outNewFaces)
 	{
 		// Get position
 		Vec3 pos = mPositions[inIdx];
@@ -1031,7 +1052,7 @@ namespace JPL
 #endif
 
 		// Find edge of convex hull of faces that are not facing the new vertex
-		FullEdges edges;
+		FullEdges edges(GetDefaultMemoryResource());
 		FindEdge(inFacingFace, pos, edges);
 		JPL_ASSERT(edges.size() >= 3);
 
@@ -1080,8 +1101,8 @@ namespace JPL
 #endif
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::GarbageCollectFaces()
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::GarbageCollectFaces()
 	{
 		for (int i = (int)mFaces.size() - 1; i >= 0; --i)
 		{
@@ -1094,11 +1115,11 @@ namespace JPL
 		}
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline ConvexHullBuilder<Vec3Type, VectorAllocator>::Face* ConvexHullBuilder<Vec3Type, VectorAllocator>::CreateFace()
+	template<CVec3 Vec3Type>
+	inline ConvexHullBuilder<Vec3Type>::Face* ConvexHullBuilder<Vec3Type>::CreateFace()
 	{
 		// Call provider to create face
-		Face* f = new Face();
+		Face* f = DefaultNew<Face>();
 
 #ifdef JPL_CONVEX_BUILDER_DEBUG
 		// Remember iteration counter
@@ -1110,16 +1131,16 @@ namespace JPL
 		return f;
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline ConvexHullBuilder<Vec3Type, VectorAllocator>::Face* ConvexHullBuilder<Vec3Type, VectorAllocator>::CreateTriangle(int inIdx1, int inIdx2, int inIdx3)
+	template<CVec3 Vec3Type>
+	inline ConvexHullBuilder<Vec3Type>::Face* ConvexHullBuilder<Vec3Type>::CreateTriangle(int inIdx1, int inIdx2, int inIdx3)
 	{
 		Face* f = CreateFace();
 		f->Initialize(inIdx1, inIdx2, inIdx3, mPositions);
 		return f;
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::FreeFace(Face* inFace)
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::FreeFace(Face* inFace)
 	{
 		JPL_ASSERT(inFace->mRemoved);
 
@@ -1136,19 +1157,21 @@ namespace JPL
 #endif
 
 		// Free the face
-		delete inFace;
+		DefaultDelete(inFace);
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::FreeFaces()
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::FreeFaces()
 	{
 		for (Face* f : mFaces)
-			delete f;
+		{
+			DefaultDelete(f);
+		}
 		mFaces.clear();
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::sLinkFace(Edge* inEdge1, Edge* inEdge2)
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::sLinkFace(Edge* inEdge1, Edge* inEdge2)
 	{
 		// Check not connected yet
 		JPL_ASSERT(inEdge1->mNeighbourEdge == nullptr);
@@ -1164,8 +1187,8 @@ namespace JPL
 		inEdge2->mNeighbourEdge = inEdge1;
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::sUnlinkFace(Face* inFace)
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::sUnlinkFace(Face* inFace)
 	{
 		// Unlink from neighbours
 		Edge* e = inFace->mFirstEdge;
@@ -1184,8 +1207,8 @@ namespace JPL
 		} while (e != inFace->mFirstEdge);
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::FindEdge(Face* inFacingFace, const Vec3& inVertex, FullEdges& outEdges) const
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::FindEdge(Face* inFacingFace, const Vec3& inVertex, FullEdges& outEdges) const
 	{
 		// Assert that we were given an empty array
 		JPL_ASSERT(outEdges.empty());
@@ -1281,8 +1304,8 @@ namespace JPL
 #endif
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::MergeFaces(Edge* inEdge)
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::MergeFaces(Edge* inEdge)
 	{
 		// Get the face
 		Face* face = inEdge->mFace;
@@ -1356,8 +1379,8 @@ namespace JPL
 #endif
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::MergeDegenerateFace(Face* inFace, Faces& ioAffectedFaces)
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::MergeDegenerateFace(Face* inFace, Faces& ioAffectedFaces)
 	{
 		// Check area of face
 		if (LengthSquared(inFace->mNormal) < cMinTriangleAreaSq)
@@ -1389,8 +1412,8 @@ namespace JPL
 		}
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::MergeCoplanarOrConcaveFaces(Face* inFace, float inCoplanarToleranceSq, Faces& ioAffectedFaces)
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::MergeCoplanarOrConcaveFaces(Face* inFace, float inCoplanarToleranceSq, Faces& ioAffectedFaces)
 	{
 		bool merged = false;
 
@@ -1425,15 +1448,15 @@ namespace JPL
 			RemoveInvalidEdges(inFace, ioAffectedFaces);
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::sMarkAffected(Face* inFace, Faces& ioAffectedFaces)
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::sMarkAffected(Face* inFace, Faces& ioAffectedFaces)
 	{
 		if (std::find(ioAffectedFaces.begin(), ioAffectedFaces.end(), inFace) == ioAffectedFaces.end())
 			ioAffectedFaces.push_back(inFace);
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::RemoveInvalidEdges(Face* inFace, Faces& ioAffectedFaces)
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::RemoveInvalidEdges(Face* inFace, Faces& ioAffectedFaces)
 	{
 		// This marks that the plane needs to be recalculated (we delay this until the end of the
 		// function since we don't use the plane and we want to avoid calculating it multiple times)
@@ -1551,8 +1574,8 @@ namespace JPL
 			inFace->CalculateNormalAndCentroid(mPositions);
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline bool ConvexHullBuilder<Vec3Type, VectorAllocator>::RemoveTwoEdgeFace(Face* inFace, Faces& ioAffectedFaces) const
+	template<CVec3 Vec3Type>
+	inline bool ConvexHullBuilder<Vec3Type>::RemoveTwoEdgeFace(Face* inFace, Faces& ioAffectedFaces) const
 	{
 		// Check if this face contains only 2 edges
 		Edge* edge = inFace->mFirstEdge;
@@ -1591,8 +1614,8 @@ namespace JPL
 	}
 
 #ifdef JPL_ENABLE_VALIDATION
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::DumpFace(const Face* inFace) const
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::DumpFace(const Face* inFace) const
 	{
 		std::cout << std::format("f:{}", std::uintptr_t(inFace)) << '\n';
 
@@ -1608,8 +1631,8 @@ namespace JPL
 		} while (e != inFace->mFirstEdge);
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::DumpFaces() const
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::DumpFaces() const
 	{
 		std::cout << std::format("Dump Faces:") << '\n';
 
@@ -1618,8 +1641,8 @@ namespace JPL
 				DumpFace(f);
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::ValidateFace(const Face* inFace) const
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::ValidateFace(const Face* inFace) const
 	{
 		if (inFace->mRemoved)
 		{
@@ -1674,8 +1697,8 @@ namespace JPL
 		}
 	}
 
-	template<CVec3 Vec3Type, template<class> class VectorAllocator>
-	inline void ConvexHullBuilder<Vec3Type, VectorAllocator>::ValidateFaces() const
+	template<CVec3 Vec3Type>
+	inline void ConvexHullBuilder<Vec3Type>::ValidateFaces() const
 	{
 		for (const Face* f : mFaces)
 			ValidateFace(f);

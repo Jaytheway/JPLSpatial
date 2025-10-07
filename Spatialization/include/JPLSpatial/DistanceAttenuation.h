@@ -19,8 +19,9 @@
 
 #pragma once
 
-#include "Core.h"
-#include "Math/Curves.h"
+#include "JPLSpatial/Core.h"
+#include "JPLSpatial/Math/Curves.h"
+#include "JPLSpatial/Memory/Memory.h"
 
 #include <algorithm>
 #include <cmath>
@@ -41,6 +42,7 @@ namespace JPL
 	struct AttenuationFunction
 	{
 		virtual float Evaluate(float distance) const = 0;
+		virtual ~AttenuationFunction() = default;
 	};
 
 	//==========================================================================
@@ -135,7 +137,7 @@ namespace JPL
 		};
 
 		/// Curve points that should sorted by distance
-		std::vector<Point> Points;
+		std::pmr::vector<Point> Points{ GetDefaultMemoryResource() };
 
 		/// Sort curve points by distance. This should be called after changing Points.
 		JPL_INLINE void SortPoints()
