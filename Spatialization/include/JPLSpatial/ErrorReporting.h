@@ -89,11 +89,11 @@ inline bool AssertFailedParamHelper(const char* inExpression, const std::source_
 #endif // !JPL_TRACE_TAG
 
 #ifndef JPL_INFO_TAG
-#define JPL_INFO_TAG(tag, message) SpatialTrace(std::format("[{}]: Trace: {}", tag, message).c_str())
+#define JPL_INFO_TAG(tag, message) SpatialTrace(std::format("[{}]: Info: {}", tag, message).c_str())
 #endif // !JPL_INFO_TAG
 
 #ifndef JPL_ERROR_TAG
-#define JPL_ERROR_TAG(tag, message) SpatialTrace(std::format("[{}]: Trace: {}", tag, message).c_str())
+#define JPL_ERROR_TAG(tag, message) SpatialTrace(std::format("[{}]: Error: {}", tag, message).c_str())
 #endif // !JPL_ERROR_TAG
 
 } // namespace JPL
