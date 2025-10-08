@@ -248,6 +248,14 @@ const float cachedConeFactor = directPath.GetDirectionAttenuation(handle);
 
 `AttenuationCone` contains the inner and outer angles in radians. The dot product fed into `EvaluateDirection` is compared against the cosines of half-angles: values above the inner threshold return a factor of `0.0f`, values below the outer threshold return `1.0f`, and everything in between linearly interpolates so you can remap that factor to any outer parameter you want (e.g., `std::lerp(1.0f, coneOuterFactor, filterCutoff)`). See the [DirectPathService header](Spatialization/include/JPLSpatial/Services/DirectPathService.h) for implementation details and [`DirectPathServiceTest`](SpatializationTests/src/Tests/DirectPathServiceTest.h) for usage examples. To tighten a spotlight-style emitter, reduce `OuterAngle` toward `InnerAngle`; to create a broad ambience, expand both toward `2π` so every direction yields the full gain of `1.0f` without angular attenuation. When paired with the cached cone gain above, this lets you reason in “forward energy” terms: the listener inside the inner cone hears the unattenuated signal, the outer region gradually blends toward your chosen tail gain, and anything behind the source sits at the outer gain floor.
 
+## Coordinate System
+In **JPLSpatial** the coordinate system is **right-handed** and uses a **Y-up axis**.
+- Positive X-axis: to the **right**
+- Positive vlaues of Y-axis: **upwards**
+- Negative vlaues of Z-axis: **forwwrd**
+
+Values passed to **JPLSpatial** have to be converted accordingly if the coordinate system they came from doesn't match the above.
+
 ## Folder structure
 - **Spatialization** - source code for the library
 - **SpatializationTests** - a set of tests to validate the behavior of the features and interfaces
