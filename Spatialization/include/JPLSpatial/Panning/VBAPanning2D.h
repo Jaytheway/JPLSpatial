@@ -86,7 +86,7 @@ namespace JPL
                 [[nodiscard]] static JPL_INLINE constexpr size_t GetMaxNumVirtualSources() noexcept { return cMaxNumVirtualSources; }
 
             private:
-                friend class Base;
+                friend Base;
                 /// Initialize VBAP data for standard channel map panning.
                 /// (called by the panner that has the value for `shortestEdgeApertureDot`)
                 bool Initialize(ChannelMap channelMap, ChannelMap targetMap, float shortestEdgeApertureDot = std::numeric_limits<float>::max());

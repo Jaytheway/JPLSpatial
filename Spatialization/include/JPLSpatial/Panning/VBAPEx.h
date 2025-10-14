@@ -121,7 +121,7 @@ namespace JPL
 			outVectors.reserve(numChannels);
 			outMapIndices.reserve(numChannels);
 
-			channelMap.ForEachChannel([&outVectors](EChannel channel, uint32 index)
+			channelMap.ForEachChannel([&outVectors, &outMapIndices](EChannel channel, uint32 index)
 			{
 				if (channel != EChannel::LFE)
 				{
