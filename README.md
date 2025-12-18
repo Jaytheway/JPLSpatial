@@ -1,6 +1,7 @@
 # JPLSpatial
 
-Simple sound spatialziation utilities library.
+Sound spatialization and propagation library.
+**No external dependencies** for the main library, only Tests and Examples (TBD) require a few external libraries.
 
 ## Status
 Functional WIP
@@ -288,13 +289,14 @@ As much of the library as possible is header-only.
 - For more examples check out tests.
 - For an example of integrating **Services** take a look at [SpatialManager.h](https://github.com/Jaytheway/JPLSpatial/blob/main/Spatialization/include/JPLSpatial/SpatialManager.h)
 ## Compiling
+- To build the library, run appropriate build script in `build` folder.
 - Some includes can be used as is as a single header include in your project.
 - Depends only on the standard template library.
 - Tests fetch `glm` to validate `glm::vec3` type working with library's interfaces, and optionally can be ran with `JoltPhysics`'s `JPH::Vec3` by passing `-DTEST_WITH_JOLT=ON` flag to test project generator.
-- Compiles with Visual Studio 2022, other compiles haven't been tested.
+- Compiles with Visual Studio 2022 and Visual Studio 2026, other compiles haven't been tested.
 - Uses C++20
 ## Updates
-JPLSpatial library is going to be updated as the need for more features matches my time availability to work on them.
+JPLSpatial is going to be updated as the need for more features matches my time availability to work on them.
 
 > [!WARNING]
 > - API may change
