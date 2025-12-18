@@ -1,6 +1,7 @@
 # JPLSpatial
 
 Sound spatialization and propagation library.
+
 **No external dependencies** for the main library, only Tests and Examples (TBD) require a few external libraries.
 
 ## Status
