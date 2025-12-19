@@ -144,6 +144,8 @@
 #define NSIMD_AARCH64
 
 #else
+#error ""32-bit Arm is not supported""
+
 #define JPL_CPU_ADDRESS_BITS 32
 #define JPL_VECTOR_ALIGNMENT 8 // 32-bit ARM does not support aligning on the stack on 16 byte boundaries
 #define JPL_DVECTOR_ALIGNMENT 8

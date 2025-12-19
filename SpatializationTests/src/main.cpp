@@ -44,6 +44,7 @@
 #include "Tests/MathTest.h"
 #include "Tests/SquareRootTest.h"
 #include "Tests/DirectionEncodingTest.h"
+#include "Tests/SIMDTest.h"
 
 #include "Tests/FlatMapTest.h"
 #include "Tests/MemoryTest.h"
