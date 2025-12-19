@@ -109,7 +109,7 @@ namespace JPL
 		[[nodiscard]] JPL_INLINE const mapped_container_type& values() const noexcept { return cont.values; }
 
 		// Capacity
-		[[nodiscard]] JPL_INLINE void       reserve(std::size_t n) { cont.keys.reserve(n); cont.values.reserve(n); }
+					  JPL_INLINE void       reserve(std::size_t n) { cont.keys.reserve(n); cont.values.reserve(n); }
 		[[nodiscard]] JPL_INLINE size_type  size() const { return cont.keys.size(); }
 		[[nodiscard]] JPL_INLINE bool       empty() const { return size() == 0; }
 
@@ -279,7 +279,7 @@ namespace JPL
 
 		// heterogeneous erase by key-like
 		template<class K2> requires (EqComparable<Key, K2> || EqComparable<K2, Key>)
-			JPL_INLINE size_t erase(const K2& key_like)
+		JPL_INLINE size_t erase(const K2& key_like)
 		{
 			if (auto it = find(key_like); it != end())
 				return erase(it);
