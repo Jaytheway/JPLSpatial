@@ -420,7 +420,7 @@ namespace JPL
 			std::pmr::vector<float> ExpectedGains;
 
 			SourceId Source;
-			AttenuationCurveRef AttenuationCurve;
+			AttenuationCurveRef AttCurve;
 		};
 	
 		std::vector<AdvanceSimTestCase> testCases
@@ -477,7 +477,7 @@ namespace JPL
 			auto curve = make_pmr_shared<AttenuationCurve>();
 			curve->Points = testCase.AttenuationCurvePoints;
 			curve->SortPoints();
-			testCase.AttenuationCurve = spatializer.GetDirectPathService().AssignAttenuationCurve(spatializer.GetDirectEffectHandle(source), curve);
+			testCase.AttCurve = spatializer.GetDirectPathService().AssignAttenuationCurve(spatializer.GetDirectEffectHandle(source), curve);
 
 			// Prepare panning
 			// TODO: test PanningService on its own
@@ -501,7 +501,7 @@ namespace JPL
 			// SCOPED_TRACE(testCase.Description);
 
 			// Test attenuation
-			const float attenuation = spatializer.GetDistanceAttenuation(testCase.Source, testCase.AttenuationCurve);
+			const float attenuation = spatializer.GetDistanceAttenuation(testCase.Source, testCase.AttCurve);
 			EXPECT_NEAR(attenuation, testCase.ExpectedAttenuationValue, tolerance) << testCase.Description;
 
 			// Test panning
