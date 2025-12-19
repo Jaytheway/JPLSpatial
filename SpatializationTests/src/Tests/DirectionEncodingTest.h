@@ -309,13 +309,13 @@ namespace JPL
             // Generate test direction
             const Vec2 dir = Normalized(Vec2{sinTheta, -cosTheta});
 
-            const float atan2Expected = std::atan2f(dir.X, dir.Y);
+            const float atan2Expected = std::atan2(dir.X, dir.Y);
 
             // Encode -> decode test direction
             const float encoded = ToDiamond(dir);
             const Vec2 decoded = FromDiamond(encoded);
 
-            const float atan2Decoded = std::atan2f(decoded.X, decoded.Y);
+            const float atan2Decoded = std::atan2(decoded.X, decoded.Y);
 
             // Get delta error
             const float atan2Delta = Math::Abs(atan2Decoded - atan2Expected);

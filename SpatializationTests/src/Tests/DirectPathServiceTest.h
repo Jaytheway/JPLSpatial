@@ -71,7 +71,7 @@ namespace JPL
 		struct ListenerTestCase
 		{
 			std::string Description;
-			Position<Vec3> Position;
+			JPL::Position<Vec3> Position;
 		};
 
 

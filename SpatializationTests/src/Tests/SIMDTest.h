@@ -553,7 +553,7 @@ namespace JPL
 		}
 		{
 			simd s1(-3.0f, -3.0f, -2.5f, 3.0f);
-			simd_mask exponent(2, 3, 200.0f, -300.0f);
+			simd_mask exponent(2, 3, 200, static_cast<uint32>(-300));
 			simd result = ldexp(s1, exponent);
 			Util::simd_check expected{
 				ldexpf(-3.0f, 2),
