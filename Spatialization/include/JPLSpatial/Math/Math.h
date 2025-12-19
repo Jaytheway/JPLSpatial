@@ -28,12 +28,14 @@
 #include <type_traits>
 #include <bit>
 #include <concepts>
+#include <utility>
 
 namespace JPL
 {
 	static constexpr float JPL_HALF_PI = 0.5f * std::numbers::pi_v<float>;
 	static constexpr float JPL_PI = std::numbers::pi_v<float>;
 	static constexpr float JPL_TWO_PI = 2.0f * std::numbers::pi_v<float>;
+	static constexpr float JPL_FOUR_PI = 4.0f * std::numbers::pi_v<float>;
 
 	static constexpr float JPL_INV_PI = std::numbers::inv_pi_v<float>;
 	static constexpr float JPL_INV_TWO_PI = std::numbers::inv_pi_v<float> * 0.5f;

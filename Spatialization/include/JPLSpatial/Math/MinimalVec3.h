@@ -92,6 +92,7 @@ namespace JPL
     JPL_INLINE constexpr MinimalVec3 operator/(T Scale, const JPL::MinimalVec3& V) noexcept { return V.operator/(Scale); }
 
     JPL_INLINE constexpr MinimalVec3 operator*(const JPL::MinimalVec3& A, const JPL::MinimalVec3& B) noexcept { return { A.X * B.X, A.Y * B.Y, A.Z * B.Z }; }
+    JPL_INLINE constexpr MinimalVec3 operator/(const JPL::MinimalVec3& A, const JPL::MinimalVec3& B) noexcept { return { A.X / B.X, A.Y / B.Y, A.Z / B.Z }; }
 
     [[nodiscard]] static JPL_INLINE constexpr float LengthSquared(const MinimalVec3& V) noexcept { return V.LengthSquared(); }
     [[nodiscard]] static JPL_INLINE constexpr float Length(const MinimalVec3& V) noexcept { return V.Length(); }
@@ -122,5 +123,5 @@ namespace JPL
         static JPL_INLINE void SetZ(MinimalVec3& v, float value) noexcept { v.Z = value; }
     };
 
-    std::ostream& operator<<(std::ostream& os, const MinimalVec3& v) { os << "{ " << v.X << ", " << v.Y << ", " << v.Z << " }"; return os; }
+    inline std::ostream& operator<<(std::ostream& os, const MinimalVec3& v) { os << "{ " << v.X << ", " << v.Y << ", " << v.Z << " }"; return os; }
 } // namespace JPL

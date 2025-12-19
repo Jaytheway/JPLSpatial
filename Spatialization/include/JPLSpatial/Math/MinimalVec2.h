@@ -64,6 +64,7 @@ namespace JPL
     [[nodiscard]] JPL_INLINE constexpr Vec2 operator/(T Scale, const JPL::Vec2& V) noexcept { return V.operator/(Scale); }
 
     [[nodiscard]] JPL_INLINE constexpr Vec2 operator*(const JPL::Vec2& A, const JPL::Vec2& B) noexcept { return { A.X * B.X, A.Y * B.Y}; }
+    [[nodiscard]] JPL_INLINE constexpr Vec2 operator/(const JPL::Vec2& A, const JPL::Vec2& B) noexcept { return { A.X / B.X, A.Y / B.Y}; }
 
     [[nodiscard]] static JPL_INLINE constexpr float CrossProduct(const Vec2& a, const Vec2& b) noexcept { return a.X * b.Y - a.Y * b.X; }
     [[nodiscard]] static JPL_INLINE constexpr float DotProduct(const Vec2& a, const Vec2& b) noexcept { return a.X * b.X + a.Y * b.Y; }
@@ -73,6 +74,6 @@ namespace JPL
     
     [[nodiscard]] static JPL_INLINE constexpr Vec2 Abs(const Vec2& V) noexcept { return { Math::Abs(V.X), Math::Abs(V.Y) }; }
 
-    std::ostream& operator<<(std::ostream& os, const Vec2& v) { os << "{ " << v.X << ", " << v.Y << " }"; return os; }
+    inline std::ostream& operator<<(std::ostream& os, const Vec2& v) { os << "{ " << v.X << ", " << v.Y << " }"; return os; }
 
 } // namespace JPL
