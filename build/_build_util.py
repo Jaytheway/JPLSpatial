@@ -156,7 +156,7 @@ def main(argv=None):
     p = argparse.ArgumentParser(
         description="Split mixed CMake args into configure/build and run both steps."
     )
-    p.add_argument("generator", help='CMake generator, e.g. "Visual Studio 17 2022" or "Ninja"')
+    p.add_argument("generator", help='CMake generator, e.g. "Visual Studio 18 2026" or "Ninja"')
     p.add_argument("build_dir", help="Binary/build directory")
     p.add_argument("arch", nargs="?", default="", help='Arch for VS generators, e.g. "x64"')
     p.add_argument(

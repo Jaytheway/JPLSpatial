@@ -8,7 +8,7 @@
      {
       "name": "_root-config",
       "hidden": true,
-      "generator": "Visual Studio 17 2022",
+      "generator": "Visual Studio 18 2026",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_GENERATOR_PLATFORM": "x64"
