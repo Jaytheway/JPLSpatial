@@ -222,6 +222,52 @@
 // Macro used by the RTTI macros to not export a function
 #define JPL_NO_EXPORT
 
+//==============================================================================
+// Pragmas to store / restore the warning state and to disable individual warnings
+#ifdef JPL_COMPILER_CLANG
+#define JPL_PRAGMA(x)					_Pragma(#x)
+#define JPL_SUPPRESS_WARNING_PUSH		JPL_PRAGMA(clang diagnostic push)
+#define JPL_SUPPRESS_WARNING_POP		JPL_PRAGMA(clang diagnostic pop)
+#define JPL_CLANG_SUPPRESS_WARNING(w)	JPL_PRAGMA(clang diagnostic ignored w)
+#if __clang_major__ >= 13
+#define JPL_CLANG_13_PLUS_SUPPRESS_WARNING(w) JPL_CLANG_SUPPRESS_WARNING(w)
+#else
+#define JPL_CLANG_13_PLUS_SUPPRESS_WARNING(w)
+#endif
+#if __clang_major__ >= 16
+#define JPL_CLANG_16_PLUS_SUPPRESS_WARNING(w) JPL_CLANG_SUPPRESS_WARNING(w)
+#else
+#define JPL_CLANG_16_PLUS_SUPPRESS_WARNING(w)
+#endif
+#else
+#define JPL_CLANG_SUPPRESS_WARNING(w)
+#define JPL_CLANG_13_PLUS_SUPPRESS_WARNING(w)
+#define JPL_CLANG_16_PLUS_SUPPRESS_WARNING(w)
+#endif
+#ifdef JPL_COMPILER_GCC
+#define JPL_PRAGMA(x)					_Pragma(#x)
+#define JPL_SUPPRESS_WARNING_PUSH		JPL_PRAGMA(GCC diagnostic push)
+#define JPL_SUPPRESS_WARNING_POP		JPL_PRAGMA(GCC diagnostic pop)
+#define JPL_GCC_SUPPRESS_WARNING(w)		JPL_PRAGMA(GCC diagnostic ignored w)
+#else
+#define JPL_GCC_SUPPRESS_WARNING(w)
+#endif
+#ifdef JPL_COMPILER_MSVC
+#define JPL_PRAGMA(x)					__pragma(x)
+#define JPL_SUPPRESS_WARNING_PUSH		JPL_PRAGMA(warning (push))
+#define JPL_SUPPRESS_WARNING_POP		JPL_PRAGMA(warning (pop))
+#define JPL_MSVC_SUPPRESS_WARNING(w)	JPL_PRAGMA(warning (disable : w))
+#if _MSC_VER >= 1920 && _MSC_VER < 1930
+#define JPL_MSVC2019_SUPPRESS_WARNING(w) JPL_MSVC_SUPPRESS_WARNING(w)
+#else
+#define JPL_MSVC2019_SUPPRESS_WARNING(w)
+#endif
+#else
+#define JPL_MSVC_SUPPRESS_WARNING(w)
+#define JPL_MSVC2019_SUPPRESS_WARNING(w)
+#endif
+
+//==============================================================================
 #include <cstdint>
 
 namespace JPL

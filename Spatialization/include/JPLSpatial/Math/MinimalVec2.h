@@ -53,7 +53,7 @@ namespace JPL
         template<typename Arg> requires(std::is_arithmetic_v<Arg>)
         [[nodiscard]] JPL_INLINE constexpr Vec2& operator/=(Arg Scale) noexcept { const float invScale = 1.0f / (float)Scale; X* invScale; Y* invScale; return *this; }
         
-        [[nodiscard]] JPL_INLINE constexpr void operator+=(const Vec2& V) noexcept { X += V.X; Y += V.Y; }
+        JPL_INLINE constexpr void operator+=(const Vec2& V) noexcept { X += V.X; Y += V.Y; }
     };
 
     [[nodiscard]] JPL_INLINE constexpr bool operator==(const Vec2& A, const Vec2& B) noexcept { return A.X == B.X && A.Y == B.Y; }

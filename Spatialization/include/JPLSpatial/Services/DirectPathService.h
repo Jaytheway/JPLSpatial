@@ -46,7 +46,7 @@ namespace JPL
 		float DirectionDot;				//< Dot product between source direction relative to listener and listener's forward vector
 		float InvDirectionDot;			//< Dot product listener direction relative to source and source's forward vector
 
-		Position<Vec3Type> Position;	//< Direction and orientation relative to listener
+		JPL::Position<Vec3Type> Position;	//< Direction and orientation relative to listener
 	};
 
 	struct AttenuationCone
@@ -76,7 +76,7 @@ namespace JPL
 	struct DirectEffectInitParameters
 	{
 		AttenuationCurveRef BaseCurve;
-		AttenuationCone AttenuationCone;
+		JPL::AttenuationCone AttenuationCone;
 	};
 
 	//==========================================================================

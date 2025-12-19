@@ -28,13 +28,13 @@
 #include "JPLSpatial/Utilities/GainEncoding.h"
 
 #include <array>
+#include <cstring>
 #include <vector>
 #include <span>
 #include <concepts>
 #include <type_traits>
 #include <algorithm>
 #include <memory>
-#include <string.h>
 
 namespace JPL::VBAP
 {

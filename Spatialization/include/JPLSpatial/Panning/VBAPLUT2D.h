@@ -39,7 +39,7 @@
 #include <type_traits>
 #include <bit>
 #include <vector>
-#include <string.h> // std::memcpy
+#include <cstring> // std::memcpy
 
 namespace JPL::VBAP
 {

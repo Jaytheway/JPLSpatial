@@ -805,7 +805,7 @@ namespace JPL
 			spatializer.AdvanceSimulation();
 
 			// Test attenuation
-			[[naybe_unused]] const float attenuation = spatializer.GetDistanceAttenuation(source, attenuationCurve);
+			[[maybe_unused]] const float attenuation = spatializer.GetDistanceAttenuation(source, attenuationCurve);
 
 			const auto channelGains = spatializer.GetChannelGains(source, quadChannels);
 			ASSERT_FALSE(channelGains.empty());

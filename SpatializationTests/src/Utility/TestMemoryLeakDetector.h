@@ -305,9 +305,9 @@ namespace JPL
 			// Default new/delete spill
 			if (!mOptions.test(SkipGlobalNewDelete))
 			{
-				EXPECT_EQ(mDefaultNewDeleteInUse, 0) << "Allocations bypassed PMR and leaked."; \
-					if (mOptions.test(CheckNonJPLMaxUsage_IsZero))
-						EXPECT_EQ(mDefaultNewDeleteMaxUsage, 0) << "Allocations bypassed PMR.";
+				EXPECT_EQ(mDefaultNewDeleteInUse, 0) << "Allocations bypassed PMR and leaked.";
+				if (mOptions.test(CheckNonJPLMaxUsage_IsZero))
+					EXPECT_EQ(mDefaultNewDeleteMaxUsage, 0) << "Allocations bypassed PMR.";
 			}
 #endif
 

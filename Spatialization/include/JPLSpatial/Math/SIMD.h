@@ -243,7 +243,7 @@ namespace JPL
 		JPL_INLINE simd_mask operator * (const simd_mask& other) const noexcept;
 
 		/// Component-wise multiplies each of the 4 integer components with an integer (discards any overflow)
-		JPL_INLINE simd_mask operator *= (const simd_mask& other) noexcept;
+		JPL_INLINE simd_mask& operator *= (const simd_mask& other) noexcept;
 
 		/// Component-wise add an integer value to all integer components (discards any overflow)
 		JPL_INLINE simd_mask operator + (const simd_mask& other) const noexcept;
@@ -947,7 +947,7 @@ namespace JPL
 		load(mem);
 	}
 
-	inline JPL_INLINE simd_mask simd_mask::replicate(int value) noexcept
+	JPL_INLINE simd_mask simd_mask::replicate(int value) noexcept
 	{
 #if defined(JPL_USE_NEON)
 		return vreinterpretq_u32_s32(vdupq_n_s32(value));
@@ -957,7 +957,7 @@ namespace JPL
 #endif
 	}
 
-	inline JPL_INLINE simd_mask simd_mask::replicate(uint32 value) noexcept
+	JPL_INLINE simd_mask simd_mask::replicate(uint32 value) noexcept
 	{
 		return simd_mask(value);
 	}
@@ -1078,7 +1078,7 @@ namespace JPL
 #endif
 	}
 
-	JPL_INLINE simd_mask simd_mask::operator*=(const simd_mask& other) noexcept
+	JPL_INLINE simd_mask& simd_mask::operator*=(const simd_mask& other) noexcept
 	{
 #if defined(JPL_USE_SSE4_1)
 		mNative = _mm_mullo_epi32(mNative, other.mNative);
@@ -1097,6 +1097,7 @@ namespace JPL
 		mNative[2] *= other.mNative[2];
 		mNative[3] *= other.mNative[3];
 #endif
+		return *this;
 	}
 
 	JPL_INLINE simd_mask simd_mask::operator+(const simd_mask& other) const noexcept

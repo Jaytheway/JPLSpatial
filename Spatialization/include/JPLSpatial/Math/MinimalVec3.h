@@ -64,14 +64,14 @@ namespace JPL
             return *this;
         }
 
-        JPL_INLINE constexpr MinimalVec3 operator-() const { return MinimalVec3(-X, -Y, -Z); }
-        JPL_INLINE constexpr MinimalVec3 operator-(const MinimalVec3& V) const { return MinimalVec3(X - V.X, Y - V.Y, Z - V.Z); }
-        JPL_INLINE constexpr MinimalVec3 operator+(const MinimalVec3& V) const { return MinimalVec3(X + V.X, Y + V.Y, Z + V.Z); }
+        [[nodiscard]] JPL_INLINE constexpr MinimalVec3 operator-() const { return MinimalVec3(-X, -Y, -Z); }
+        [[nodiscard]] JPL_INLINE constexpr MinimalVec3 operator-(const MinimalVec3& V) const { return MinimalVec3(X - V.X, Y - V.Y, Z - V.Z); }
+        [[nodiscard]] JPL_INLINE constexpr MinimalVec3 operator+(const MinimalVec3& V) const { return MinimalVec3(X + V.X, Y + V.Y, Z + V.Z); }
         
         template<typename Arg> requires(std::is_arithmetic_v<Arg>)
-        JPL_INLINE constexpr MinimalVec3 operator*(Arg Scale) const noexcept { return MinimalVec3(X * (float)Scale, Y * (float)Scale, Z * (float)Scale); }
+        [[nodiscard]] JPL_INLINE constexpr MinimalVec3 operator*(Arg Scale) const noexcept { return MinimalVec3(X * (float)Scale, Y * (float)Scale, Z * (float)Scale); }
         template<typename Arg> requires(std::is_arithmetic_v<Arg>)
-        JPL_INLINE constexpr MinimalVec3 operator/(Arg Scale) const noexcept { return MinimalVec3(X / (float)Scale, Y / (float)Scale, Z / (float)Scale); }
+        [[nodiscard]] JPL_INLINE constexpr MinimalVec3 operator/(Arg Scale) const noexcept { return MinimalVec3(X / (float)Scale, Y / (float)Scale, Z / (float)Scale); }
         
         JPL_INLINE constexpr void operator+=(const MinimalVec3& V) noexcept { X += V.X; Y += V.Y; Z += V.Z; }
         JPL_INLINE constexpr MinimalVec3& operator*=(const MinimalVec3 Other) { X *= Other.X; Y *= Other.Y; Z *= Other.Z; return *this; }
@@ -87,12 +87,12 @@ namespace JPL
     [[nodiscard]] JPL_INLINE constexpr bool operator==(const MinimalVec3& A, const MinimalVec3& B) noexcept{ return A.X == B.X && A.Y == B.Y && A.Z == B.Z; }
 
     template<typename T> requires(std::is_arithmetic_v<T>)
-    JPL_INLINE constexpr MinimalVec3 operator*(T Scale, const JPL::MinimalVec3& V) noexcept { return V.operator*(Scale); }
+    [[nodiscard]] JPL_INLINE constexpr MinimalVec3 operator*(T Scale, const JPL::MinimalVec3& V) noexcept { return V.operator*(Scale); }
     template<typename T> requires(std::is_arithmetic_v<T>)
-    JPL_INLINE constexpr MinimalVec3 operator/(T Scale, const JPL::MinimalVec3& V) noexcept { return V.operator/(Scale); }
+    [[nodiscard]] JPL_INLINE constexpr MinimalVec3 operator/(T Scale, const JPL::MinimalVec3& V) noexcept { return V.operator/(Scale); }
 
-    JPL_INLINE constexpr MinimalVec3 operator*(const JPL::MinimalVec3& A, const JPL::MinimalVec3& B) noexcept { return { A.X * B.X, A.Y * B.Y, A.Z * B.Z }; }
-    JPL_INLINE constexpr MinimalVec3 operator/(const JPL::MinimalVec3& A, const JPL::MinimalVec3& B) noexcept { return { A.X / B.X, A.Y / B.Y, A.Z / B.Z }; }
+    [[nodiscard]] JPL_INLINE constexpr MinimalVec3 operator*(const JPL::MinimalVec3& A, const JPL::MinimalVec3& B) noexcept { return { A.X * B.X, A.Y * B.Y, A.Z * B.Z }; }
+    [[nodiscard]] JPL_INLINE constexpr MinimalVec3 operator/(const JPL::MinimalVec3& A, const JPL::MinimalVec3& B) noexcept { return { A.X / B.X, A.Y / B.Y, A.Z / B.Z }; }
 
     [[nodiscard]] static JPL_INLINE constexpr float LengthSquared(const MinimalVec3& V) noexcept { return V.LengthSquared(); }
     [[nodiscard]] static JPL_INLINE constexpr float Length(const MinimalVec3& V) noexcept { return V.Length(); }

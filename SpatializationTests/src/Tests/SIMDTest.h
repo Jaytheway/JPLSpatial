@@ -371,7 +371,7 @@ namespace JPL
 		simd s1(Util::cTest0123.data());
 		Util::simd_ref arg2{ 1.0f, 0.5f, 3.0f, 2.5f };
 		simd result = min(s1, arg2.data());
-		Util::simd_check expected{ Util::cTest0123, arg2, std::fminf };
+		Util::simd_check expected{ Util::cTest0123, arg2, fminf };
 		EXPECT_EQ(result, expected);
 	}
 
@@ -380,7 +380,7 @@ namespace JPL
 		simd s1(Util::cTest0123.data());
 		Util::simd_ref arg2{ 1.5f, 0.5f, 3.5f, 2.5f };
 		simd result = max(s1, arg2.data());
-		Util::simd_check expected{ Util::cTest0123, arg2, std::fmaxf };
+		Util::simd_check expected{ Util::cTest0123, arg2, fmaxf };
 		EXPECT_EQ(result, expected);
 	}
 
@@ -398,7 +398,7 @@ namespace JPL
 	{
 		Util::simd_ref arg1{ -1.0f, -2.4f, 2.8f, 3.2f };
 		simd result = abs(simd(arg1.data()));
-		Util::simd_check expected{ arg1, std::fabsf };
+		Util::simd_check expected{ arg1, fabsf };
 		EXPECT_EQ(result, expected);
 	}
 
@@ -420,20 +420,20 @@ namespace JPL
 		{
 			Util::simd_ref arg1{ +2.7f, -2.9f, +0.7f, -0.9f };
 			simd result = trunc(simd(arg1.data()));
-			Util::simd_check expected{ arg1, std::truncf };
+			Util::simd_check expected{ arg1, truncf };
 			EXPECT_EQ(result, expected);
 		}
 		{
 			Util::simd_ref arg1{ +0.0f, -0.0f, -Util::inf(), +Util::inf() };
 			simd result = trunc(simd(arg1.data()));
-			Util::simd_check expected{ arg1, std::truncf };
+			Util::simd_check expected{ arg1, truncf };
 			EXPECT_EQ(result, expected);
 		}
 		{
 			// NaNs are special
 			Util::simd_ref arg1{ -Util::nan(), +Util::nan(), 1.0f, 1.0f };
 			simd result = trunc(simd(arg1.data()));
-			Util::simd_check expected{ arg1, std::truncf };
+			Util::simd_check expected{ arg1, truncf };
 			EXPECT_EQ(result, expected);
 		}
 	}
@@ -444,7 +444,7 @@ namespace JPL
 		Util::simd_ref mul{ 2.0f, 3.0f, 1.0f, 2.0f };
 		Util::simd_ref add{ 1.5f, 1.5f, 3.5f, 3.5f };
 		simd result = fma(s1, mul.data(), add.data());
-		Util::simd_check expected{ Util::cTest0123, mul, add, std::fmaf };
+		Util::simd_check expected{ Util::cTest0123, mul, add, fmaf };
 		EXPECT_EQ(result, expected);
 	}
 
@@ -493,7 +493,7 @@ namespace JPL
 
 		s1 = { 0.5f, 1.0f, 2.0f, 3.0f };
 		result = log(s1);
-		Util::simd_check expected{{ 0.5f, 1.0f, 2.0f, 3.0f }, std::logf };
+		Util::simd_check expected{{ 0.5f, 1.0f, 2.0f, 3.0f }, logf };
 		EXPECT_EQ(result, expected);
 	}
 
@@ -507,7 +507,7 @@ namespace JPL
 
 		s1 = { 0.5f, 1.0f, 2.0f, 3.0f };
 		result = log10(s1);
-		Util::simd_check expected{ { 0.5f, 1.0f, 2.0f, 3.0f }, std::log10f };
+		Util::simd_check expected{ { 0.5f, 1.0f, 2.0f, 3.0f }, log10f };
 		EXPECT_EQ(result, expected);
 	}
 
@@ -515,7 +515,7 @@ namespace JPL
 	{
 		simd s1(0.0f, 1.0f, 2.5f, 3.0f);
 		simd result = exp(s1);
-		Util::simd_check expected{{ 0.0f, 1.0f, 2.5f, 3.0f }, std::expf };
+		Util::simd_check expected{{ 0.0f, 1.0f, 2.5f, 3.0f }, expf };
 		EXPECT_EQ(result, expected);
 	}
 
@@ -523,7 +523,7 @@ namespace JPL
 	{
 		simd s1(0.0f, 1.0f, -2.5f, 3.0f);
 		simd result = exp2(s1);
-		Util::simd_check expected{{ 0.0f, 1.0f, -2.5f, 3.0f }, std::exp2f };
+		Util::simd_check expected{{ 0.0f, 1.0f, -2.5f, 3.0f }, exp2f };
 		EXPECT_EQ(result, expected);
 	}
 
@@ -534,10 +534,10 @@ namespace JPL
 			simd_mask exponent(1, 0, 3, 3);
 			simd result = ldexp(s1, exponent);
 			Util::simd_check expected{
-				std::ldexpf(0.0f, 1),
-				std::ldexpf(1.0f, 0),
-				std::ldexpf(-2.5f, 3),
-				std::ldexpf(3.0f, 3) };
+				ldexpf(0.0f, 1),
+				ldexpf(1.0f, 0),
+				ldexpf(-2.5f, 3),
+				ldexpf(3.0f, 3) };
 			EXPECT_EQ(result, expected);
 		}
 		{
@@ -545,10 +545,10 @@ namespace JPL
 			simd_mask exponent(-1, 0, -2, -3);
 			simd result = ldexp(s1, exponent);
 			Util::simd_check expected{
-				std::ldexpf(0.0f, -1),
-				std::ldexpf(1.0f, 0),
-				std::ldexpf(-2.5f, -2),
-				std::ldexpf(3.0f, -3) };
+				ldexpf(0.0f, -1),
+				ldexpf(1.0f, 0),
+				ldexpf(-2.5f, -2),
+				ldexpf(3.0f, -3) };
 			EXPECT_EQ(result, expected);
 		}
 		{
@@ -556,10 +556,10 @@ namespace JPL
 			simd_mask exponent(2, 3, 200.0f, -300.0f);
 			simd result = ldexp(s1, exponent);
 			Util::simd_check expected{
-				std::ldexpf(-3.0f, 2),
-				std::ldexpf(-3.0f, 3),
-				std::ldexpf(-2.5f, 200),
-				std::ldexpf(3.0f, -300) };
+				ldexpf(-3.0f, 2),
+				ldexpf(-3.0f, 3),
+				ldexpf(-2.5f, 200),
+				ldexpf(3.0f, -300) };
 			EXPECT_EQ(result, expected);
 		}
 		{
@@ -567,10 +567,10 @@ namespace JPL
 			simd_mask exponent(3, 0, 2, -3);
 			simd result = ldexp(s1, exponent);
 			Util::simd_check expected{
-				std::ldexpf(-0.0f, -1),
-				std::ldexpf(-0.0f, 0),
-				std::ldexpf(-0.f, 2),
-				std::ldexpf(-0.0f, -3) };
+				ldexpf(-0.0f, -1),
+				ldexpf(-0.0f, 0),
+				ldexpf(-0.f, 2),
+				ldexpf(-0.0f, -3) };
 			EXPECT_EQ(result, expected);
 		}
 
@@ -579,10 +579,10 @@ namespace JPL
 			simd_mask exponent(2, 3, 0, 0);
 			simd result = ldexp(s1, exponent);
 			Util::simd_check expected{
-				std::ldexpf(Util::nan(), 2),
-				std::ldexpf(-Util::nan(), 3),
-				std::ldexpf(Util::nan(), 0),
-				std::ldexpf(-Util::nan(), 0) };
+				ldexpf(Util::nan(), 2),
+				ldexpf(-Util::nan(), 3),
+				ldexpf(Util::nan(), 0),
+				ldexpf(-Util::nan(), 0) };
 			EXPECT_EQ(result, expected);
 		}
 		{
@@ -590,10 +590,10 @@ namespace JPL
 			simd_mask exponent(2, 3, 0, 0);
 			simd result = ldexp(s1, exponent);
 			Util::simd_check expected{
-				std::ldexpf(Util::inf(), 2),
-				std::ldexpf(-Util::inf(), 3),
-				std::ldexpf(Util::inf(), 0),
-				std::ldexpf(-Util::inf(), 0) };
+				ldexpf(Util::inf(), 2),
+				ldexpf(-Util::inf(), 3),
+				ldexpf(Util::inf(), 0),
+				ldexpf(-Util::inf(), 0) };
 			EXPECT_EQ(result, expected);
 		}
 	}
@@ -615,7 +615,7 @@ namespace JPL
 			Util::simd_ref arg2{ 10.0f, 0.5f, -3.0f, 3.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 			
-			Util::simd_check expected(arg1, arg2, std::powf);
+			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -628,7 +628,7 @@ namespace JPL
 			Util::simd_ref arg2{ -5.0f, -5.0f, 5.0f, 5.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, std::powf);
+			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -638,7 +638,7 @@ namespace JPL
 			Util::simd_ref arg2{ -2.0f, -2.0f, -2.5f, -2.5f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, std::powf);
+			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -650,7 +650,7 @@ namespace JPL
 			Util::simd_ref arg2{ -Util::inf(), -Util::inf(), 1.0f / 3.0f, Util::nan()};
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, std::powf);
+			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -660,7 +660,7 @@ namespace JPL
 			Util::simd_ref arg2{ 2.5f, 2.5f, 2.0f, 2.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, std::powf);
+			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -670,7 +670,7 @@ namespace JPL
 			Util::simd_ref arg2{ Util::nan(), -Util::inf(), 2.0f, -3.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, std::powf);
+			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -681,7 +681,7 @@ namespace JPL
 			Util::simd_ref arg2{ Util::inf(), -Util::inf(), 2.5f, -2.5f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, std::powf);
+			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -692,7 +692,7 @@ namespace JPL
 			Util::simd_ref arg2{ +0.0f, -0.0f, +0.0f, -0.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, std::powf);
+			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -703,7 +703,7 @@ namespace JPL
 			Util::simd_ref arg2{ -Util::inf(), -Util::inf(), -Util::inf(), -Util::inf() };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, std::powf);
+			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -714,7 +714,7 @@ namespace JPL
 			Util::simd_ref arg2{ Util::inf(), Util::inf(), Util::inf(), Util::inf() };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, std::powf);
+			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -726,7 +726,7 @@ namespace JPL
 			Util::simd_ref arg2{ -5.0f, -2.5f, -2.0f, 5.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, std::powf);
+			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -736,7 +736,7 @@ namespace JPL
 			Util::simd_ref arg2{ 2.5f, 2.0f, -2.0f, 5.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, std::powf);
+			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -747,7 +747,7 @@ namespace JPL
 			Util::simd_ref arg2{ -4.0f, -2.5f, 4.0f, 2.5f};
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, std::powf);
+			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -757,7 +757,7 @@ namespace JPL
 	{
 		Util::simd_ref arg1{ -2.4f, 1.0f, 0.0f, 2.2f };
 		simd result = sin(simd(arg1.data()));
-		Util::simd_check expected{ arg1, std::sinf };
+		Util::simd_check expected{ arg1, sinf };
 		EXPECT_EQ(result, expected);
 	}
 
@@ -765,7 +765,7 @@ namespace JPL
 	{
 		Util::simd_ref arg1{ -2.4f, 1.0f, 0.0f, 2.2f };
 		simd result = cos(simd(arg1.data()));
-		Util::simd_check expected{ arg1, std::cosf };
+		Util::simd_check expected{ arg1, cosf };
 		EXPECT_EQ(result, expected);
 	}
 
@@ -774,8 +774,8 @@ namespace JPL
 		Util::simd_ref arg1{ -2.4f, 1.0f, 0.3f, 2.8f };
 		simd resultSin, resultCos;
 		SinCos(simd(arg1.data()), resultSin, resultCos);
-		Util::simd_check expectedSin{ arg1, std::sinf };
-		Util::simd_check expectedCos{ arg1, std::cosf };
+		Util::simd_check expectedSin{ arg1, sinf };
+		Util::simd_check expectedCos{ arg1, cosf };
 		EXPECT_EQ(resultSin, expectedSin);
 		EXPECT_EQ(resultCos, expectedCos);
 	}
@@ -785,7 +785,7 @@ namespace JPL
 		{
 			Util::simd_ref arg1{ -2.4f, 1.0f, 0.0f, 2.2f };
 			simd result = tan(simd(arg1.data()));
-			Util::simd_check expected{ arg1, std::tanf };
+			Util::simd_check expected{ arg1, tanf };
 			EXPECT_EQ(result, expected) << "Test values: " << simd(arg1.data());
 		}
 
@@ -795,51 +795,51 @@ namespace JPL
 		{	// Tiny / near zero
 			Util::simd_ref arg1{ 1e-7f, -1e-7f, 1e-4f, -1e-4f };
 			simd result = tan(simd(arg1.data()));
-			Util::simd_check expected{ arg1, std::tanf };
+			Util::simd_check expected{ arg1, tanf };
 			EXPECT_EQ(result, expected) << "Test values: " << simd(arg1.data());
 		}
 		{	// Friendly angles
 			Util::simd_ref arg1{ pi / 6,  -pi / 6, pi / 4, -pi / 4 };
 			simd result = tan(simd(arg1.data()));
-			Util::simd_check expected{ arg1, std::tanf };
+			Util::simd_check expected{ arg1, tanf };
 			EXPECT_EQ(result, expected) << "Test values: " << simd(arg1.data());
 		}
 		{	// Friendly angles
 			Util::simd_ref arg1{ pi / 3,  -pi / 3, pi, -pi};
 			simd result = tan(simd(arg1.data()));
-			Util::simd_check expected{ arg1, std::tanf };
+			Util::simd_check expected{ arg1, tanf };
 			EXPECT_EQ(result, expected) << "Test values: " << simd(arg1.data());
 		}
 		{	// Friendly angles (and 0, 1)
 			Util::simd_ref arg1{ 2 * pi,  -2 * pi, 0.0f, 1.0f };
 			simd result = tan(simd(arg1.data()));
-			Util::simd_check expected{ arg1, std::tanf };
+			Util::simd_check expected{ arg1, tanf };
 			EXPECT_EQ(result, expected) << "Test values: " << simd(arg1.data());
 		}
 		{	// Near poles (Pi/2 + kPi) — approach from both sides
 			Util::simd_ref arg1{ (pi / 2) - eps, (pi / 2) + eps,  (3 * pi / 2) - eps, (3 * pi / 2) + eps };
 			simd result = tan(simd(arg1.data()));
-			Util::simd_check expected{ arg1, std::tanf };
+			Util::simd_check expected{ arg1, tanf };
 			EXPECT_EQ(result, expected) << "Test values: " << simd(arg1.data());
 		}
 		{	// Near octant boundaries (k*Pi/4): hit just around the reducer’s sweet spots
 			Util::simd_ref arg1{ (pi / 4) - eps, (pi / 4) + eps, (3 * pi / 4) - eps, (3 * pi / 4) + eps };
 			simd result = tan(simd(arg1.data()));
-			Util::simd_check expected{ arg1, std::tanf };
+			Util::simd_check expected{ arg1, tanf };
 			EXPECT_EQ(result, expected) << "Test values: " << simd(arg1.data());
 		}
 		{	// Large-magnitude inputs (stress argument reduction)
 			Util::simd_ref arg1{ 1000.0f, -1000.0f, 1e5f * pi + 0.001f, -1e5f * pi + 0.001f };
 			simd result = tan(simd(arg1.data()));
-			Util::simd_check expected{ arg1, std::tanf };
+			Util::simd_check expected{ arg1, tanf };
 			EXPECT_EQ(result, expected) << "Test values: " << simd(arg1.data());
 		}
-		// Around Pi * 1'000'000 is where our simd tan can't keep up with std::tanf
+		// Around Pi * 1'000'000 is where our simd tan can't keep up with tanf
 #if 0
 		{	// Large-magnitude inputs (stress argument reduction)
 			Util::simd_ref arg1{ 1e6f * pi + 0.001f, -1e6f * pi + 0.001f, 1e7f * pi + 0.001f, -1e7f * pi + 0.001f };
 			simd result = tan(simd(arg1.data()));
-			Util::simd_check expected{ arg1, std::tanf };
+			Util::simd_check expected{ arg1, tanf };
 			EXPECT_EQ(result, expected) << "Test values: " << simd(arg1.data());
 		}
 #endif

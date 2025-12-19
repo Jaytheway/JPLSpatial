@@ -304,7 +304,11 @@ namespace JPL
 			return _aligned_malloc(inSize, inAlignment);
 #else
 			void* block = nullptr;
+			JPL_SUPPRESS_WARNING_PUSH
+			JPL_GCC_SUPPRESS_WARNING("-Wunused-result")
+			JPL_CLANG_SUPPRESS_WARNING("-Wunused-result")
 			(void)posix_memalign(&block, inAlignment, inSize);
+			JPL_SUPPRESS_WARNING_POP
 			return block;
 #endif
 		}
