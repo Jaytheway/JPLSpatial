@@ -677,7 +677,7 @@ namespace JPL
 	{
 		// TODO: At Focus 1, spread 1 (or 0.5?), channel mapping should be direct from source to output, or do we still want to spread evenly?
 
-		using PannerType = typename VBAPanner2D<>;
+		using PannerType = VBAPanner2D<>;
 		PannerType panner;
 
 		// Quadraphonic channel layout

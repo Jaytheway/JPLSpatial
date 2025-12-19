@@ -81,7 +81,7 @@ namespace JPL
             /// Implementation of the source layout for 2D panning
             struct SourceLayout : Base::VBAPLayoutBase
             {
-                using LayoutBase = Base::VBAPLayoutBase;
+                using LayoutBase = typename Base::VBAPLayoutBase;
 
                 // Note:
                 //  Initializing SourceLayout dimensions with these defaults results in
@@ -116,7 +116,7 @@ namespace JPL
                 [[nodiscard]] JPL_INLINE static constexpr size_t GetMaxNumVirtualSources() noexcept;
 
             private:
-                friend class Base;
+                friend Base;
                 /// Initialize VBAP data for standard channel map panning.
                 /// (called by the panner that has the value for `shortestEdgeApertureDot`)
                 bool Initialize(ChannelMap channelMap, ChannelMap targetMap, float shortestEdgeApertureDot = std::numeric_limits<float>::max());

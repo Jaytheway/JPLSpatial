@@ -47,7 +47,7 @@ namespace JPL
 		{
 			return Position<Vec3>{
 				.Location = Vec3(0, 0, 0),
-				.Orientation = Orientation<Vec3>::IdentityForward()
+				.Orientation = OrientationData<Vec3>::IdentityForward()
 			};
 		}
 
@@ -75,9 +75,9 @@ namespace JPL
 		};
 
 
-		static Orientation<Vec3> OrientForward(const Vec3& forward)
+		static OrientationData<Vec3> OrientForward(const Vec3& forward)
 		{
-			return Orientation<Vec3>{.Up = Vec3(0, 1, 0), .Forward = forward };
+			return OrientationData<Vec3>{.Up = Vec3(0, 1, 0), .Forward = forward };
 		};
 
 		static ListenerTestCase GetListenerCaseFor(EFacing direction)
@@ -498,7 +498,7 @@ namespace JPL
 			float ExpectedInvDot;
 		};
 
-		const std::vector<DirectPathTestCase> testCases
+		const std::pmr::vector<DirectPathTestCase> testCases(
 		{
 			// Listener facing forward
 			{
@@ -626,7 +626,7 @@ namespace JPL
 				.ExpectedDot = 1.0f,
 				.ExpectedInvDot = 0.7071f,
 			},
-		};
+		}, JPL::GetDefaultPmrAllocator()); // just to silence the error for bypassing pmr allocator, only for this case.;
 
 		static constexpr float tolerance = 1e-5f;
 
@@ -639,7 +639,7 @@ namespace JPL
 
 			const Position<Vec3> sourcePosition{
 				.Location = testCase.SourcePosition,
-				.Orientation = Orientation<Vec3>::IdentityForward()
+				.Orientation = OrientationData<Vec3>::IdentityForward()
 			};
 
 			const DirectPathResult<Vec3> result = DirectPathService::ProcessDirectPath(sourcePosition, listenerPosition);

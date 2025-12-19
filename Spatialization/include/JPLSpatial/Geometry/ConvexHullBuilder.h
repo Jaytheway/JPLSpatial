@@ -29,6 +29,7 @@
 
 #include <vector>
 #include <memory>
+#include <limits>
 #include <span>
 #include <unordered_set>
 
@@ -490,7 +491,7 @@ namespace JPL
 		}
 		else
 		{
-			Vec3 maxv = Vec3::sReplicate(-FLT_MAX), minv = Vec3::sReplicate(FLT_MAX);
+			Vec3 maxv = Vec3::sReplicate(-std::numeric_limits<float>::max()), minv = Vec3::sReplicate(std::numeric_limits<float>::max());
 			for (Vec3 v : mPositions)
 			{
 				minv = Vec3::sMin(minv, v);
@@ -933,7 +934,7 @@ namespace JPL
 		Vec3 vmax{ 0.0f, 0.0f, 0.0f };
 		for (Vec3 v : mPositions)
 			vmax = vec3max(vmax, vec3abs(v));
-		return 3.0f * FLT_EPSILON * (GetX(vmax) + GetY(vmax) + GetZ(vmax));
+		return 3.0f * std::numeric_limits<float>::epsilon() * (GetX(vmax) + GetY(vmax) + GetZ(vmax));
 	}
 
 	template<CVec3 Vec3Type>
@@ -965,7 +966,7 @@ namespace JPL
 	inline float ConvexHullBuilder<Vec3Type>::GetDistanceToEdgeSq(const Vec3& inPoint, const Face* inFace) const
 	{
 		bool all_inside = true;
-		float edge_dist_sq = FLT_MAX;
+		float edge_dist_sq = std::numeric_limits<float>::max();
 
 		// Test if it is inside the edges of the polygon
 		Edge* edge = inFace->mFirstEdge;

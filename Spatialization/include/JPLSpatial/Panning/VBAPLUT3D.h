@@ -34,6 +34,7 @@
 #include <type_traits>
 #include <algorithm>
 #include <memory>
+#include <string.h>
 
 namespace JPL::VBAP
 {

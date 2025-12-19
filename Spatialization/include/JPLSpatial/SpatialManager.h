@@ -77,7 +77,7 @@ namespace JPL::Spatial
 		uint32 NumTargetChannels = 2;
 
 		/// Optional listener to assign this source to. If not set, default listener is used.
-		ListenerId ListenerId;
+		JPL::Spatial::ListenerId ListenerId;
 
 		/// Determines spatialized source channel oritentation
 		ESpatializationType SpatializationType = ESpatializationType::Position;
@@ -97,7 +97,7 @@ namespace JPL::Spatial
 		AttenuationCurveRef DistanceAttenuationCurve = make_pmr_shared<AttenuationCurve>(); 
 
 		/// Source directivity cone
-		AttenuationCone AttenuationCone;
+		JPL::AttenuationCone AttenuationCone;
 	};
 
 	template<CVec3 Vec3Type>
@@ -107,7 +107,7 @@ namespace JPL::Spatial
 #if JPL_HAS_ENV_PROPAGATION
 		RoomId Room;
 #endif
-		Position<Vec3Type> Position;
+		JPL::Position<Vec3Type> Position;
 	};
 
 	// At each position in space relative to listener we have:
@@ -127,7 +127,7 @@ namespace JPL::Spatial
 	struct ObjectInSpace
 	{
 		PositionId Id;
-		Position<Vec3Type> Position;
+		JPL::Position<Vec3Type> Position;
 
 		// Data computed for the object position
 		PositionData Data;
@@ -139,13 +139,13 @@ namespace JPL::Spatial
 		SourceId Id;
 		ListenerId Listener;
 
-		Position<Vec3Type> Position;
+		JPL::Position<Vec3Type> Position;
 
 #if JPL_HAS_ENV_PROPAGATION
 		RoomId Room; //< Room this source is currently in
 #endif
-		DirectEffectHandle DirectEffectHandle;
-		PanEffectHandle PanEffectHandle;
+		JPL::DirectEffectHandle DirectEffectHandle;
+		JPL::PanEffectHandle PanEffectHandle;
 
 		std::optional<float> ObjectSize;
 
@@ -287,7 +287,7 @@ namespace JPL::Spatial
 				.Id = mDefaultListener,
 				.Position = {
 					.Location = Vec3Type(0, 0, 0),
-					.Orientation = Orientation<Vec3Type>::IdentityForward()
+					.Orientation = OrientationData<Vec3Type>::IdentityForward()
 				}}
 			}
 		}, GetDefaultMemoryResource() };
@@ -444,7 +444,7 @@ namespace JPL::Spatial
 			.Id = listenerId,
 				.Position = {
 					.Location = Vec3Type(0, 0, 0),
-					.Orientation = Orientation<Vec3Type>::IdentityForward()
+					.Orientation = OrientationData<Vec3Type>::IdentityForward()
 			}
 		});
 		return listenerId;

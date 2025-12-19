@@ -215,7 +215,7 @@ namespace JPL
 			float Spread;               // [0, 1]
 		};
 
-		using PanSourceOrientation = Orientation<Vec3Type>;
+		using PanSourceOrientation = OrientationData<Vec3Type>;
 
 		struct PanUpdateDataWithOrientation
 		{
@@ -583,7 +583,7 @@ namespace JPL
 		stdr::for_each(sourceLayout.ChannelGroups, [&getOutGains](const ChannelGroup& channelGroup)
 		{
 			ChannelGainsRef channelGains = getOutGains(channelGroup.Channel);
-			std::memset(channelGains.data(), 0, channelGains.size() * sizeof(typename Traits::ChannelGains::value_type));
+			stdr::fill(channelGains, 0.0f);
 		});
 
 		// General idea is to generate new channel cap relative to nominal

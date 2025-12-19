@@ -777,7 +777,7 @@ namespace JPL
 
 			Position<Vec3> sourcePos{
 				.Location = Vec3(0, 10, 10),
-				.Orientation = Orientation<Vec3>::Identity()
+				.Orientation = OrientationData<Vec3>::Identity()
 			};
 			ASSERT_TRUE(spatializer.SetSourcePosition(source, sourcePos));
 

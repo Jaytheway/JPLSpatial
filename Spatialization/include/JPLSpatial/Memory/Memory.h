@@ -213,12 +213,12 @@ namespace JPL
 	}
 
 	template<class T, class Y>
-	[[nodiscard]] JPL_INLINE void reset_pmr_shared(std::shared_ptr<T>& sharedPtr, Y* ptr)
+	JPL_INLINE void reset_pmr_shared(std::shared_ptr<T>& sharedPtr, Y* ptr)
 	{
 		sharedPtr.reset(ptr, PmrDeleter<Y>(GetDefaultMemoryResource()), GetDefaultPmrAllocator<Y>());
 	}
 	template<class T>
-	[[nodiscard]] JPL_INLINE void reset_pmr_shared(std::shared_ptr<T>& sharedPtr)
+	JPL_INLINE void reset_pmr_shared(std::shared_ptr<T>& sharedPtr)
 	{
 		sharedPtr.reset(static_cast<T*>(nullptr), PmrDeleter<T>(GetDefaultMemoryResource()), GetDefaultPmrAllocator<T>());
 	}

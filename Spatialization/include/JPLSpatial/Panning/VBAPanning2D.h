@@ -77,7 +77,7 @@ namespace JPL
             /// Implementation of the source layout for 2D panning
             struct SourceLayout : Base::VBAPLayoutBase
             {
-                using LayoutBase = Base::VBAPLayoutBase;
+                using LayoutBase = typename Base::VBAPLayoutBase;
 
                 static constexpr size_t cMaxNumVirtualSources = 32;
             public:

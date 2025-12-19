@@ -36,7 +36,7 @@ namespace JPL
 
 		Vec3 X, Y, Z;
 
-		[[nodiscard]] static constexpr const Basis& Identity() noexcept
+		[[nodiscard]] static const Basis& Identity() noexcept
 		{
 			static constexpr Basis sIdentity(
 				Vec3{ Float(1), Float(0), Float(0) },

@@ -21,6 +21,8 @@
 
 #include "JPLSpatial/Math/Vec3Traits.h"
 
+#include <limits>
+
 namespace JPL
 {
 	/// Compute barycentric coordinates of closest point to origin for infinite line defined by (inA, inB)
@@ -29,9 +31,11 @@ namespace JPL
 	template<CVec3 Vec3>
 	inline bool GetBaryCentricCoordinates(const Vec3& inA, const Vec3& inB, float& outU, float& outV)
 	{
+		static constexpr float epsSqr = std::numeric_limits<float>::epsilon() * std::numeric_limits<float>::epsilon();
+
 		const Vec3 ab = inB - inA;
 		const float denominator = LengthSquared(ab);
-		if (denominator < (FLT_EPSILON * FLT_EPSILON))
+		if (denominator < (epsSqr))
 		{
 			// Degenerate line segment, fallback to points
 			if (LengthSquared(inA) < LengthSquared(inB))

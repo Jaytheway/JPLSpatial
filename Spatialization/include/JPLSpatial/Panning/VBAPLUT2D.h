@@ -39,6 +39,7 @@
 #include <type_traits>
 #include <bit>
 #include <vector>
+#include <string.h> // std::memcpy
 
 namespace JPL::VBAP
 {
@@ -112,11 +113,11 @@ namespace JPL::VBAP
 
         /// Build a table of size M_corr that maps
         /// diamond-parameter bins to 'uniform-angle' indices in [0, N_uniform).
-        [[nodiscard]] static void BuildDiamondToUniformIndexLUT(Array<uint32>& outCorrectionLUT, uint32 N_uniform, uint32 M_corr = 1024);
+        static void BuildDiamondToUniformIndexLUT(Array<uint32>& outCorrectionLUT, uint32 N_uniform, uint32 M_corr = 1024);
 
         /// Build p -> normalized angle in [0,1)
         /// M_corr: power-of-two size
-        [[nodiscard]] static void BuildDiamondToAngleNormLUT(Array<float>& outCorrectionLUT, uint32 M_corr = 1024);
+        static void BuildDiamondToAngleNormLUT(Array<float>& outCorrectionLUT, uint32 M_corr = 1024);
 
     private:
         void Resize(uint16 resolution, uint32 numTargetChannels);

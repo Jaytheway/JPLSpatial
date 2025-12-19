@@ -28,7 +28,7 @@ namespace JPL
 {
 	/// Minimum data required to do our orientation math
 	template<CVec3 Vec3Type>
-	struct Orientation
+	struct OrientationData
 	{
 		// Note: we may just switch to Basis to store all three axes at some point,
 		// unless we want to keep this Orientation as customization point
@@ -37,13 +37,13 @@ namespace JPL
 		Vec3Type Up;
 		Vec3Type Forward;
 
-		[[nodiscard]] JPL_INLINE static Orientation<Vec3Type> Identity() noexcept
+		[[nodiscard]] JPL_INLINE static OrientationData<Vec3Type> Identity() noexcept
 		{
 			return { .Up = Vec3Type(0, 1, 0), .Forward = Vec3Type(0, 0, 1) };
 		}
 
 		/// Identity facing forward as per right-handed rotation
-		[[nodiscard]] JPL_INLINE static Orientation<Vec3Type> IdentityForward() noexcept
+		[[nodiscard]] JPL_INLINE static OrientationData<Vec3Type> IdentityForward() noexcept
 		{
 			return { .Up = Vec3Type(0, 1, 0), .Forward = Vec3Type(0, 0, -1) };
 		}
@@ -79,11 +79,11 @@ namespace JPL
 	struct Position
 	{
 		Vec3Type Location;
-		Orientation<Vec3Type> Orientation;
+		OrientationData<Vec3Type> Orientation;
 	};
 
 	template<CVec3 Vec3Type>
-	[[nodiscard]] JPL_INLINE bool operator==(const Orientation<Vec3Type>& lhs, const Orientation<Vec3Type>& rhs) noexcept
+	[[nodiscard]] JPL_INLINE bool operator==(const OrientationData<Vec3Type>& lhs, const OrientationData<Vec3Type>& rhs) noexcept
 	{
 		return lhs.Up== rhs.Up && lhs.Forward == rhs.Forward;
 	}

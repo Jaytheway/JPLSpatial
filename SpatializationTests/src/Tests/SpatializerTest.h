@@ -469,7 +469,7 @@ namespace JPL
 
 			Position<Vec3Type> sourcePos{
 				.Location = testCase.SourcePosition,
-				.Orientation = Orientation<Vec3Type>::Identity()
+				.Orientation = OrientationData<Vec3Type>::Identity()
 			};
 			ASSERT_TRUE(spatializer.SetSourcePosition(source, sourcePos));
 
