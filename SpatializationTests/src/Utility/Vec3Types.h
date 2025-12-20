@@ -65,11 +65,11 @@ namespace JPH
 	[[nodiscard]] JPL_INLINE JPH::Vec3 Abs(const JPH::Vec3& v) { return v.Abs(); }
 
 	JPL_INLINE JPH::Vec3& Normalize(JPH::Vec3& v) { v = v.Normalized(); return v; }
-	JPL_INLINE [[nodiscard]] JPH::Vec3 Normalized(const JPH::Vec3& v) { return v.Normalized(); }
-	JPL_INLINE [[nodiscard]] float DotProduct(const JPH::Vec3& a, const JPH::Vec3& b) { return a.Dot(b); }
-	JPL_INLINE [[nodiscard]] JPH::Vec3 CrossProduct(const JPH::Vec3& a, const JPH::Vec3& b) { return a.Cross(b); }
-	JPL_INLINE [[nodiscard]] float LengthSquared(const JPH::Vec3& v) { return v.LengthSq(); }
-	JPL_INLINE [[nodiscard]] float Length(const JPH::Vec3& V) { return V.Length(); }
+	[[nodiscard]] JPL_INLINE JPH::Vec3 Normalized(const JPH::Vec3& v) { return v.Normalized(); }
+	[[nodiscard]] JPL_INLINE float DotProduct(const JPH::Vec3& a, const JPH::Vec3& b) { return a.Dot(b); }
+	[[nodiscard]] JPL_INLINE JPH::Vec3 CrossProduct(const JPH::Vec3& a, const JPH::Vec3& b) { return a.Cross(b); }
+	[[nodiscard]] JPL_INLINE float LengthSquared(const JPH::Vec3& v) { return v.LengthSq(); }
+	[[nodiscard]] JPL_INLINE float Length(const JPH::Vec3& V) { return V.Length(); }
 }
 
 static_assert(JPL::CVec3<JPH::Vec3>);
@@ -80,9 +80,9 @@ namespace glm
 	[[nodiscard]] JPL_INLINE glm::vec3 Abs(const glm::vec3& v) { return glm::abs(v); }
 
 	JPL_INLINE glm::vec3& Normalize(glm::vec3& v) { v = glm::normalize(v); return v; }
-	JPL_INLINE [[nodiscard]] glm::vec3 Normalized(const glm::vec3& v) { return glm::normalize(v); }
-	JPL_INLINE [[nodiscard]] float DotProduct(const glm::vec3& a, const glm::vec3& b) { return glm::dot(a, b); }
-	JPL_INLINE [[nodiscard]] glm::vec3 CrossProduct(const glm::vec3& a, const glm::vec3& b) { return glm::cross(a, b); }
-	JPL_INLINE [[nodiscard]] float LengthSquared(const glm::vec3& v) { return glm::dot(v, v); }
-	JPL_INLINE [[nodiscard]] float Length(const glm::vec3& v) { return glm::length(v); }
+	[[nodiscard]] JPL_INLINE glm::vec3 Normalized(const glm::vec3& v) { return glm::normalize(v); }
+	[[nodiscard]] JPL_INLINE float DotProduct(const glm::vec3& a, const glm::vec3& b) { return glm::dot(a, b); }
+	[[nodiscard]] JPL_INLINE glm::vec3 CrossProduct(const glm::vec3& a, const glm::vec3& b) { return glm::cross(a, b); }
+	[[nodiscard]] JPL_INLINE float LengthSquared(const glm::vec3& v) { return glm::dot(v, v); }
+	[[nodiscard]] JPL_INLINE float Length(const glm::vec3& v) { return glm::length(v); }
 }

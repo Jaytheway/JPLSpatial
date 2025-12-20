@@ -27,6 +27,7 @@
 #include "JPLSpatial/Memory/Memory.h"
 #include "JPLSpatial/Geometry/Triangulation.h"
 
+#include <cstdlib>
 #include <vector>
 #include <memory>
 #include <limits>
@@ -291,7 +292,7 @@ namespace JPL
 		void DumpShape() const;
 #endif
 
-		const Positions& mPositions;				///< List of positions (some of them are part of the hull)
+		const Positions mPositions;					///< List of positions (some of them are part of the hull)
 		Faces mFaces;								///< List of faces that are part of the hull (if !mRemoved)
 
 		struct Coplanar
@@ -633,7 +634,7 @@ namespace JPL
 			//! Coplanar hull is invalid for 3D VBAP
 			// TODO: (may be still useful if we reuse this hull builder for other stuff
 #if 1
-			JPL_ENSURE(false);
+			JPL_ASSERT(false);
 			return EResult::Degenerate;
 #else
 				// First project all points in 2D space
@@ -1429,9 +1430,9 @@ namespace JPL
 			const Face* other_face = edge->mNeighbourEdge->mFace;
 			const Vec3 delta_centroid = other_face->mCentroid - inFace->mCentroid;
 			const float dist_other_face_centroid = DotProduct(inFace->mNormal, delta_centroid);
-			const float signed_dist_other_face_centroid_sq = abs(dist_other_face_centroid) * dist_other_face_centroid;
+			const float signed_dist_other_face_centroid_sq = std::abs(dist_other_face_centroid) * dist_other_face_centroid;
 			const float dist_face_centroid = -DotProduct(other_face->mNormal, delta_centroid);
-			const float signed_dist_face_centroid_sq = abs(dist_face_centroid) * dist_face_centroid;
+			const float signed_dist_face_centroid_sq = std::abs(dist_face_centroid) * dist_face_centroid;
 			const float face_normal_len_sq = LengthSquared(inFace->mNormal);
 			const float other_face_normal_len_sq = LengthSquared(other_face->mNormal);
 			if ((signed_dist_other_face_centroid_sq > -inCoplanarToleranceSq * face_normal_len_sq
