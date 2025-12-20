@@ -19,7 +19,6 @@
 
 #ifdef JPL_TEST
 
-// Must be first include
 #include "JPLSpatial/ErrorReporting.h"
 
 #define JPL_TEST_GLOBAL_NEW_LEAKS_DEF
@@ -63,6 +62,10 @@
 #include <iostream>
 
 #include <gtest/gtest.h>
+
+#ifndef JPL_BREAKPOINT
+#error JPL_BREAKPOINT not defined
+#endif
 
 //==========================================================================
 using AllocationCallbackData = std::atomic<uint64_t>;

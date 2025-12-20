@@ -26,6 +26,7 @@
 #define JPL_ERROR_REPORTING_DEFINED
 
 #include "Core.h"
+
 #include <format>
 #include <source_location>
 
