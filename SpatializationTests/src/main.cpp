@@ -19,10 +19,12 @@
 
 #ifdef JPL_TEST
 
+// Must be first include
+#include "JPLSpatial/ErrorReporting.h"
+
 #define JPL_TEST_GLOBAL_NEW_LEAKS_DEF
 #include "Utility/TestMemoryLeakDetector.h"
-
-#include "JPLSpatial/ErrorReporting.h"
+#undef JPL_TEST_GLOBAL_NEW_LEAKS_DEF
 
 #include "Tests/SpatializerTest.h"
 
