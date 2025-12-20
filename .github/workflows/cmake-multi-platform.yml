@@ -74,3 +74,31 @@ jobs:
       # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
+      
+    - name: gdb backtrace (Linux, only if tests failed)
+      if: failure() && runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # Path to the test executable
+        TEST_EXE="${{ steps.strings.outputs.build-output-dir }}"
+
+        echo "Checking test executable: $TEST_EXE"
+        ls -la "$TEST_EXE"
+
+        echo "::group::Re-run all tests verbosely"
+        "$TEST_EXE" --gtest_list_tests || true
+        echo "::endgroup::"
+
+        # IMPORTANT:
+        FILTER="VBAPTest.LUTPositionToAngle"
+
+        echo "::group::Running failing test under gdb (printing SIGTRAP backtrace)"
+        gdb -q \
+          -ex "set pagination off" \
+          -ex "run" \
+          -ex "bt" \
+          -ex "quit" \
+          --args "$TEST_EXE" --gtest_filter="$FILTER"
+        echo "::endgroup::"
