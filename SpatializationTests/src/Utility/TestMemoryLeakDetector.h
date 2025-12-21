@@ -165,7 +165,11 @@ namespace JPL
 
 	JPL_INLINE void* MallocatorCounting::AlignedAllocate(std::size_t inSize, std::size_t inAlignment)
 	{
-		JPL_ASSERT(inAlignment > cDefaultAlignment);
+		//JPL_ASSERT(inAlignment > cDefaultAlignment);
+		// Some libraries call aligned new with alignment <= default.
+		// That's not an error, we can service it via normal allocation.
+		if (inAlignment <= cDefaultAlignment)
+			return Allocate(inSize);
 
 		// We are wasting quite a bit here if alighment is much greater than sizeof(std::size_t)
 		// but it's fine for testing
@@ -180,7 +184,13 @@ namespace JPL
 		if (inBlock == nullptr)
 			return;
 
-		JPL_ASSERT(inAlignment > cDefaultAlignment);
+		//JPL_ASSERT(inAlignment > cDefaultAlignment);
+		if (inAlignment <= cDefaultAlignment)
+		{
+			Free(inBlock);
+			return;
+		}
+
 		auto* p = SubtractAllocation(inBlock, inAlignment);
 		Mallocator::AlignedFree(p);
 	}
