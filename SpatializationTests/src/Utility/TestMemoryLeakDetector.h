@@ -90,8 +90,11 @@ void operator delete[](void* inPointer, std::align_val_t inAlignment) noexcept;
 void* operator new(std::size_t n, const std::nothrow_t&) noexcept;
 void* operator new[](std::size_t n, const std::nothrow_t&) noexcept;
 
-void operator delete(void* p, std::size_t) noexcept;
-void operator delete[](void* p, std::size_t) noexcept;
+void operator delete(void* inPointer, std::size_t inCount) noexcept;
+void operator delete[](void* inPointer, std::size_t inCount) noexcept;
+
+void operator delete(void* inPointer, std::size_t inCount, std::align_val_t inAlignment) noexcept;
+void operator delete[](void* inPointer, std::size_t inCount, std::align_val_t inAlignment) noexcept;
 
 #ifdef JPL_TEST_GLOBAL_NEW_LEAKS_DEF
 void* operator new (std::size_t inCount) { return JPL::GetGlobalNewDeleteCounter().Allocate(inCount); }
@@ -113,8 +116,19 @@ void* operator new[](std::size_t n, const std::nothrow_t&) noexcept
 	try { return JPL::GetGlobalNewDeleteCounter().Allocate(n); } catch (...) { return nullptr; }
 }
 
-void operator delete(void* p, std::size_t) noexcept { JPL::GetGlobalNewDeleteCounter().Free(p); }
-void operator delete[](void* p, std::size_t) noexcept { JPL::GetGlobalNewDeleteCounter().Free(p); }
+void operator delete(void* inPointer, std::size_t) noexcept { JPL::GetGlobalNewDeleteCounter().Free(inPointer); }
+void operator delete[](void* inPointer, std::size_t) noexcept { JPL::GetGlobalNewDeleteCounter().Free(inPointer); }
+
+void operator delete(void* inPointer, std::size_t, std::align_val_t inAlignment) noexcept
+{
+	JPL::GetGlobalNewDeleteCounter().AlignedFree(inPointer, static_cast<std::size_t>(inAlignment));
+}
+
+void operator delete[](void* inPointer, std::size_t, std::align_val_t inAlignment) noexcept
+{
+	JPL::GetGlobalNewDeleteCounter().AlignedFree(inPointer, static_cast<std::size_t>(inAlignment));
+}
+
 
 #endif
 #endif
