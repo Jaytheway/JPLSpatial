@@ -57,6 +57,7 @@
 #undef min
 
 #include <cstdint>
+#include <cstdio>
 #include <atomic>
 #include <array>
 #include <iostream>
@@ -65,10 +66,6 @@
 #include <gtest/gtest.h>
 
 #include <format>
-
-#ifndef JPL_BREAKPOINT
-#error JPL_BREAKPOINT not defined
-#endif
 
 //==========================================================================
 using AllocationCallbackData = std::atomic<uint64_t>;
@@ -99,7 +96,9 @@ static bool AssertionFailedCallback(const char* inExpression, const char* inMess
 		inMessage ? "\n   Message: " : "",
 		inMessage ? inMessage : "");
 
-	JPLTraceCallback(messageString.c_str());
+	// Making sure we flush the output when running CI
+	std::fwrite(messageString.data(), 1, messageString.size(), stderr);
+	std::fflush(stderr);
 
 	return true; // Trigger breakpoint
 };
