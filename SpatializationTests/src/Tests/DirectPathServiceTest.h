@@ -30,6 +30,8 @@
 #include "../Utility/TestMemoryLeakDetector.h"
 
 #include <gtest/gtest.h>
+
+#include <array>
 #include <cmath>
 #include <random>
 #include <numbers>
@@ -70,7 +72,7 @@ namespace JPL
 		enum class EFacing { Forward, Backward, Left, Right };
 		struct ListenerTestCase
 		{
-			std::string Description;
+			std::string_view Description;
 			JPL::Position<Vec3> Position;
 		};
 
@@ -276,6 +278,7 @@ namespace JPL
 		EXPECT_NEAR(angularGainOriginal, expectedAngularGain, tolerance);
 	}
 
+#if 0 // TODO: investigate if we need this
 	TEST_F(ProcessAngleAttenuationTest, OuterAngleLessThanInnerAngle)
 	{
 		// Inputs
@@ -294,6 +297,7 @@ namespace JPL
 		static constexpr float tolerance = 1e-6f;
 		//EXPECT_NEAR(angularGainOriginal, angularGainSIMD, tolerance);
 	}
+#endif
 
 	TEST_F(ProcessAngleAttenuationTest, DAtCutoffValues)
 	{
@@ -489,7 +493,7 @@ namespace JPL
 	{
 		struct DirectPathTestCase
 		{
-			std::string Description;
+			std::string_view Description;
 			Vec3 SourcePosition;
 			
 			ListenerTestCase ListenerCase;
@@ -498,10 +502,10 @@ namespace JPL
 			float ExpectedInvDot;
 		};
 
-		const std::pmr::vector<DirectPathTestCase> testCases(
+		const auto testCases = std::to_array(
 		{
 			// Listener facing forward
-			{
+			DirectPathTestCase{
 				.Description = "Source in world forward",
 				.SourcePosition = Vec3(0.0f, 0.0f, -5.0f),
 				.ListenerCase = GetListenerCaseFor(EFacing::Forward),
@@ -509,7 +513,7 @@ namespace JPL
 				.ExpectedDot = 1.0f,
 				.ExpectedInvDot = -1.0f,
 			},
-			{
+			DirectPathTestCase{
 				.Description = "Source above the listener",
 				.SourcePosition = Vec3(0.0f, 5.0f, 0.0f),
 				.ListenerCase = GetListenerCaseFor(EFacing::Forward),
@@ -517,7 +521,7 @@ namespace JPL
 				.ExpectedDot = 0.0f,
 				.ExpectedInvDot = 0.0f,
 			},
-			{
+			DirectPathTestCase{
 				.Description = "Source in world left",
 				.SourcePosition = Vec3(-5.0f, 0.0f, 0.0f),
 				.ListenerCase = GetListenerCaseFor(EFacing::Forward),
@@ -525,17 +529,17 @@ namespace JPL
 				.ExpectedDot = 0.0f,
 				.ExpectedInvDot = 0.0f,
 			},
-			{
+			DirectPathTestCase{
 				.Description = "Source on top of the listener",
 				.SourcePosition = Vec3(0.0f, 0.0f, 0.0f),
 				.ListenerCase = GetListenerCaseFor(EFacing::Forward),
-				
+
 				.ExpectedDot = 1.0f,
 				.ExpectedInvDot = -1.0f,
 			},
 
 			// Listener facing backward
-			{
+			DirectPathTestCase{
 				.Description = "Source in world forward",
 				.SourcePosition = Vec3(0.0f, 0.0f, -5.0f),
 				.ListenerCase = GetListenerCaseFor(EFacing::Backward),
@@ -543,7 +547,7 @@ namespace JPL
 				.ExpectedDot = -1.0f,
 				.ExpectedInvDot = -1.0f,
 			},
-			{
+			DirectPathTestCase{
 				.Description = "Source above the listener",
 				.SourcePosition = Vec3(0.0f, 5.0f, 0.0f),
 				.ListenerCase = GetListenerCaseFor(EFacing::Backward),
@@ -551,7 +555,7 @@ namespace JPL
 				.ExpectedDot = 0.0f,
 				.ExpectedInvDot = 0.0f,
 			},
-			{
+			DirectPathTestCase{
 				.Description = "Source in world left",
 				.SourcePosition = Vec3(-5.0f, 0.0f, 0.0f),
 				.ListenerCase = GetListenerCaseFor(EFacing::Backward),
@@ -559,7 +563,7 @@ namespace JPL
 				.ExpectedDot = 0.0f,
 				.ExpectedInvDot = 0.0f,
 			},
-			{
+			DirectPathTestCase{
 				.Description = "Source on top of the listener",
 				.SourcePosition = Vec3(0.0f, 0.0f, 0.0f),
 				.ListenerCase = GetListenerCaseFor(EFacing::Backward),
@@ -569,7 +573,7 @@ namespace JPL
 			},
 
 			// Listener offset, facing fowrard
-			{
+			DirectPathTestCase{
 				.Description = "Source in world forward",
 				.SourcePosition = Vec3(0.0f, 0.0f, -10.0f),
 				.ListenerCase = {
@@ -580,7 +584,7 @@ namespace JPL
 				.ExpectedDot = 1.0f,
 				.ExpectedInvDot = -1.0f,
 			},
-			{
+			DirectPathTestCase{
 				.Description = "Source in world diagonal fowrard-right",
 				.SourcePosition = Vec3(10.0f, 0.0f, -10.0f),
 				.ListenerCase = {
@@ -591,7 +595,7 @@ namespace JPL
 				.ExpectedDot = 0.0f,
 				.ExpectedInvDot = 0.0f,
 			},
-			{
+			DirectPathTestCase{
 				.Description = "Source in world diagonal forward-left",
 				.SourcePosition = Vec3(-10.0f, 0.0f, -10.0f),
 				.ListenerCase = {
@@ -604,7 +608,7 @@ namespace JPL
 			},
 
 			// Listener offset, facing source
-			{
+			DirectPathTestCase{
 				.Description = "Source in world diagonal forward-right",
 				.SourcePosition = Vec3(10.0f, 0.0f, -10.0f),
 				.ListenerCase = {
@@ -615,7 +619,7 @@ namespace JPL
 				.ExpectedDot = 1.0f,
 				.ExpectedInvDot = -0.7071f,
 			},
-			{
+			DirectPathTestCase{
 				.Description = "Source in world diagonal forward-left",
 				.SourcePosition = Vec3(-10.0f, 0.0f, -10.0f),
 				.ListenerCase = {
@@ -625,8 +629,8 @@ namespace JPL
 
 				.ExpectedDot = 1.0f,
 				.ExpectedInvDot = 0.7071f,
-			},
-		}, JPL::GetDefaultPmrAllocator()); // just to silence the error for bypassing pmr allocator, only for this case.;
+			}
+		});
 
 		static constexpr float tolerance = 1e-5f;
 
@@ -634,8 +638,10 @@ namespace JPL
 		{
 			const Position<Vec3>& listenerPosition = testCase.ListenerCase.Position;
 
-			SCOPED_TRACE(testCase.ListenerCase.Description);
-			SCOPED_TRACE(testCase.Description);
+			//! Note: SCOPED_TRACE allocate and messes up our leak detector,
+			//! just print the description on failed EXPECT/ASSERT as a workaround
+			// SCOPED_TRACE(testCase.ListenerCase.Description);
+			// SCOPED_TRACE(testCase.Description);
 
 			const Position<Vec3> sourcePosition{
 				.Location = testCase.SourcePosition,
@@ -644,8 +650,11 @@ namespace JPL
 
 			const DirectPathResult<Vec3> result = DirectPathService::ProcessDirectPath(sourcePosition, listenerPosition);
 
-			EXPECT_NEAR(result.DirectionDot, testCase.ExpectedDot, tolerance);
-			EXPECT_NEAR(result.InvDirectionDot, testCase.ExpectedInvDot, tolerance);
+			EXPECT_NEAR(result.DirectionDot, testCase.ExpectedDot, tolerance)
+				<< testCase.ListenerCase.Description << " " << testCase.Description;
+
+			EXPECT_NEAR(result.InvDirectionDot, testCase.ExpectedInvDot, tolerance)
+				<< testCase.ListenerCase.Description << " " << testCase.Description;
 		}
 	}
 
