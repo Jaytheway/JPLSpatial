@@ -20,6 +20,7 @@
 #pragma once
 
 #include "JPLSpatial/Core.h"
+#include "JPLSpatial/ErrorReporting.h"
 
 #include <malloc.h>
 #include <memory>

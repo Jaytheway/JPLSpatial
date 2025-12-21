@@ -41,6 +41,6 @@ namespace JPL
 
 	AssertFailedFunction AssertFailed = DummyAssertFailed;
 
-#endif // JPL_ENABLE_ASSERTS
+#endif // JPL_ENABLE_ASSERTS || defined(JPL_ENABLE_ENSURE)
 
 } // namespace JPL

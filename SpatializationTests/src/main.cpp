@@ -60,8 +60,11 @@
 #include <atomic>
 #include <array>
 #include <iostream>
+#include <source_location>
 
 #include <gtest/gtest.h>
+
+#include <format>
 
 #ifndef JPL_BREAKPOINT
 #error JPL_BREAKPOINT not defined
@@ -78,13 +81,41 @@ static void JPLTraceCallback(const char* message)
 	std::cout << message << '\n';
 }
 
+#if defined(JPL_ENABLE_ASSERTS) || defined(JPL_ENABLE_ENSURE)
+
+static bool AssertionFailedCallback(const char* inExpression, const char* inMessage, const std::source_location location)
+{
+	// Print assertion details to the log
+	const auto messageString = std::format(
+		"ASSERT FAILED in file '{}' at line {}\n"
+		"\n"
+		"  Function: {}.\n"
+		"Expression: {}"
+		"{}{}", // message if provided
+		location.file_name(),
+		location.line(),
+		location.function_name(),
+		inExpression,
+		inMessage ? "\n   Message: " : "",
+		inMessage ? inMessage : "");
+
+	JPLTraceCallback(messageString.c_str());
+
+	return true; // Trigger breakpoint
+};
+#endif // JPL_ENABLE_ASSERTS || defined(JPL_ENABLE_ENSURE)
+
 //==========================================================================
 static void Main(int argc, char* argv[])
 {
 #if defined(JPL_TEST_WITH_JOLT)
     JPH::RegisterDefaultAllocator();
 #endif
+
 	JPL::SpatialTrace = JPLTraceCallback;
+#if defined(JPL_ENABLE_ASSERTS) || defined(JPL_ENABLE_ENSURE)
+	JPL::AssertFailed = AssertionFailedCallback;
+#endif
 }
 
 #if defined(JPL_TEST_WITH_JOLT)
