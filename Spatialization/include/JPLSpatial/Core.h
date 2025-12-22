@@ -313,6 +313,15 @@ namespace JPL
 	#error Undefined
 #endif
 
+#if defined(JPL_COMPILER_MSVC)
+	#define JPL_NOINLINE __declspec(noinline)
+#elif defined(JPL_COMPILER_CLANG) || defined(JPL_COMPILER_GCC)
+	#define JPL_NOINLINE __attribute__((noinline))
+#else
+	// Fallback for other compilers, which does nothing
+	#define JPL_NOINLINE
+#endif
+
 // Cache line size (used for aligning to cache line)
 #ifndef JPL_CACHE_LINE_SIZE
 	#define JPL_CACHE_LINE_SIZE 64
