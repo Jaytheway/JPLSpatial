@@ -115,6 +115,8 @@ namespace JPL
 #if JPL_TEST_GLOBAL_NEW_LEAKS
 			// Get the counters before resetting the override object
 			mNewDeleteOverride->GetCounters(mDefaultNewDeleteInUse, mDefaultNewDeleteMaxUsage);
+
+			GetGlobalNewDeleteCounter().ResetCounters();
 #endif
 
 			// - InUse = 0: indicates leaks, either deallocated from different memory resource
@@ -188,7 +190,7 @@ namespace JPL
 		Check(
 			MemoryExpectations{
 				.NewDeleteInUse = 0,
-				.NewDeleteMaxUsage = sizeof(Vec3)
+				.NewDeleteMaxUsage = 0
 			});
 	}
 #endif
@@ -417,7 +419,7 @@ namespace JPL
 		Check(
 			MemoryExpectations{
 				.NewDeleteInUse = 0,
-				.NewDeleteMaxUsage = MemoryExpectations::NotZero
+				.NewDeleteMaxUsage = 0
 			}
 		);
 	}
