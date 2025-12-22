@@ -612,8 +612,6 @@ namespace JPL
 		auto qYawL = Quat<Vec3>::Rotation(UP, -yawRad); // left (world-Y)
 		auto qYawR = Quat<Vec3>::Rotation(UP, +yawRad); // right
 
-		static constexpr Vec3 forward(0.0f, 0.0f, -1.0f);
-
 		for (const Vec3& panDir : testPanDiections)
 		{
 			// Normalizing here instead of on construction to be able
@@ -737,7 +735,7 @@ namespace JPL
 				typename VBAPanner3D<>::SourceLayoutType data;
 				ASSERT_TRUE(panner.InitializeSourceLayout(sourceChannels, data));
 
-				const uint32 numTargetChannels = panner.GetNumChannels();
+				//const uint32 numTargetChannels = panner.GetNumChannels();
 				const uint32 numChannels = sourceChannels.GetNumChannels();
 
 				std::vector<typename VBAPStandartTraits::ChannelGains> sourceChannelGains(numChannels);
@@ -938,7 +936,7 @@ namespace JPL
 
 	TEST_F(VBAP3DTest, WorksWithDifferentVec3Types)
 	{
-		static constexpr auto sourceChannelMap = ChannelMap::FromChannelMask(ChannelMask::Quad);
+		//static constexpr auto sourceChannelMap = ChannelMap::FromChannelMask(ChannelMask::Quad);
 		static constexpr auto targetChannelMap = ChannelMap::FromChannelMask(ChannelMask::Surround_5_0_2);
 		static constexpr auto targetChannelCount = targetChannelMap.GetNumChannels();
 

@@ -75,7 +75,8 @@ namespace JPL
 
 namespace std
 {
-	static_assert(std::same_as<size_t, uint64_t>);
+	static_assert(sizeof(size_t) >= sizeof(uint64_t));
+	static_assert(std::convertible_to<uint64_t, size_t>);
 
 	template <>
 	struct hash<JPL::SourceLayoutKey>

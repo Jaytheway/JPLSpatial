@@ -741,7 +741,7 @@ namespace JPL
 
 			for (int i = 0; i < 10; ++i)
 			{
-				SourceId source = spatializer.CreateSource(
+				[[maybe_unused]] SourceId source = spatializer.CreateSource(
 					SourceInitParameters{
 						.NumChannels = 1,
 						.NumTargetChannels = quadChannels.GetNumChannels(),

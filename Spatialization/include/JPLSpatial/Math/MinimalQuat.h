@@ -103,10 +103,10 @@ namespace JPL
             {
                 const Float s = Math::Sqrt(Float(1.0) + r00 - r11 - r22) * Float(2.0);
                 const Float invS = Float(1.0) / s;
-                qw = (r21 - r12) / s;
+                qw = (r21 - r12) * invS;
                 qx = Float(0.25) * s;
-                qy = (r01 + r10) / s;
-                qz = (r02 + r20) / s;
+                qy = (r01 + r10) * invS;
+                qz = (r02 + r20) * invS;
             }
             else if (r11 > r22)
             {

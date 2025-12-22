@@ -518,7 +518,7 @@ namespace JPL
 	{
 		// Make argument positive and remember sign for sin only
 		// since cos is symmetric around x (highest bit of a float is the sign bit)
-		simd_mask sin_sign_bit = signbit(x); // extract the sign bit (upper one)
+		//simd_mask sin_sign_bit = signbit(x); // extract the sign bit (upper one)
 		x = abs(x); // take the absolute value
 
 		// Store the integer part of y in quadrant

@@ -33,13 +33,16 @@
 #include "../Utility/TestUtils.h"
 
 #include <gtest/gtest.h>
-#include <numbers>
+#include <array>
 #include <algorithm>
-#include <format>
-#include <set>
 #include <concepts>
+#include <format>
+#include <numbers>
+#include <set>
 #include <memory>
 #include <ranges>
+#include <vector>
+#include <string_view>
 
 #include "../Utility/Vec3Types.h"
 
@@ -67,7 +70,7 @@ namespace JPL
 	protected:
 		struct ChannelMaskTest
 		{
-			std::string Label;
+			std::string_view Label;
 			uint32 Mask;
 		};
 
@@ -85,7 +88,7 @@ namespace JPL
 
 		struct NamedChannelLayout
 		{
-			std::string Name;
+			std::string_view Name;
 			ChannelMap Layout;
 		};
 
@@ -229,7 +232,7 @@ namespace JPL
 
 		struct VBAPTestCase
 		{
-			std::string description;
+			std::string_view description;
 			JPL::ChannelMap channelMap;
 
 			struct AngleTest
@@ -620,7 +623,7 @@ namespace JPL
 
 		struct VirtualSourcesTestCase
 		{
-			std::string Description;
+			std::string_view Description;
 			std::vector<float> VirtualSourceAnglesDegrees;
 			std::vector<float> ExpectedGains;
 		};
@@ -685,7 +688,7 @@ namespace JPL
 
 		struct ProcessVBAPDataTestCase
 		{
-			std::string Description;
+			std::string_view Description;
 			float PanAngleDegrees;
 			float Spread;
 			float Focus;
@@ -1038,7 +1041,7 @@ namespace JPL
 
 		struct VirtualSourcesTestCase
 		{
-			std::string Description;
+			std::string_view Description;
 			std::vector<float> VirtualSourceAnglesDegrees;
 			std::vector<float> ExpectedGains;
 		};

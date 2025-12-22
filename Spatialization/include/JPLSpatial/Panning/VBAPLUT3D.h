@@ -620,7 +620,7 @@ namespace JPL::VBAP
     {
         bool bAnyFailed = false;
 
-        const auto yminuscode = LUTCodec::Encode(Vec3Type(0, -1, 0));
+        //const auto yminuscode = LUTCodec::Encode(Vec3Type(0, -1, 0));
 
         // Compute LUT values for every possible direction
         for (uint16_t dy = 0; dy < LUTCodec::cAxisRange; ++dy)

@@ -281,7 +281,7 @@ namespace JPL
 	JPL_INLINE DirectPathResult<Vec3Type> DirectPathService::ProcessDirectPath(const Position<Vec3Type>& source, const Position<Vec3Type>& listener)
 	{
 		static const Vec3Type cForwardAxis(0, 0, -1); // TODO: this is very assuming
-		static const Vec3Type cUpAxis(0, 1, 0); // TODO: this is very assuming
+		//static const Vec3Type cUpAxis(0, 1, 0); // TODO: this is very assuming
 #if 1
 		const Basis<Vec3Type> listenerBasis = listener.Orientation.ToBasisUnsafe();
 		const Vec3Type sourceRelativePosition = source.Location - listener.Location;

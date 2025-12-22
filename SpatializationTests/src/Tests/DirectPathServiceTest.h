@@ -132,7 +132,6 @@ namespace JPL
 		// Inputs
 		Vec3 position(0.0f, 0.0f, -1.0f); // Directly in front (since forward is -Z)
 		Position<Vec3> referencePoint = GetForwardFacingIdentity();
-		Vec3 forw = referencePoint.Orientation.ToBasisUnsafe().Transform(Vec3(0, 0, 1)); // get forward axis rotation
 		AttenuationCone cone;
 		cone.InnerAngle = Math::ToRadians(60.0f);
 		cone.OuterAngle = Math::ToRadians(120.0f);
@@ -167,7 +166,6 @@ namespace JPL
 		angularGainOriginal = std::lerp(1.0f, coneOuterGain, angularGainOriginal);
 
 		// Assertions
-		static constexpr float tolerance = 1e-6f;
 		EXPECT_TRUE(angularGainOriginal > coneOuterGain);
 		EXPECT_TRUE(angularGainOriginal < 1.0f);
 	}

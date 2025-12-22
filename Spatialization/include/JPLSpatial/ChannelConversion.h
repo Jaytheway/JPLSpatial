@@ -161,7 +161,7 @@ namespace JPL
         static auto toChannelPos = [](EChannel channel) { return std::bit_width(static_cast<uint32>(channel) - 1); };
 
         // We need to make sure all channels that are present in both channel maps have a 1:1 mapping.
-        channelMapIn.ForEachChannel([channelMapOut, channelMapIn, &outWeights](EChannel channelIn, uint32 iChannelIn)
+        channelMapIn.ForEachChannel([channelMapOut, &outWeights](EChannel channelIn, uint32 iChannelIn)
         {
             channelMapOut.ForEachChannel([channelIn, iChannelIn, &outWeights](EChannel channelOut, uint32 iChannelOut)
             {
@@ -171,7 +171,7 @@ namespace JPL
         });
 
 
-        channelMapIn.ForEachChannel([channelMapOut, numChannelsIn, &outWeights](EChannel channelIn, uint32 iChannelIn)
+        channelMapIn.ForEachChannel([channelMapOut, /*numChannelsIn, */&outWeights](EChannel channelIn, uint32 iChannelIn)
         {
             if (!isSpatialChannel(channelIn))
                 return;
@@ -179,7 +179,7 @@ namespace JPL
             if (channelMapOut.Has(channelIn))
                 return;
 
-            channelMapOut.ForEachChannel([channelIn, iChannelIn, numChannelsIn, &outWeights](EChannel channelOut, uint32 iChannelOut)
+            channelMapOut.ForEachChannel([channelIn, iChannelIn, &outWeights](EChannel channelOut, uint32 iChannelOut)
             {
                 if (!isSpatialChannel(channelOut))
                     return;
@@ -205,7 +205,7 @@ namespace JPL
             if (channelMapIn.Has(channelOut))
                 return;
 
-            channelMapIn.ForEachChannel([iChannelOut, channelOut, numChannelsIn, &outWeights](EChannel channelIn, uint32 iChannelIn)
+            channelMapIn.ForEachChannel([iChannelOut, channelOut, /*numChannelsIn,*/ &outWeights](EChannel channelIn, uint32 iChannelIn)
             {
                 if (!isSpatialChannel(channelIn))
                     return;
