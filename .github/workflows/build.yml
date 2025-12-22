@@ -1,0 +1,223 @@
+name: Build
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+  pull_request:
+    branches: [ "main" ]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+  workflow_dispatch:
+    inputs:
+      run_extended:
+        description: "Run extended CI (macOS ARM64 + Linux ARM64)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  # Put all build trees under this folder; each job uses a subfolder.
+  BUILD_ROOT: ${{ github.workspace }}/build
+
+jobs:
+  windows-msvc-x64:
+    name: Windows MSVC x64 (${{ matrix.config }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [ Debug, Release ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure (CMake)
+        shell: pwsh
+        run: >
+          cmake -S . -B "${{ env.BUILD_ROOT }}/windows-msvc-x64/${{ matrix.config }}"
+          -G "Visual Studio 18 2026"
+          -A x64
+
+      - name: Build
+        shell: pwsh
+        run: >
+          cmake --build "${{ env.BUILD_ROOT }}/windows-msvc-x64/${{ matrix.config }}"
+          --config ${{ matrix.config }}
+
+      - name: Test
+        shell: pwsh
+        run: >
+          ctest --test-dir "${{ env.BUILD_ROOT }}/windows-msvc-x64/${{ matrix.config }}"
+          -C ${{ matrix.config }}
+          --output-on-failure
+
+
+  linux-gcc-x64:
+    name: Linux GCC x64 (${{ matrix.config }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [ Debug, Release ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Configure (CMake)
+        run: >
+          cmake -S . -B "${{ env.BUILD_ROOT }}/linux-gcc-x64/${{ matrix.config }}"
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+          -DCMAKE_C_COMPILER=gcc
+          -DCMAKE_CXX_COMPILER=g++
+
+      - name: Build
+        run: >
+          cmake --build "${{ env.BUILD_ROOT }}/linux-gcc-x64/${{ matrix.config }}"
+          --parallel
+
+      - name: Test
+        run: >
+          ctest --test-dir "${{ env.BUILD_ROOT }}/linux-gcc-x64/${{ matrix.config }}"
+          --output-on-failure
+
+
+  linux-clang-x64:
+    name: Linux Clang x64 (${{ matrix.config }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [ Debug, Release ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Configure (CMake)
+        run: >
+          cmake -S . -B "${{ env.BUILD_ROOT }}/linux-clang-x64/${{ matrix.config }}"
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+          -DCMAKE_C_COMPILER=clang
+          -DCMAKE_CXX_COMPILER=clang++
+
+      - name: Build
+        run: >
+          cmake --build "${{ env.BUILD_ROOT }}/linux-clang-x64/${{ matrix.config }}"
+          --parallel
+
+      - name: Test
+        run: >
+          ctest --test-dir "${{ env.BUILD_ROOT }}/linux-clang-x64/${{ matrix.config }}"
+          --output-on-failure
+
+
+  linux-clang-asan-x64:
+    name: Linux Clang ASAN x64 (Debug)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Configure (CMake, ASAN)
+        run: >
+          cmake -S . -B "${{ env.BUILD_ROOT }}/linux-clang-asan-x64/Debug"
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_C_COMPILER=clang
+          -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_C_FLAGS="-fsanitize=address -fno-omit-frame-pointer"
+          -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer"
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
+          -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address"
+
+      - name: Build
+        run: >
+          cmake --build "${{ env.BUILD_ROOT }}/linux-clang-asan-x64/Debug"
+          --parallel
+
+      - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:check_initialization_order=1:strict_init_order=1
+        run: >
+          ctest --test-dir "${{ env.BUILD_ROOT }}/linux-clang-asan-x64/Debug"
+          --output-on-failure
+
+
+  linux-gcc-arm64:
+    name: Linux GCC ARM64 (Debug) [manual]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_extended }}
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Configure (CMake)
+        run: >
+          cmake -S . -B "${{ env.BUILD_ROOT }}/linux-gcc-arm64/Debug"
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_C_COMPILER=gcc
+          -DCMAKE_CXX_COMPILER=g++
+
+      - name: Build
+        run: >
+          cmake --build "${{ env.BUILD_ROOT }}/linux-gcc-arm64/Debug"
+          --parallel
+
+      - name: Test
+        run: >
+          ctest --test-dir "${{ env.BUILD_ROOT }}/linux-gcc-arm64/Debug"
+          --output-on-failure
+
+
+  macos-appleclang-arm64:
+    name: macOS AppleClang ARM64 (Debug) [manual]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_extended }}
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Configure (CMake)
+        run: >
+          cmake -S . -B "${{ env.BUILD_ROOT }}/macos-appleclang-arm64/Debug"
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        run: >
+          cmake --build "${{ env.BUILD_ROOT }}/macos-appleclang-arm64/Debug"
+          --parallel
+
+      - name: Test
+        run: >
+          ctest --test-dir "${{ env.BUILD_ROOT }}/macos-appleclang-arm64/Debug"
+          --output-on-failure
