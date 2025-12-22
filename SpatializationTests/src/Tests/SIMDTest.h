@@ -216,6 +216,16 @@ namespace JPL
 		}
 	}
 
+	TEST(SIMD, get_lane_GetsCorrectComponent)
+	{
+		simd s(Util::cTest0123.data());
+
+		EXPECT_EQ(s.get_lane<0>(), Util::cTest0123[0]);
+		EXPECT_EQ(s.get_lane<1>(), Util::cTest0123[1]);
+		EXPECT_EQ(s.get_lane<2>(), Util::cTest0123[2]);
+		EXPECT_EQ(s.get_lane<3>(), Util::cTest0123[3]);
+	}
+
 	TEST(SIMD, MultiplyWithSIMDCorrect)
 	{
 		simd s1(Util::cTest0123.data());
@@ -481,7 +491,22 @@ namespace JPL
 		Util::simd_check expected{ 4.0f, 1.0f, 2.0f, 7.0f };
 		EXPECT_EQ(result, expected);
 	}
-		
+
+	TEST(SIMD, BitShiftCorrect)
+	{
+		simd_mask a(1, 2, 4, 8);
+		EXPECT_TRUE(((a << 2) == simd_mask((1u << 2u), (2u << 2u), (4u << 2u), (8u << 2u))).all_of());
+		EXPECT_TRUE(((a >> 2) == simd_mask((1u >> 2u), (2u >> 2u), (4u >> 2u), (8u >> 2u))).all_of());
+
+		EXPECT_TRUE(((a.shl<2>()) == simd_mask((1u << 2u), (2u << 2u), (4u << 2u), (8u << 2u))).all_of());
+		EXPECT_TRUE(((a.shr<2>()) == simd_mask((1u >> 2u), (2u >> 2u), (4u >> 2u), (8u >> 2u))).all_of());
+	}
+
+	TEST(SIMD, ArithmeticShiftRightCorrect)
+	{
+		simd_mask a(1, 2, 4, 8);
+		EXPECT_TRUE(((a.ashr<29>()) == simd_mask((1 >> 29), (2 >> 29), (4 >> 29), (8 >> 29))).all_of());
+	}
 
 	TEST(SIMD, NaturalLogarithmCorrect)
 	{

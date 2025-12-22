@@ -99,6 +99,10 @@ namespace JPL
 		/// Get float component by index
 		JPL_INLINE float operator [] (uint32 index) const noexcept;
 
+		/// Get float component by index known at compile-time
+		template<uint32 LaneIndex> requires (LaneIndex < 4)
+		JPL_INLINE float get_lane() const noexcept;
+
 		/// Multiply two float vectors (component wise)
 		JPL_INLINE simd	operator * (const simd& other) const noexcept;
 
@@ -272,7 +276,13 @@ namespace JPL
 		JPL_INLINE simd_mask operator >> (const uint32 count) const noexcept;
 		JPL_INLINE simd_mask operator << (const uint32 count) const noexcept;
 
-		template<const uint Count> requires(Count <= 31)
+		template<uint Count> requires(Count <= 31)
+		JPL_INLINE simd_mask shr() const noexcept;
+
+		template<uint Count> requires(Count <= 31)
+		JPL_INLINE simd_mask shl() const noexcept;
+
+		template<uint Count> requires(Count <= 31)
 		JPL_INLINE simd_mask ashr() const noexcept;
 
 		JPL_INLINE simd_mask adds(const simd_mask& other) const noexcept;
@@ -492,18 +502,32 @@ namespace JPL
 		JPL_ASSERT(index < 4);
 #if defined(JPL_USE_SSE)
 #if defined(JPL_USE_AVX)
-		__m128i sel = _mm_set_epi32(0, 0, 0, index);
+		__m128i sel = _mm_set1_epi32(static_cast<int>(index));
 		__m128  p = _mm_permutevar_ps(mNative, sel);
 		return _mm_cvtss_f32(p);
 #else
-		float temp[4];
-		_mm_storeu_ps(temp, mNative);
+		alignas(16) float temp[4];
+		_mm_store_ps(temp, mNative);
 		return temp[index];
 #endif
 #elif defined(JPL_USE_NEON)
-		return vgetq_lane_f32(mNative, index);
+		alignas(16) float temp[4];
+		vst1q_f32(temp, mNative);
+		return temp[index];
 #else
 		return mNative[index];
+#endif
+	}
+
+	template<uint32 LaneIndex> requires (LaneIndex < 4)
+	JPL_INLINE float simd::get_lane() const noexcept
+	{
+#if defined(JPL_USE_SSE)
+		return _mm_cvtss_f32(_mm_shuffle_ps(mNative, mNative, _MM_SHUFFLE(0, 0, 0, LaneIndex)));
+#elif defined(JPL_USE_NEON)
+		return vgetq_lane_f32(mNative, LaneIndex);
+#else
+		return mNative[LaneIndex];
 #endif
 	}
 
@@ -1316,10 +1340,13 @@ namespace JPL
 
 	JPL_INLINE simd_mask simd_mask::operator>>(const uint32 count) const noexcept
 	{
+		JPL_ASSERT(count <= 31);
 #if defined(JPL_USE_SSE)
-		return _mm_srli_epi32(mNative, count);
+		__m128i c = _mm_cvtsi32_si128(static_cast<int>(count));
+		return _mm_srl_epi32(mNative, c);
 #elif defined(JPL_USE_NEON)
-		return vshrq_n_u32(mNative, count);
+		int32x4_t sh = vdupq_n_s32(-static_cast<int32_t>(count));
+		return vshlq_u32(mNative, sh);
 #else
 		return simd_mask(
 			mNative[0] >> count,
@@ -1332,16 +1359,53 @@ namespace JPL
 
 	JPL_INLINE simd_mask simd_mask::operator<<(const uint32 count) const noexcept
 	{
+		JPL_ASSERT(count <= 31);
 #if defined(JPL_USE_SSE)
-		return _mm_slli_epi32(mNative, count);
+		__m128i c = _mm_cvtsi32_si128(static_cast<int>(count));
+		return _mm_sll_epi32(mNative, c);
 #elif defined(JPL_USE_NEON)
-		return vshlq_n_u32(mNative, count);
+		int32x4_t sh = vdupq_n_s32(static_cast<int32_t>(count));
+		return vshlq_u32(mNative, sh);
 #else
 		return simd_mask(
 			mNative[0] << count,
 			mNative[1] << count,
 			mNative[2] << count,
 			mNative[3] << count
+		);
+#endif
+	}
+
+	template<uint Count> requires(Count <= 31)
+	JPL_INLINE simd_mask simd_mask::shr() const noexcept
+	{
+#if defined(JPL_USE_SSE)
+		return _mm_srli_epi32(mNative, Count);
+#elif defined(JPL_USE_NEON)
+		return vshrq_n_u32(mNative, Count);
+#else
+		return simd_mask(
+			mNative[0] >> Count,
+			mNative[1] >> Count,
+			mNative[2] >> Count,
+			mNative[3] >> Count
+		);
+#endif
+	}
+
+	template<uint Count> requires(Count <= 31)
+	JPL_INLINE simd_mask simd_mask::shl() const noexcept
+	{
+#if defined(JPL_USE_SSE)
+		return _mm_slli_epi32(mNative, Count);
+#elif defined(JPL_USE_NEON)
+		return vshlq_n_u32(mNative, Count);
+#else
+		return simd_mask(
+			mNative[0] << Count,
+			mNative[1] << Count,
+			mNative[2] << Count,
+			mNative[3] << Count
 		);
 #endif
 	}
@@ -1649,7 +1713,7 @@ namespace JPL
 		simd_mask sign = vec.as_mask() & simd_mask(0x80000000);
 		return (vec + (simd(0.5f) | sign.as_simd())).to_mask().to_simd();
 #elif defined(JPL_USE_NEON)
-		return vrndnq_f32(vec.mNative)
+		return vrndnq_f32(vec.mNative);
 #else
 		return {
 			std::roundf(vec.mNative[0]),
