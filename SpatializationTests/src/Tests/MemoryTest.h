@@ -174,17 +174,17 @@ namespace JPL
 			mStackAllocator.delete_object(mPmrStdOverride);
 			mPmrStdOverride = nullptr;
 		}
-
-		// Some GCC and Clang may optimize away simple allocations that we need to test
-		static JPL_NOINLINE void EscapePtr(const void* p) noexcept
-		{
-#if defined(JPL_COMPILER_CLANG) || defined(JPL_COMPILER_GCC)
-			asm volatile("" : : "g"(p) : "memory");
-#else
-			(void)p;
-#endif
-		}
 	};
+
+	// Some GCC and Clang may optimize away simple allocations that we need to test
+	static JPL_NOINLINE void EscapePtr(const void* p) noexcept
+	{
+#if defined(JPL_COMPILER_CLANG) || defined(JPL_COMPILER_GCC)
+		asm volatile("" : : "g"(p) : "memory");
+#else
+		(void)p;
+#endif
+	}
 
 #if JPL_TEST_GLOBAL_NEW_LEAKS
 	TEST_F(MemoryTest, NewDelete_BypassesJPLPmr)
