@@ -66,14 +66,6 @@ namespace JPL
 #if JPL_TEST_GLOBAL_NEW_LEAKS
 	// Single global object we use just for testing
 	MallocatorCounting& GetGlobalNewDeleteCounter();
-
-#ifdef JPL_TEST_GLOBAL_NEW_LEAKS_DEF
-	MallocatorCounting& GetGlobalNewDeleteCounter()
-	{
-		static MallocatorCounting gGlobalNewDeleteCounter;
-		return gGlobalNewDeleteCounter;
-	}
-#endif
 #endif
 } // namespace JPL
 
@@ -95,42 +87,6 @@ void operator delete[](void* inPointer, std::size_t inCount) noexcept;
 
 void operator delete(void* inPointer, std::size_t inCount, std::align_val_t inAlignment) noexcept;
 void operator delete[](void* inPointer, std::size_t inCount, std::align_val_t inAlignment) noexcept;
-
-#ifdef JPL_TEST_GLOBAL_NEW_LEAKS_DEF
-void* operator new (std::size_t inCount) { return JPL::GetGlobalNewDeleteCounter().Allocate(inCount); }
-void operator delete (void* inPointer) noexcept { JPL::GetGlobalNewDeleteCounter().Free(inPointer); }
-void* operator new[](std::size_t inCount) { return JPL::GetGlobalNewDeleteCounter().Allocate(inCount); }
-void operator delete[](void* inPointer) noexcept { JPL::GetGlobalNewDeleteCounter().Free(inPointer); }
-void* operator new (std::size_t inCount, std::align_val_t inAlignment) { return JPL::GetGlobalNewDeleteCounter().AlignedAllocate(inCount, static_cast<std::size_t>(inAlignment)); }
-void operator delete (void* inPointer, std::align_val_t inAlignment) noexcept { JPL::GetGlobalNewDeleteCounter().AlignedFree(inPointer, static_cast<std::size_t>(inAlignment)); }
-void* operator new[](std::size_t inCount, std::align_val_t inAlignment) { return JPL::GetGlobalNewDeleteCounter().AlignedAllocate(inCount, static_cast<std::size_t>(inAlignment)); }
-void operator delete[](void* inPointer, std::align_val_t inAlignment) noexcept { JPL::GetGlobalNewDeleteCounter().AlignedFree(inPointer, static_cast<std::size_t>(inAlignment)); }
-
-void* operator new(std::size_t n, const std::nothrow_t&) noexcept
-{
-	try { return JPL::GetGlobalNewDeleteCounter().Allocate(n); } catch (...) { return nullptr; }
-}
-
-void* operator new[](std::size_t n, const std::nothrow_t&) noexcept
-{
-	try { return JPL::GetGlobalNewDeleteCounter().Allocate(n); } catch (...) { return nullptr; }
-}
-
-void operator delete(void* inPointer, std::size_t) noexcept { JPL::GetGlobalNewDeleteCounter().Free(inPointer); }
-void operator delete[](void* inPointer, std::size_t) noexcept { JPL::GetGlobalNewDeleteCounter().Free(inPointer); }
-
-void operator delete(void* inPointer, std::size_t, std::align_val_t inAlignment) noexcept
-{
-	JPL::GetGlobalNewDeleteCounter().AlignedFree(inPointer, static_cast<std::size_t>(inAlignment));
-}
-
-void operator delete[](void* inPointer, std::size_t, std::align_val_t inAlignment) noexcept
-{
-	JPL::GetGlobalNewDeleteCounter().AlignedFree(inPointer, static_cast<std::size_t>(inAlignment));
-}
-
-
-#endif
 #endif
 
 namespace JPL

@@ -21,9 +21,7 @@
 
 #include "JPLSpatial/ErrorReporting.h"
 
-#define JPL_TEST_GLOBAL_NEW_LEAKS_DEF
 #include "Utility/TestMemoryLeakDetector.h"
-#undef JPL_TEST_GLOBAL_NEW_LEAKS_DEF
 
 #include "Tests/SpatializerTest.h"
 
