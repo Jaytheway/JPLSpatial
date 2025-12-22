@@ -27,51 +27,137 @@
 #if defined(JPL_PLATFORM_BLUE)
 	// Correct define already defined, this overrides everything else
 #elif defined(_WIN32) || defined(_WIN64)
-#include <winapifamily.h>
-#if WINAPI_FAMILY == WINAPI_FAMILY_APP
-#define JPL_PLATFORM_WINDOWS_UWP // Building for Universal Windows Platform
-#endif
-#define JPL_PLATFORM_WINDOWS
+	#include <winapifamily.h>
+	#if WINAPI_FAMILY == WINAPI_FAMILY_APP
+		#define JPL_PLATFORM_WINDOWS_UWP // Building for Universal Windows Platform
+	#endif
+	#define JPL_PLATFORM_WINDOWS
 #elif defined(__ANDROID__) // Android is linux too, so that's why we check it first
-#define JPL_PLATFORM_ANDROID
+	#define JPL_PLATFORM_ANDROID
 #elif defined(__linux__)
-#define JPL_PLATFORM_LINUX
+	#define JPL_PLATFORM_LINUX
 #elif defined(__FreeBSD__)
-#define JPL_PLATFORM_FREEBSD
+	#define JPL_PLATFORM_FREEBSD
 #elif defined(__APPLE__)
-#include <TargetConditionals.h>
-#if defined(TARGET_OS_IPHONE) && !TARGET_OS_IPHONE
-#define JPL_PLATFORM_MACOS
-#else
-#define JPL_PLATFORM_IOS
-#endif
+	#include <TargetConditionals.h>
+	#if defined(TARGET_OS_IPHONE) && !TARGET_OS_IPHONE
+		#define JPL_PLATFORM_MACOS
+	#else
+		#define JPL_PLATFORM_IOS
+	#endif
 #elif defined(__EMSCRIPTEN__)
-#define JPL_PLATFORM_WASM
+	#define JPL_PLATFORM_WASM
 #endif
 
 //==============================================================================
 // Determine compiler
 #if defined(__clang__)
-#define JPL_COMPILER_CLANG
+	#define JPL_COMPILER_CLANG
 #elif defined(__GNUC__)
-#define JPL_COMPILER_GCC
+	#define JPL_COMPILER_GCC
 #elif defined(_MSC_VER)
-#define JPL_COMPILER_MSVC
+	#define JPL_COMPILER_MSVC
 #endif
 
 //==============================================================================
 // Detect CPU architecture
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
-// X86 CPU architecture
-#define JPL_CPU_X86
-#if defined(__x86_64__) || defined(_M_X64)
-#define JPL_CPU_ADDRESS_BITS 64
+	//==========================================================================
+	// X86 CPU architecture
+	#define JPL_CPU_X86
+	
+	#if defined(__x86_64__) || defined(_M_X64)
+		#define JPL_CPU_ADDRESS_BITS 64
+	#else
+		#error ""32-bit architecture is not supported""
+		#define JPL_CPU_ADDRESS_BITS 32
+	#endif
+	#define JPL_USE_SSE
+	#define JPL_VECTOR_ALIGNMENT 16
+	#define JPL_DVECTOR_ALIGNMENT 32
+
+	//==========================================================================
+	// Detect enabled instruction sets
+	#if defined(__AVX512F__) && defined(__AVX512VL__) && defined(__AVX512DQ__) && !defined(JPL_USE_AVX512)
+		#define JPL_USE_AVX512
+	#endif
+	#if (defined(__AVX2__) || defined(JPL_USE_AVX512)) && !defined(JPL_USE_AVX2)
+		#define JPL_USE_AVX2
+	#endif
+	#if (defined(__AVX__) || defined(JPL_USE_AVX2)) && !defined(JPL_USE_AVX)
+		#define JPL_USE_AVX
+	#endif
+	#if (defined(__SSE4_2__) || defined(JPL_USE_AVX)) && !defined(JPL_USE_SSE4_2)
+		#define JPL_USE_SSE4_2
+	#endif
+	#if (defined(__SSE4_1__) || defined(JPL_USE_SSE4_2)) && !defined(JPL_USE_SSE4_1)
+		#define JPL_USE_SSE4_1
+	#endif
+	#if (defined(__F16C__) || defined(JPL_USE_AVX2)) && !defined(JPL_USE_F16C)
+		#define JPL_USE_F16C
+	#endif
+	#if (defined(__LZCNT__) || defined(JPL_USE_AVX2)) && !defined(JPL_USE_LZCNT)
+		#define JPL_USE_LZCNT
+	#endif
+	#if (defined(__BMI__) || defined(JPL_USE_AVX2)) && !defined(JPL_USE_TZCNT)
+		#define JPL_USE_TZCNT
+	#endif
+
+	#ifndef JPL_CROSS_PLATFORM_DETERMINISTIC // FMA is not compatible with cross platform determinism
+		#if defined(JPL_COMPILER_CLANG) || defined(JPL_COMPILER_GCC)
+			#if defined(__FMA__) && !defined(JPL_USE_FMADD)
+				#define JPL_USE_FMADD
+			#endif
+		#elif defined(JPL_COMPILER_MSVC)
+			#if defined(__AVX2__) && !defined(JPL_USE_FMADD) // AVX2 also enables fused multiply add
+				#define JPL_USE_FMADD
+			#endif
+		#else
+			#error Undefined compiler
+		#endif
+	#endif
+
+#elif defined(__aarch64__) || defined(_M_ARM64) || defined(__arm__) || defined(_M_ARM)
+	//==========================================================================
+	// ARM CPU architecture
+	#define JPL_CPU_ARM
+	#if defined(__aarch64__) || defined(_M_ARM64)
+		#define JPL_CPU_ADDRESS_BITS 64
+		#define JPL_USE_NEON
+		#define JPL_VECTOR_ALIGNMENT 16
+		#define JPL_DVECTOR_ALIGNMENT 32
+	#else
+		#error ""32-bit Arm is not supported""
+		#define JPL_CPU_ADDRESS_BITS 32
+		#define JPL_VECTOR_ALIGNMENT 8 // 32-bit ARM does not support aligning on the stack on 16 byte boundaries
+		#define JPL_DVECTOR_ALIGNMENT 8
+	#endif
+
+#elif defined(JPL_PLATFORM_WASM)
+	//==========================================================================
+	// WebAssembly CPU architecture
+	#define JPL_CPU_WASM
+	#define JPL_CPU_ADDRESS_BITS 32
+	#define JPL_VECTOR_ALIGNMENT 16
+	#define JPL_DVECTOR_ALIGNMENT 32
+	#ifdef __wasm_simd128__
+		#define JPL_USE_SSE
+		#define JPL_USE_SSE4_1
+		#define JPL_USE_SSE4_2
+	#endif
+
+#elif defined(__e2k__)
+	//==========================================================================
+	// Elbrus e2k architecture
+	#define JPL_CPU_E2K
+	#define JPL_CPU_ADDRESS_BITS 64
+	#define JPL_USE_SSE
+	#define JPL_VECTOR_ALIGNMENT 16
+	#define JPL_DVECTOR_ALIGNMENT 32
+
 #else
-#define JPL_CPU_ADDRESS_BITS 32
+	#error Unsupported CPU architecture
 #endif
-#define JPL_USE_SSE
-#define JPL_VECTOR_ALIGNMENT 16
-#define JPL_DVECTOR_ALIGNMENT 32
 
 //==============================================================================
 // OS-specific includes
@@ -92,129 +178,47 @@
 #endif
 
 //==============================================================================
-// Detect enabled instruction sets
-#if defined(__AVX512F__) && defined(__AVX512VL__) && defined(__AVX512DQ__) && !defined(JPL_USE_AVX512)
-#define JPL_USE_AVX512
-#endif
-#if (defined(__AVX2__) || defined(JPL_USE_AVX512)) && !defined(JPL_USE_AVX2)
-#define JPL_USE_AVX2
-#endif
-#if (defined(__AVX__) || defined(JPL_USE_AVX2)) && !defined(JPL_USE_AVX)
-#define JPL_USE_AVX
-#endif
-#if (defined(__SSE4_2__) || defined(JPL_USE_AVX)) && !defined(JPL_USE_SSE4_2)
-#define JPL_USE_SSE4_2
-#endif
-#if (defined(__SSE4_1__) || defined(JPL_USE_SSE4_2)) && !defined(JPL_USE_SSE4_1)
-#define JPL_USE_SSE4_1
-#endif
-#if (defined(__F16C__) || defined(JPL_USE_AVX2)) && !defined(JPL_USE_F16C)
-#define JPL_USE_F16C
-#endif
-#if (defined(__LZCNT__) || defined(JPL_USE_AVX2)) && !defined(JPL_USE_LZCNT)
-#define JPL_USE_LZCNT
-#endif
-#if (defined(__BMI__) || defined(JPL_USE_AVX2)) && !defined(JPL_USE_TZCNT)
-#define JPL_USE_TZCNT
-#endif
-#ifndef JPL_CROSS_PLATFORM_DETERMINISTIC // FMA is not compatible with cross platform determinism
-#if defined(JPL_COMPILER_CLANG) || defined(JPL_COMPILER_GCC)
-#if defined(__FMA__) && !defined(JPL_USE_FMADD)
-#define JPL_USE_FMADD
-#endif
-#elif defined(JPL_COMPILER_MSVC)
-#if defined(__AVX2__) && !defined(JPL_USE_FMADD) // AVX2 also enables fused multiply add
-#define JPL_USE_FMADD
-#endif
-#else
-#error Undefined compiler
-#endif
-#endif
-#elif defined(__aarch64__) || defined(_M_ARM64) || defined(__arm__) || defined(_M_ARM)
-// ARM CPU architecture
-#define JPL_CPU_ARM
-#if defined(__aarch64__) || defined(_M_ARM64)
-#define JPL_CPU_ADDRESS_BITS 64
-#define JPL_USE_NEON
-#define JPL_VECTOR_ALIGNMENT 16
-#define JPL_DVECTOR_ALIGNMENT 32
-
-#define NSIMD_AARCH64
-
-#else
-#error ""32-bit Arm is not supported""
-
-#define JPL_CPU_ADDRESS_BITS 32
-#define JPL_VECTOR_ALIGNMENT 8 // 32-bit ARM does not support aligning on the stack on 16 byte boundaries
-#define JPL_DVECTOR_ALIGNMENT 8
-
-#define NSIMD_NEON128
-
-#endif
-#elif defined(JPL_PLATFORM_WASM)
-// WebAssembly CPU architecture
-#define JPL_CPU_WASM
-#define JPL_CPU_ADDRESS_BITS 32
-#define JPL_VECTOR_ALIGNMENT 16
-#define JPL_DVECTOR_ALIGNMENT 32
-#ifdef __wasm_simd128__
-#define JPL_USE_SSE
-#define JPL_USE_SSE4_1
-#define JPL_USE_SSE4_2
-#endif
-#elif defined(__e2k__)
-// Elbrus e2k architecture
-#define JPL_CPU_E2K
-#define JPL_CPU_ADDRESS_BITS 64
-#define JPL_USE_SSE
-#define JPL_VECTOR_ALIGNMENT 16
-#define JPL_DVECTOR_ALIGNMENT 32
-#else
-#error Unsupported CPU architecture
-#endif
-
-//==============================================================================
 // If this define is set, JPL is compiled as a shared library
 #ifdef JPL_SHARED_LIBRARY
-#ifdef JPL_BUILD_SHARED_LIBRARY
-	// While building the shared library, we must export these symbols
-#ifdef JPL_PLATFORM_WINDOWS
-#define JPL_EXPORT __declspec(dllexport)
-#else
-#define JPL_EXPORT __attribute__ ((visibility ("default")))
-#if defined(JPL_COMPILER_GCC)
-	// Prevents an issue with GCC attribute parsing (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69585)
-#define JPL_EXPORT_GCC_BUG_WORKAROUND [[gnu::visibility("default")]]
-#endif
-#endif
-#else
-	// When linking against JPL, we must import these symbols
-#ifdef JPL_PLATFORM_WINDOWS
-#define JPL_EXPORT __declspec(dllimport)
-#else
-#define JPL_EXPORT __attribute__ ((visibility ("default")))
-#if defined(JPL_COMPILER_GCC)
-	// Prevents an issue with GCC attribute parsing (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69585)
-#define JPL_EXPORT_GCC_BUG_WORKAROUND [[gnu::visibility("default")]]
-#endif
-#endif
-#endif
+	#ifdef JPL_BUILD_SHARED_LIBRARY
+		// While building the shared library, we must export these symbols
+		#ifdef JPL_PLATFORM_WINDOWS
+			#define JPL_EXPORT __declspec(dllexport)
+		#else
+			#define JPL_EXPORT __attribute__ ((visibility ("default")))
+			#if defined(JPL_COMPILER_GCC)
+				// Prevents an issue with GCC attribute parsing (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69585)
+				#define JPL_EXPORT_GCC_BUG_WORKAROUND [[gnu::visibility("default")]]
+			#endif
+		#endif
+	#else
+		// When linking against JPL, we must import these symbols
+		#ifdef JPL_PLATFORM_WINDOWS
+			#define JPL_EXPORT __declspec(dllimport)
+		#else
+			#define JPL_EXPORT __attribute__ ((visibility ("default")))
+			#if defined(JPL_COMPILER_GCC)
+				// Prevents an issue with GCC attribute parsing (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69585)
+			#define JPL_EXPORT_GCC_BUG_WORKAROUND [[gnu::visibility("default")]]
+			#endif
+		#endif
+	#endif
 #else
 	// If the define is not set, we use static linking and symbols don't need to be imported or exported
-#define JPL_EXPORT
+	#define JPL_EXPORT
 #endif
 
 #ifndef JPL_EXPORT_GCC_BUG_WORKAROUND
-#define JPL_EXPORT_GCC_BUG_WORKAROUND JPL_EXPORT
+	#define JPL_EXPORT_GCC_BUG_WORKAROUND JPL_EXPORT
 #endif
 
 //==============================================================================
 #if (defined (__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)) || __BIG_ENDIAN__
-#define JPL_LITTLE_ENDIAN 0
-#define JPL_BIG_ENDIAN    1
+	#define JPL_LITTLE_ENDIAN 0
+	#define JPL_BIG_ENDIAN    1
 #else
-#define JPL_LITTLE_ENDIAN 1
-#define JPL_BIG_ENDIAN    0
+	#define JPL_LITTLE_ENDIAN 1
+	#define JPL_BIG_ENDIAN    0
 #endif
 
 // Macro used by the RTTI macros to not export a function
@@ -223,46 +227,48 @@
 //==============================================================================
 // Pragmas to store / restore the warning state and to disable individual warnings
 #ifdef JPL_COMPILER_CLANG
-#define JPL_PRAGMA(x)					_Pragma(#x)
-#define JPL_SUPPRESS_WARNING_PUSH		JPL_PRAGMA(clang diagnostic push)
-#define JPL_SUPPRESS_WARNING_POP		JPL_PRAGMA(clang diagnostic pop)
-#define JPL_CLANG_SUPPRESS_WARNING(w)	JPL_PRAGMA(clang diagnostic ignored w)
-#if __clang_major__ >= 13
-#define JPL_CLANG_13_PLUS_SUPPRESS_WARNING(w) JPL_CLANG_SUPPRESS_WARNING(w)
+	#define JPL_PRAGMA(x)					_Pragma(#x)
+	#define JPL_SUPPRESS_WARNING_PUSH		JPL_PRAGMA(clang diagnostic push)
+	#define JPL_SUPPRESS_WARNING_POP		JPL_PRAGMA(clang diagnostic pop)
+	#define JPL_CLANG_SUPPRESS_WARNING(w)	JPL_PRAGMA(clang diagnostic ignored w)
+	#if __clang_major__ >= 13
+		#define JPL_CLANG_13_PLUS_SUPPRESS_WARNING(w) JPL_CLANG_SUPPRESS_WARNING(w)
+	#else
+		#define JPL_CLANG_13_PLUS_SUPPRESS_WARNING(w)
+	#endif
+	#if __clang_major__ >= 16
+		#define JPL_CLANG_16_PLUS_SUPPRESS_WARNING(w) JPL_CLANG_SUPPRESS_WARNING(w)
+	#else
+		#define JPL_CLANG_16_PLUS_SUPPRESS_WARNING(w)
+	#endif
 #else
-#define JPL_CLANG_13_PLUS_SUPPRESS_WARNING(w)
+	#define JPL_CLANG_SUPPRESS_WARNING(w)
+	#define JPL_CLANG_13_PLUS_SUPPRESS_WARNING(w)
+	#define JPL_CLANG_16_PLUS_SUPPRESS_WARNING(w)
 #endif
-#if __clang_major__ >= 16
-#define JPL_CLANG_16_PLUS_SUPPRESS_WARNING(w) JPL_CLANG_SUPPRESS_WARNING(w)
-#else
-#define JPL_CLANG_16_PLUS_SUPPRESS_WARNING(w)
-#endif
-#else
-#define JPL_CLANG_SUPPRESS_WARNING(w)
-#define JPL_CLANG_13_PLUS_SUPPRESS_WARNING(w)
-#define JPL_CLANG_16_PLUS_SUPPRESS_WARNING(w)
-#endif
+
 #ifdef JPL_COMPILER_GCC
-#define JPL_PRAGMA(x)					_Pragma(#x)
-#define JPL_SUPPRESS_WARNING_PUSH		JPL_PRAGMA(GCC diagnostic push)
-#define JPL_SUPPRESS_WARNING_POP		JPL_PRAGMA(GCC diagnostic pop)
-#define JPL_GCC_SUPPRESS_WARNING(w)		JPL_PRAGMA(GCC diagnostic ignored w)
+	#define JPL_PRAGMA(x)					_Pragma(#x)
+	#define JPL_SUPPRESS_WARNING_PUSH		JPL_PRAGMA(GCC diagnostic push)
+	#define JPL_SUPPRESS_WARNING_POP		JPL_PRAGMA(GCC diagnostic pop)
+	#define JPL_GCC_SUPPRESS_WARNING(w)		JPL_PRAGMA(GCC diagnostic ignored w)
 #else
-#define JPL_GCC_SUPPRESS_WARNING(w)
+	#define JPL_GCC_SUPPRESS_WARNING(w)
 #endif
+
 #ifdef JPL_COMPILER_MSVC
-#define JPL_PRAGMA(x)					__pragma(x)
-#define JPL_SUPPRESS_WARNING_PUSH		JPL_PRAGMA(warning (push))
-#define JPL_SUPPRESS_WARNING_POP		JPL_PRAGMA(warning (pop))
-#define JPL_MSVC_SUPPRESS_WARNING(w)	JPL_PRAGMA(warning (disable : w))
-#if _MSC_VER >= 1920 && _MSC_VER < 1930
-#define JPL_MSVC2019_SUPPRESS_WARNING(w) JPL_MSVC_SUPPRESS_WARNING(w)
+	#define JPL_PRAGMA(x)					__pragma(x)
+	#define JPL_SUPPRESS_WARNING_PUSH		JPL_PRAGMA(warning (push))
+	#define JPL_SUPPRESS_WARNING_POP		JPL_PRAGMA(warning (pop))
+	#define JPL_MSVC_SUPPRESS_WARNING(w)	JPL_PRAGMA(warning (disable : w))
+	#if _MSC_VER >= 1920 && _MSC_VER < 1930
+		#define JPL_MSVC2019_SUPPRESS_WARNING(w) JPL_MSVC_SUPPRESS_WARNING(w)
+	#else
+		#define JPL_MSVC2019_SUPPRESS_WARNING(w)
+	#endif
 #else
-#define JPL_MSVC2019_SUPPRESS_WARNING(w)
-#endif
-#else
-#define JPL_MSVC_SUPPRESS_WARNING(w)
-#define JPL_MSVC2019_SUPPRESS_WARNING(w)
+	#define JPL_MSVC_SUPPRESS_WARNING(w)
+	#define JPL_MSVC2019_SUPPRESS_WARNING(w)
 #endif
 
 //==============================================================================
@@ -293,23 +299,23 @@ namespace JPL
 
 // Determine if we want extra debugging code to be active
 #if !defined(NDEBUG) && !defined(JPL_NO_DEBUG)
-#define JPL_DEBUG
+	#define JPL_DEBUG
 #endif
 
 	// Define inline macro
 #if defined(JPL_NO_FORCE_INLINE)
-#define JPL_INLINE inline
+	#define JPL_INLINE inline
 #elif defined(JPL_COMPILER_CLANG) || defined(JPL_COMPILER_GCC)
-#define JPL_INLINE __inline__ __attribute__((always_inline))
+	#define JPL_INLINE __inline__ __attribute__((always_inline))
 #elif defined(JPL_COMPILER_MSVC)
-#define JPL_INLINE __forceinline
+	#define JPL_INLINE __forceinline
 #else
-#error Undefined
+	#error Undefined
 #endif
 
 // Cache line size (used for aligning to cache line)
 #ifndef JPL_CACHE_LINE_SIZE
-#define JPL_CACHE_LINE_SIZE 64
+	#define JPL_CACHE_LINE_SIZE 64
 #endif
 
 #define JPL_DEFAULT_NEW_ALIGNMENT __STDCPP_DEFAULT_NEW_ALIGNMENT__
