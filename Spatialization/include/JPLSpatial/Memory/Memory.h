@@ -22,7 +22,11 @@
 #include "JPLSpatial/Core.h"
 #include "JPLSpatial/ErrorReporting.h"
 
+#ifdef JPL_COMPILER_MSVC
 #include <malloc.h>
+#else
+#include <cstdlib>
+#endif
 #include <memory>
 #include <type_traits>
 #include <concepts>
@@ -282,18 +286,18 @@ namespace JPL
 		[[nodiscard]] JPL_INLINE static void* Allocate(std::size_t inSize)
 		{
 			JPL_ASSERT(inSize > 0);
-			return malloc(inSize);
+			return std::malloc(inSize);
 		}
 
 		[[nodiscard]] JPL_INLINE static void* Reallocate(void* inBlock, [[maybe_unused]] std::size_t inOldSize, std::size_t inNewSize)
 		{
 			JPL_ASSERT(inNewSize > 0);
-			return realloc(inBlock, inNewSize);
+			return std::realloc(inBlock, inNewSize);
 		}
 
 		JPL_INLINE static void Free(void* inBlock)
 		{
-			free(inBlock);
+			std::free(inBlock);
 		}
 
 		[[nodiscard]] JPL_INLINE static void* AlignedAllocate(std::size_t inSize, std::size_t inAlignment)
