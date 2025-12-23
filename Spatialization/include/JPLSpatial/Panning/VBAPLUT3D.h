@@ -614,7 +614,7 @@ namespace JPL::VBAP
 
             Vec3Type gains = mTrisInvMats[triI].Transform(directionSafe);
 
-            ss << "gains: " << GetX(direction) << " " << GetY(direction) << " " << GetZ(direction) << '\n';
+            ss << "gains: " << GetX(gains) << " " << GetY(gains) << " " << GetZ(gains) << '\n';
 
             ss << "-----\n";
         }
