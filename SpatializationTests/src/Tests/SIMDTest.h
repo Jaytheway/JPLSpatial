@@ -299,7 +299,7 @@ namespace JPL
 		Util::simd_check expected = Util::cTest0123.apply(std::plus<float>());
 		EXPECT_EQ(s1, expected);
 	}
-
+	
 	TEST(SIMD, NegateCorrect)
 	{
 		simd s1(Util::cTest0123.data());
@@ -444,6 +444,37 @@ namespace JPL
 			Util::simd_ref arg1{ -Util::nan(), +Util::nan(), 1.0f, 1.0f };
 			simd result = trunc(simd(arg1.data()));
 			Util::simd_check expected{ arg1, truncf };
+			EXPECT_EQ(result, expected);
+		}
+	}
+
+	TEST(SIMD, FloorCorrect)
+	{
+		// As per cppreference
+		/*
+			floor(-inf) = -inf
+			floor(+inf) = +inf
+			floor(+0) = +0
+			floor(-0) = -0
+			floor(nan) = nan
+		*/
+		{
+			Util::simd_ref arg1{ +2.7f, -2.9f, +0.7f, -0.9f };
+			simd result = floor(simd(arg1.data()));
+			Util::simd_check expected{ arg1, floorf };
+			EXPECT_EQ(result, expected);
+		}
+		{
+			Util::simd_ref arg1{ +0.0f, -0.0f, -Util::inf(), +Util::inf() };
+			simd result = floor(simd(arg1.data()));
+			Util::simd_check expected{ arg1, floorf };
+			EXPECT_EQ(result, expected);
+		}
+		{
+			// NaNs are special
+			Util::simd_ref arg1{ -Util::nan(), +Util::nan(), 1.0f, 1.0f };
+			simd result = floor(simd(arg1.data()));
+			Util::simd_check expected{ arg1, floorf };
 			EXPECT_EQ(result, expected);
 		}
 	}

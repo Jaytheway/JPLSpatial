@@ -663,13 +663,13 @@ namespace JPL
 #if defined(JPL_USE_SSE)
 		return _mm_sub_ps(_mm_setzero_ps(), mNative);
 #elif defined(JPL_USE_NEON)
-#ifdef JPL_CROSS_PLATFORM_DETERMINISTIC
+#ifdef 1 // JPL_CROSS_PLATFORM_DETERMINISTIC
 		return vsubq_f32(vdupq_n_f32(0), mNative);
 #else
 		return vnegq_f32(mNative);
 #endif
 #else
-#ifdef JPL_CROSS_PLATFORM_DETERMINISTIC
+#ifdef 1 // JPL_CROSS_PLATFORM_DETERMINISTIC
 		return simd(
 			0.0f - mNative[0],
 			0.0f - mNative[1],
@@ -1684,16 +1684,26 @@ namespace JPL
 
 	JPL_INLINE simd floor(const simd& vec) noexcept
 	{
+		// Error handling...
+		const simd vec_abs = abs(vec);
+		const simd_mask is_nan = vec != vec;
+		const simd_mask is_inf = vec_abs == simd::inf();
+		const simd_mask is_zero = vec_abs == simd::zero();
+
+#if defined (JPL_USE_SSE)
 #if defined (JPL_USE_SSE4_1)
-		return _mm_floor_ps(vec.mNative);
-#elif defined (JPL_USE_SSE)
+		simd floored = _mm_floor_ps(vec.mNative);
+#else
 		// trunc toward 0
 		simd truncated = vec.to_mask().to_simd();
 		// floor = trunc - (trunc > v ? 1 : 0)
 		simd mask = (truncated > vec).as_simd() & simd(1.0f);
-		return truncated - mask;
+		simd floored = truncated - mask;
+#endif
+		return simd::select(is_nan | is_inf | is_zero, vec, floored);
 #elif defined (JPL_USE_NEON)
-		return vrndmq_f32(vec.mNative);
+		Type floored = vrndmq_f32(vec.mNative);
+		return simd::select(is_nan | is_inf | is_zero, vec, floored);
 #else
 		return {
 			std::floorf(vec.mNative[0]),
@@ -1746,7 +1756,7 @@ namespace JPL
 			)
 		);
 #elif defined(JPL_USE_NEON)
-		return vcombine_f32(vget_low_f32(a.mNative), vget_high_f32(a.mNative));
+		return vcombine_f32(vget_low_f32(a.mNative), vget_high_f32(b.mNative));
 #else
 		return { a.mNative[0], a.mNative[1],  b.mNative[0], b.mNative[1] };
 #endif
@@ -1762,7 +1772,7 @@ namespace JPL
 			)
 		);
 #elif defined(JPL_USE_NEON)
-		return vcombine_f32(vget_high_f32(a.mNative), vget_high_f32(a.mNative));
+		return vcombine_f32(vget_high_f32(a.mNative), vget_high_f32(b.mNative));
 #else
 		return { a.mNative[2], a.mNative[3],  b.mNative[2], b.mNative[3] };
 #endif
@@ -1773,7 +1783,7 @@ namespace JPL
 #if defined(JPL_USE_SSE)
 		return _mm_shuffle_ps(a.mNative, b.mNative, _MM_SHUFFLE(3, 2, 1, 0));
 #elif defined(JPL_USE_NEON)
-		return vcombine_f32(vget_low_f32(a.mNative), vget_high_f32(a.mNative));
+		return vcombine_f32(vget_low_f32(a.mNative), vget_high_f32(b.mNative));
 #else
 		return { a.mNative[0], a.mNative[1],  b.mNative[2], b.mNative[3] };
 #endif

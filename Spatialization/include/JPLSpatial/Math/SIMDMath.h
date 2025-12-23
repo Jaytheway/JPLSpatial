@@ -85,7 +85,7 @@ namespace JPL
 		simd_mask is_nan = isnan(vec_abs);
 		return simd::select(is_inf | is_zero | is_nan,
 							vec,
-							vec.to_mask().to_simd() | sign_bit.as_simd());
+							vec_abs.to_mask().to_simd() | sign_bit.as_simd());
 	}
 
 	//==========================================================================
