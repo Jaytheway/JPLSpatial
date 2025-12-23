@@ -1484,7 +1484,8 @@ namespace JPL
 #if defined(JPL_USE_SSE)
 		return _mm_cvtepi32_ps(mNative);
 #elif defined(JPL_USE_NEON)
-		return vcvtq_f32_u32(mNative);
+		return vcvtq_f32_s32(vreinterpretq_s32_u32(mNative));
+		//return vcvtq_f32_u32(mNative);
 #else
 		return {
 			static_cast<float>(mU32[0]),
@@ -1776,7 +1777,7 @@ namespace JPL
 			)
 		);
 #elif defined(JPL_USE_NEON)
-		return vcombine_f32(vget_low_f32(a.mNative), vget_high_f32(b.mNative));
+		return vcombine_f32(vget_low_f32(a.mNative), vget_low_f32(b.mNative));
 #else
 		return { a.mNative[0], a.mNative[1],  b.mNative[0], b.mNative[1] };
 #endif

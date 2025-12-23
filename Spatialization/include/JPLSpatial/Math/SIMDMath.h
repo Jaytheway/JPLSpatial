@@ -326,7 +326,7 @@ namespace JPL
 		simd_mask y_is_nan = isnan(y_abs);
 		simd y_trunc = simd::select(y_is_inf | y_is_zero | y_is_nan,
 							y,
-							y.to_mask().to_simd() | y_sign_bit.as_simd());
+							y_abs.to_mask().to_simd() | y_sign_bit.as_simd());
 
 		// y is integer if y == trunc(y) OR |y| >= 2^24 (float can exactly represent all ints below 2^24)
 		simd_mask y_is_in_24bit_range = y_abs < simd(static_cast<float>(1 << 24));
