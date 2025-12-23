@@ -1594,7 +1594,7 @@ namespace JPL
 #else
 				Type y2 = _mm_mul_ps(y, y);
 				Type term = _mm_sub_ps(thal, _mm_mul_ps(_mm_mul_ps(half, x), y2));
-				return _mm_mul_ps(y, tern);
+				return _mm_mul_ps(y, term);
 #endif
 			};
 
@@ -1623,7 +1623,7 @@ namespace JPL
 				static const Type thal = vdupq_n_f32(1.5f);
 				Type xy = vmulq_f32(x, y);
 				Type xy2 = vmulq_f32(xy, y);
-				Type term = vfnmaddq_f32(half, xy2, thal);
+				Type term = vfmsq_f32(thal, half, xy2);
 #endif
 				return vmulq_f32(y, term);
 			};
