@@ -622,7 +622,7 @@ namespace JPL::VBAP
 
         // Should be unreachable
         const auto formatString = std::format("Computing VBAP LUT failed. Direction {{{}, {}, {}}}, LUT index {}, InvMatsSize {}"
-                                              "\n Triplets Dump:\n",
+                                              "\n Triplets Dump:\n {}",
                                               GetX(direction), GetY(direction), GetZ(direction),
                                               lutIndex,
                                               mTrisInvMats.size(),
