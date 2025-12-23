@@ -23,6 +23,7 @@
 #include "JPLSpatial/ChannelMap.h"
 #include "JPLSpatial/Panning/VBAPEx.h"
 #include "JPLSpatial/Panning/DummySpeakers.h"
+#include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/MinimalMat.h"
 #include "JPLSpatial/Memory/Memory.h"
 #include "JPLSpatial/Utilities/GainEncoding.h"
@@ -511,7 +512,8 @@ namespace JPL::VBAP
         {
             Vec3Type gains = mTrisInvMats[triI].Transform(directionSafe);
 
-            if (GetX(gains) < 0.0f || GetY(gains) < 0.0f || GetZ(gains) < 0.0)
+            static constexpr float eps = -JPL_FLOAT_EPS;
+            if (GetX(gains) < eps || GetY(gains) < eps || GetZ(gains) < eps)
                 continue; // direction is outside of this trignale
 
             if (!JPL_ENSURE(!Math::IsNearlyZero(LengthSquared(gains))))
