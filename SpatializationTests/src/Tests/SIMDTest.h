@@ -53,6 +53,7 @@ namespace JPL
 		{
 			// Some tests may want to override this
 			float Tolerance = 1e-6f;
+			bool bNaNSignMatters = true;
 
 			simd_check() = default;
 			constexpr simd_check(std::initializer_list<float> list)
@@ -149,7 +150,7 @@ namespace JPL
 					}
 					else if (std::isnan(Ref[i]))
 					{
-						if (!std::isnan(ref[i]) || !sameSigns(i))
+						if (!std::isnan(ref[i]) || (bNaNSignMatters && !sameSigns(i)))
 							return false;
 					}
 					else if (Ref[i] == 0.0f || Ref[i] == -0.0f)
@@ -708,6 +709,7 @@ namespace JPL
 
 			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
+			expected.bNaNSignMatters = false;
 			EXPECT_EQ(result, expected);
 		}
 
@@ -739,6 +741,7 @@ namespace JPL
 
 			Util::simd_check expected(arg1, arg2, powf);
 			expected.Tolerance = toleranceOverride;
+			expected.bNaNSignMatters = false;
 			EXPECT_EQ(result, expected);
 		}
 
