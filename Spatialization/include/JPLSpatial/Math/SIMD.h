@@ -663,13 +663,13 @@ namespace JPL
 #if defined(JPL_USE_SSE)
 		return _mm_sub_ps(_mm_setzero_ps(), mNative);
 #elif defined(JPL_USE_NEON)
-#ifdef 1 // JPL_CROSS_PLATFORM_DETERMINISTIC
+#if 1 // ifdef JPL_CROSS_PLATFORM_DETERMINISTIC
 		return vsubq_f32(vdupq_n_f32(0), mNative);
 #else
 		return vnegq_f32(mNative);
 #endif
 #else
-#ifdef 1 // JPL_CROSS_PLATFORM_DETERMINISTIC
+#if 1 // ifdef JPL_CROSS_PLATFORM_DETERMINISTIC
 		return simd(
 			0.0f - mNative[0],
 			0.0f - mNative[1],
@@ -897,7 +897,7 @@ namespace JPL
 
 		int32x4_t cvt = vcvtq_s32_f32(mNative);
 		return vreinterpretq_u32_s32(_sse2neon_cvtps_epi32_fixup(mNative, cvt));
-		//return vcvtq_s32_f32(mNative);
+		//return vcvtq_u32_f32(mNative);
 #else
 		return {
 			uint32(mNative[0]),
@@ -1722,7 +1722,7 @@ namespace JPL
 #endif
 		return simd::select(is_nan | is_inf | is_zero, vec, floored);
 #elif defined (JPL_USE_NEON)
-		Type floored = vrndmq_f32(vec.mNative);
+		auto floored = vrndmq_f32(vec.mNative);
 		return simd::select(is_nan | is_inf | is_zero, vec, floored);
 #else
 		return {
