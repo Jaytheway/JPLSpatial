@@ -37,6 +37,7 @@
 #include <memory>
 
 #include <format>
+#include <string>
 #include <sstream>
 
 namespace JPL::VBAP
@@ -617,6 +618,7 @@ namespace JPL::VBAP
 
             ss << "-----\n";
         }
+        std::string dump = ss.str();
 
         // Should be unreachable
         const auto formatString = std::format("Computing VBAP LUT failed. Direction {{{}, {}, {}}}, LUT index {}, InvMatsSize {}"
@@ -624,7 +626,7 @@ namespace JPL::VBAP
                                               GetX(direction), GetY(direction), GetZ(direction),
                                               lutIndex,
                                               mTrisInvMats.size(),
-                                              ss.str());
+                                              dump.c_str());
         JPL_ASSERT(false, formatString.c_str());
 
         if constexpr (bLUTHasGains)
