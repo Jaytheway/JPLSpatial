@@ -595,9 +595,10 @@ namespace JPL::VBAP
             //std::cout << "No tri found for: " << std::format("{{{}, {}, {}}}", direction.X, GetY(direction), GetZ(direction)) << "\n";
 
         // Should be unreachable
-        const auto formatString = std::format("Computing VBAP LUT failed. Direction {{{}, {}, {}}}, LUT index {}",
+        const auto formatString = std::format("Computing VBAP LUT failed. Direction {{{}, {}, {}}}, LUT index {}, InvMatsSize {}",
                                               GetX(direction), GetY(direction), GetZ(direction),
-                                              lutIndex);
+                                              lutIndex,
+                                              mTrisInvMats.size());
         JPL_ASSERT(false, formatString.c_str());
 
         if constexpr (bLUTHasGains)
