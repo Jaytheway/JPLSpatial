@@ -1,3 +1,4 @@
+[![Build](https://github.com/Jaytheway/JPLSpatial/actions/workflows/build.yml/badge.svg)](https://github.com/Jaytheway/JPLSpatial/actions/workflows/build.yml)
 # JPLSpatial
 
 Sound spatialization and propagation library.
@@ -15,7 +16,7 @@ If you have access to Hazel Engine code, you can check how JPLSpatial is integra
 	- Source elevation / Height channels
 
 	- <details>
-		<summary>Supported/tested source channel layouts</summary>
+		<summary>Supported source channel layouts</summary>
 		<ul>
 		<li>Mono</li>
 		<li>Stereo</li>
@@ -33,7 +34,7 @@ If you have access to Hazel Engine code, you can check how JPLSpatial is integra
 	</details>
 
 	- <details>
-		<summary>Supported/tested target/output channel layouts</summary>
+		<summary>Supported target/output channel layouts</summary>
 		<ul>
 		<br>
 		<b>VBAPanner2D</b>
@@ -90,6 +91,13 @@ If you have access to Hazel Engine code, you can check how JPLSpatial is integra
 	- Spatial Manager (top level interface managing Sources and Services)
 	- Panning Service
 	- Direct Path Service (for now handles just distance and angle attenuation)
+  
+## Supported platforms
+
+* Windows (Desktop) x64/ARM64
+* Linux (tested on Ubuntu) x64/ARM64
+* macOS x64/ARM64
+
 ## Examples & Usage
 Initializing `VBAPPanner`, `SourceLayout` and querying target channel gains for a source direction:
 ```cpp
