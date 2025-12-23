@@ -37,9 +37,13 @@
 #include <algorithm>
 #include <memory>
 
+#define JPL_DBG_DUMP_SPEAKER_FAILED_SELECTION 0
+
+#if JPL_DBG_DUMP_SPEAKER_FAILED_SELECTION
 #include <format>
 #include <string>
 #include <sstream>
+#endif
 
 namespace JPL::VBAP
 {
@@ -595,9 +599,8 @@ namespace JPL::VBAP
 
             return true;
         }
-        //if (GetY(direction) >= 0.0f)
-            //std::cout << "No tri found for: " << std::format("{{{}, {}, {}}}", direction.X, GetY(direction), GetZ(direction)) << "\n";
 
+#if JPL_DBG_DUMP_SPEAKER_FAILED_SELECTION
         std::stringstream ss;
         for (int triI = 0; triI < mTrisInvMats.size(); ++triI)
         {
@@ -622,7 +625,6 @@ namespace JPL::VBAP
         }
         std::string dump = ss.str();
 
-        // Should be unreachable
         const auto formatString = std::format("Computing VBAP LUT failed. Direction {{{}, {}, {}}}, LUT index {}, InvMatsSize {}"
                                               "\n Triplets Dump:\n {}",
                                               GetX(direction), GetY(direction), GetZ(direction),
@@ -630,6 +632,10 @@ namespace JPL::VBAP
                                               mTrisInvMats.size(),
                                               dump.c_str());
         JPL_ASSERT(false, formatString.c_str());
+#else
+        // Should be unreachable
+        JPL_ASSERT(false, "Computing VBAP LUT failed.");
+#endif
 
         if constexpr (bLUTHasGains)
         {
