@@ -877,7 +877,27 @@ namespace JPL
 #if defined(JPL_USE_SSE)
 		return _mm_cvttps_epi32(mNative);
 #elif defined(JPL_USE_NEON)
-		return vcvtq_u32_f32(mNative);
+		// Fixup from https://github.com/DLTcollab/sse2neon (MIT)
+		auto _sse2neon_cvtps_epi32_fixup = [](float32x4_t f, int32x4_t cvt)
+		{
+			/* Detect values >= 2147483648.0f (out of INT32 range) */
+			float32x4_t max_f = vdupq_n_f32(2147483648.0f);
+			uint32x4_t overflow = vcgeq_f32(f, max_f);
+
+			/* Detect NaN: x != x for NaN values */
+			uint32x4_t is_nan = vmvnq_u32(vceqq_f32(f, f));
+
+			/* Combine: any overflow or NaN should produce INT32_MIN */
+			uint32x4_t need_indefinite = vorrq_u32(overflow, is_nan);
+
+			/* Blend: select INT32_MIN where needed */
+			int32x4_t indefinite = vdupq_n_s32(INT32_MIN);
+			return vbslq_s32(need_indefinite, indefinite, cvt);
+		};
+
+		int32x4_t cvt = vcvtq_s32_f32(mNative);
+		return vreinterpretq_u32_s32(_sse2neon_cvtps_epi32_fixup(mNative, cvt));
+		//return vcvtq_s32_f32(mNative);
 #else
 		return {
 			uint32(mNative[0]),
