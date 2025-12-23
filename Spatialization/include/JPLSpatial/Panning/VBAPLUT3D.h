@@ -37,6 +37,7 @@
 #include <memory>
 
 #include <format>
+#include <sstream>
 
 namespace JPL::VBAP
 {
@@ -594,11 +595,36 @@ namespace JPL::VBAP
         //if (GetY(direction) >= 0.0f)
             //std::cout << "No tri found for: " << std::format("{{{}, {}, {}}}", direction.X, GetY(direction), GetZ(direction)) << "\n";
 
+        std::stringstream ss;
+        for (int triI = 0; triI < mTrisInvMats.size(); ++triI)
+        {
+            ss << "triI " << triI << '\n';
+
+            const auto& tri = mTris[triI];
+
+            const auto& A = mVectors[tri[0]];
+            ss << "A: " << GetX(A) << " " << GetY(A) << " " << GetZ(A) << '\n';
+
+            const auto& B = mVectors[tri[1]];
+            ss << "B: " << GetX(B) << " " << GetY(B) << " " << GetZ(B) << '\n';
+
+            const auto& C = mVectors[tri[2]];
+            ss << "C: " << GetX(C) << " " << GetY(C) << " " << GetZ(C) << '\n';
+
+            Vec3Type gains = mTrisInvMats[triI].Transform(directionSafe);
+
+            ss << "gains: " << GetX(direction) << " " << GetY(direction) << " " << GetZ(direction) << '\n';
+
+            ss << "-----\n";
+        }
+
         // Should be unreachable
-        const auto formatString = std::format("Computing VBAP LUT failed. Direction {{{}, {}, {}}}, LUT index {}, InvMatsSize {}",
+        const auto formatString = std::format("Computing VBAP LUT failed. Direction {{{}, {}, {}}}, LUT index {}, InvMatsSize {}"
+                                              "\n Triplets Dump:\n",
                                               GetX(direction), GetY(direction), GetZ(direction),
                                               lutIndex,
-                                              mTrisInvMats.size());
+                                              mTrisInvMats.size(),
+                                              ss.str());
         JPL_ASSERT(false, formatString.c_str());
 
         if constexpr (bLUTHasGains)
