@@ -1593,8 +1593,8 @@ namespace JPL
 				return _mm_mul_ps(y, term);
 #else
 				Type y2 = _mm_mul_ps(y, y);
-				Type t = _mm_sub_ps(thal, _mm_mul_ps(_mm_mul_ps(half, x), y2));
-				return _mm_mul_ps(y, t);
+				Type term = _mm_sub_ps(thal, _mm_mul_ps(_mm_mul_ps(half, x), y2));
+				return _mm_mul_ps(y, tern);
 #endif
 			};
 
@@ -1613,10 +1613,18 @@ namespace JPL
 
 			auto newton = [](const Type& x, const Type& y)
 			{
+#if 0
 				// vrsqrtsq_f32(a, b) ~= (3 - a * b) / 2, here a = x * y, b = y
 				Type y2 = vmulq_f32(y, y);
 				Type xy2 = vmulq_f32(x, y2);
 				Type term = vrsqrtsq_f32(xy2, y);
+#else
+				static const Type half = vdupq_n_f32(0.5f);
+				static const Type thal = vdupq_n_f32(1.5f);
+				Type xy = vmulq_f32(x, y);
+				Type xy2 = vmulq_f32(xy, y);
+				Type term = vfnmaddq_f32(half, xy2, thal);
+#endif
 				return vmulq_f32(y, term);
 			};
 

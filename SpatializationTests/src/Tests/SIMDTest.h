@@ -671,7 +671,7 @@ namespace JPL
 			Util::simd_ref arg2{ 10.0f, 0.5f, -3.0f, 3.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 			
-			Util::simd_check expected(arg1, arg2, powf);
+			Util::simd_check expected(arg1, arg2, std::powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -684,7 +684,7 @@ namespace JPL
 			Util::simd_ref arg2{ -5.0f, -5.0f, 5.0f, 5.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, powf);
+			Util::simd_check expected(arg1, arg2, std::powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -694,7 +694,7 @@ namespace JPL
 			Util::simd_ref arg2{ -2.0f, -2.0f, -2.5f, -2.5f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, powf);
+			Util::simd_check expected(arg1, arg2, std::powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -706,7 +706,7 @@ namespace JPL
 			Util::simd_ref arg2{ -Util::inf(), -Util::inf(), 1.0f / 3.0f, Util::nan()};
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, powf);
+			Util::simd_check expected(arg1, arg2, std::powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -716,7 +716,7 @@ namespace JPL
 			Util::simd_ref arg2{ 2.5f, 2.5f, 2.0f, 2.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, powf);
+			Util::simd_check expected(arg1, arg2, std::powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -726,7 +726,7 @@ namespace JPL
 			Util::simd_ref arg2{ Util::nan(), -Util::inf(), 2.0f, -3.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, powf);
+			Util::simd_check expected(arg1, arg2, std::powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -737,7 +737,7 @@ namespace JPL
 			Util::simd_ref arg2{ Util::inf(), -Util::inf(), 2.5f, -2.5f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, powf);
+			Util::simd_check expected(arg1, arg2, std::powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -748,7 +748,7 @@ namespace JPL
 			Util::simd_ref arg2{ +0.0f, -0.0f, +0.0f, -0.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, powf);
+			Util::simd_check expected(arg1, arg2, std::powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -759,7 +759,7 @@ namespace JPL
 			Util::simd_ref arg2{ -Util::inf(), -Util::inf(), -Util::inf(), -Util::inf() };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, powf);
+			Util::simd_check expected(arg1, arg2, std::powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -770,7 +770,7 @@ namespace JPL
 			Util::simd_ref arg2{ Util::inf(), Util::inf(), Util::inf(), Util::inf() };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, powf);
+			Util::simd_check expected(arg1, arg2, std::powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -782,7 +782,7 @@ namespace JPL
 			Util::simd_ref arg2{ -5.0f, -2.5f, -2.0f, 5.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, powf);
+			Util::simd_check expected(arg1, arg2, std::powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -792,7 +792,7 @@ namespace JPL
 			Util::simd_ref arg2{ 2.5f, 2.0f, -2.0f, 5.0f };
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, powf);
+			Util::simd_check expected(arg1, arg2, std::powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
@@ -803,7 +803,7 @@ namespace JPL
 			Util::simd_ref arg2{ -4.0f, -2.5f, 4.0f, 2.5f};
 			simd result = pow(simd(arg1.data()), simd(arg2.data()));
 
-			Util::simd_check expected(arg1, arg2, powf);
+			Util::simd_check expected(arg1, arg2, std::powf);
 			expected.Tolerance = toleranceOverride;
 			EXPECT_EQ(result, expected);
 		}
