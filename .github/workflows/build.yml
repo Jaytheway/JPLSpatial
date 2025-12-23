@@ -61,7 +61,7 @@ jobs:
         run: >
           ctest --test-dir "${{ env.BUILD_ROOT }}/windows-msvc-x64/${{ matrix.config }}"
           -C ${{ matrix.config }}
-          --output-on-failure
+          --output-on-failure --verbose
 
 
   linux-gcc-x64:
@@ -95,7 +95,7 @@ jobs:
       - name: Test
         run: >
           ctest --test-dir "${{ env.BUILD_ROOT }}/linux-gcc-x64/${{ matrix.config }}"
-          --output-on-failure
+          --output-on-failure --verbose
 
 
   linux-clang-x64:
@@ -129,8 +129,38 @@ jobs:
       - name: Test
         run: >
           ctest --test-dir "${{ env.BUILD_ROOT }}/linux-clang-x64/${{ matrix.config }}"
-          --output-on-failure
+          --output-on-failure --verbose
 
+  macos-appleclang-x64:
+    name: macOS AppleClang x64
+    runs-on: macos-latest
+    strategy:
+          fail-fast: false
+          matrix:
+            config: [ Debug, Release ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Configure (CMake)
+        run: >
+          cmake -S . -B "${{ env.BUILD_ROOT }}/macos-appleclang-x64/${{ matrix.config }}"
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+
+      - name: Build
+        run: >
+          cmake --build "${{ env.BUILD_ROOT }}/macos-appleclang-x64/${{ matrix.config }}"
+          --parallel
+
+      - name: Test
+        run: >
+          ctest --test-dir "${{ env.BUILD_ROOT }}/macos-appleclang-x64/${{ matrix.config }}"
+          --output-on-failure --verbose
 
   linux-clang-asan-x64:
     name: Linux Clang ASAN x64 (Debug)
@@ -165,7 +195,7 @@ jobs:
           ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:check_initialization_order=1:strict_init_order=1
         run: >
           ctest --test-dir "${{ env.BUILD_ROOT }}/linux-clang-asan-x64/Debug"
-          --output-on-failure
+          --output-on-failure --verbose
 
 
   linux-gcc-arm64:
@@ -196,7 +226,7 @@ jobs:
       - name: Test
         run: >
           ctest --test-dir "${{ env.BUILD_ROOT }}/linux-gcc-arm64/Debug"
-          --output-on-failure
+          --output-on-failure --verbose
 
 
   macos-appleclang-arm64:
@@ -225,4 +255,4 @@ jobs:
       - name: Test
         run: >
           ctest --test-dir "${{ env.BUILD_ROOT }}/macos-appleclang-arm64/Debug"
-          --output-on-failure
+          --output-on-failure --verbose
