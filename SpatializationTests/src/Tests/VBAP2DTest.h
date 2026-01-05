@@ -31,6 +31,7 @@
 
 
 #include "../Utility/TestUtils.h"
+#include "../Utility/Vec3D.h"
 
 #include <gtest/gtest.h>
 #include <array>
@@ -680,7 +681,14 @@ namespace JPL
 	{
 		// TODO: At Focus 1, spread 1 (or 0.5?), channel mapping should be direct from source to output, or do we still want to spread evenly?
 
-		using PannerType = VBAPanner2D<>;
+		// This vector component double and channel gains as span
+		// is more-or-less how JPLSpatial UE integration is setup
+		struct TraitsOverride : VBAPBaseTraits<Vec3D>
+		{
+			using ChannelGains = std::span<float>;
+		};
+
+		using PannerType = VBAPanner2D<TraitsOverride>;
 		PannerType panner;
 
 		// Quadraphonic channel layout
@@ -742,23 +750,72 @@ namespace JPL
 			// 1 channel group with 2 virtual sources at positions { -90, 90 } in radians
 			ASSERT_TRUE(panner.InitializeSourceLayout(ChannelMap::FromNumChannels(1), data));
 
-			const float panRad = toRad(testCase.PanAngleDegrees);
+			const double panRad = static_cast<double>(toRad(testCase.PanAngleDegrees));
 			typename PannerType::PanUpdateData positionData
 			{
-				.SourceDirection = Vec3{ std::sin(panRad), 0.0f, -std::cos(panRad) },
+				.SourceDirection = Vec3D{ std::sin(panRad), 0.0, -std::cos(panRad) },
 				.Focus = testCase.Focus,
 				.Spread = testCase.Spread
 			};
 
-			typename VBAPStandartTraits::ChannelGains gains;
+			std::array<float, TraitsOverride::MAX_CHANNELS> gainsData;
+			typename TraitsOverride::ChannelGains gains(gainsData.data(), panner.GetNumChannels());
 
-			panner.ProcessVBAPData(data, positionData, [&gains](uint32 channel) -> auto& { return gains; });
+			panner.ProcessVBAPData(data, positionData,
+								   [&gains](uint32 channel) -> typename TraitsOverride::ChannelGains&
+			{
+				return gains;
+			});
 
 			ASSERT_TRUE(testCase.ExpectedGains.size() <= gains.size());
 			for (size_t i = 0; i < testCase.ExpectedGains.size(); ++i)
 			{
 				EXPECT_NEAR(gains[i], testCase.ExpectedGains[i], 1e-4f) << "at index " << i;
 			}
+		}
+
+		{
+			SCOPED_TRACE("2 source channels");
+			static constexpr uint32 numSourceChannels = 2;
+
+			typename PannerType::SourceLayoutType data;
+			// 1 channel group with 2 virtual sources at positions { -90, 90 } in radians
+			ASSERT_TRUE(panner.InitializeSourceLayout(ChannelMap::FromNumChannels(numSourceChannels), data));
+
+			const double panRad = static_cast<double>(toRad(0.0f));
+			typename PannerType::PanUpdateData positionData
+			{
+				.SourceDirection = Vec3D{ std::sin(panRad), 0.0, -std::cos(panRad) },
+				.Focus = 1.0f,
+				.Spread = 1.0f
+			};
+
+			alignas(16) float gainsData[numSourceChannels * 4]{};
+			typename TraitsOverride::ChannelGains gains;
+
+			const uint32 numOutputChannels = panner.GetNumChannels();
+
+			panner.ProcessVBAPData(data, positionData,
+								   [&](uint32 channel) -> typename TraitsOverride::ChannelGains&
+			{
+				gains = typename TraitsOverride::ChannelGains{
+					&gainsData[channel * numOutputChannels],
+					numOutputChannels
+				};
+				return gains;
+			});
+
+			// Expect left channel to output only to FL and BL, and the same amount
+			EXPECT_GT(  gainsData[0], 1e-4f);
+			EXPECT_NEAR(gainsData[0], gainsData[2], 1e-4f);
+			EXPECT_NEAR(gainsData[1], 0.0f, 1e-4f);
+			EXPECT_NEAR(gainsData[3], 0.0f, 1e-4f);
+
+			// Expect rithg channel to output only to FR and BR, and the same amount
+			EXPECT_GT(  gainsData[numOutputChannels + 1], 1e-4f);
+			EXPECT_NEAR(gainsData[numOutputChannels + 1], gainsData[numOutputChannels + 3], 1e-4f);
+			EXPECT_NEAR(gainsData[numOutputChannels + 0], 0.0f, 1e-4f);
+			EXPECT_NEAR(gainsData[numOutputChannels + 2], 0.0f, 1e-4f);
 		}
 	}
 
