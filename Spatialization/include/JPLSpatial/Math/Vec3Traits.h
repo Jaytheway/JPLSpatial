@@ -29,13 +29,16 @@ namespace JPL
 	template<class Vec3Type>
 	struct Vec3Access{};
 
-	template<class Vec3Type> [[nodiscard]] JPL_INLINE float GetX(const Vec3Type& v) noexcept { return Vec3Access<Vec3Type>::GetX(v); }
-	template<class Vec3Type> [[nodiscard]] JPL_INLINE float GetY(const Vec3Type& v) noexcept { return Vec3Access<Vec3Type>::GetY(v); }
-	template<class Vec3Type> [[nodiscard]] JPL_INLINE float GetZ(const Vec3Type& v) noexcept { return Vec3Access<Vec3Type>::GetZ(v); }
+	template<class Vec3Type>
+	using Vec3FloatType = std::remove_cvref_t<decltype(Vec3Access<Vec3Type>::GetX(std::declval<Vec3Type>()))>;
 
-	template<class Vec3Type> JPL_INLINE void SetX(Vec3Type& v, float value) noexcept { Vec3Access<Vec3Type>::SetX(v, value); }
-	template<class Vec3Type> JPL_INLINE void SetY(Vec3Type& v, float value) noexcept { Vec3Access<Vec3Type>::SetY(v, value); }
-	template<class Vec3Type> JPL_INLINE void SetZ(Vec3Type& v, float value) noexcept { Vec3Access<Vec3Type>::SetZ(v, value); }
+	template<class Vec3Type> [[nodiscard]] JPL_INLINE auto GetX(const Vec3Type& v) noexcept { return Vec3Access<Vec3Type>::GetX(v); }
+	template<class Vec3Type> [[nodiscard]] JPL_INLINE auto GetY(const Vec3Type& v) noexcept { return Vec3Access<Vec3Type>::GetY(v); }
+	template<class Vec3Type> [[nodiscard]] JPL_INLINE auto GetZ(const Vec3Type& v) noexcept { return Vec3Access<Vec3Type>::GetZ(v); }
+
+	template<class Vec3Type> JPL_INLINE void SetX(Vec3Type& v, Vec3FloatType<Vec3Type> value) noexcept { Vec3Access<Vec3Type>::SetX(v, value); }
+	template<class Vec3Type> JPL_INLINE void SetY(Vec3Type& v, Vec3FloatType<Vec3Type> value) noexcept { Vec3Access<Vec3Type>::SetY(v, value); }
+	template<class Vec3Type> JPL_INLINE void SetZ(Vec3Type& v, Vec3FloatType<Vec3Type> value) noexcept { Vec3Access<Vec3Type>::SetZ(v, value); }
 
 	template<class T>
 	concept CVec3 = requires (T& v)

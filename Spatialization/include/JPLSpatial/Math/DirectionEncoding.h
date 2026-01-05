@@ -263,7 +263,6 @@ namespace JPL
     template<CVec3 Vec3>
     constexpr OctahedronEncoding<Precision>::EncodedType OctahedronEncoding<Precision>::Encode(const Vec3& direction)
     {
-        using FloatType = Internal::FloatOf<Vec3>;
         const Vec3 dirAbs = Abs(direction);
         const FloatType L1Norm = FloatType(GetX(dirAbs) + GetY(dirAbs) + GetZ(dirAbs));
 
@@ -319,7 +318,6 @@ namespace JPL
     template<CVec3 Vec3>
     constexpr Vec3 JPL::OctahedronEncoding<Precision>::Decode(EncodedType encodedDirection)
     {
-        using FloatType = Internal::FloatOf<Vec3>;
         constexpr FloatType muInv = FloatType(1.0) / static_cast<FloatType>(cAxisMask);
 
         EncodedType dx = encodedDirection & cAxisMask;                      // Low bits for dx
@@ -334,9 +332,9 @@ namespace JPL
         // Check if it matches our special encoding for (0,0,-1)
         if (encodedDirection == cPoleNegZ)
         {
-            return Vec3(FloatType(0.0),
-                        FloatType(0.0),
-                        FloatType(-1.0));
+            return Vec3(Internal::FloatOf<Vec3>(0.0),
+                        Internal::FloatOf<Vec3>(0.0),
+                        Internal::FloatOf<Vec3>(-1.0));
         }
         // ---------------------------
 #endif
@@ -359,9 +357,9 @@ namespace JPL
         direction[1] += (FloatType(direction[1]) > FloatType(0.0)) ? -t : t;
 
         return Normalized(Vec3{
-                FloatType(direction[0]),
-                FloatType(direction[1]),
-                FloatType(direction[2])
+                Internal::FloatOf<Vec3>(direction[0]),
+                Internal::FloatOf<Vec3>(direction[1]),
+                Internal::FloatOf<Vec3>(direction[2])
             });
     }
 

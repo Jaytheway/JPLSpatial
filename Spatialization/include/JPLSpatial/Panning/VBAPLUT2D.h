@@ -149,7 +149,10 @@ namespace JPL::VBAP
         template<CVec3 Vec3Type>
         JPL_INLINE void GainsFor(const Vec3Type& direction, std::span<float> outGains) const
         {
-            LUT.GetSpeakerGains({ GetX(direction), GetZ(direction) }, outGains);
+            LUT.GetSpeakerGains({
+                static_cast<float>(GetX(direction)),
+                static_cast<float>(GetZ(direction)) },
+                outGains);
         }
 
     public:
