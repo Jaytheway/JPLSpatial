@@ -34,11 +34,11 @@
 #include <span>
 #include <unordered_set>
 
-#ifndef JPL_ENABLE_VALIDATION
-//#define JPL_ENABLE_VALIDATION
-#endif
+//#ifndef JPL_ENABLE_VALIDATION
+//#define JPL_ENABLE_VALIDATION 0
+//#endif
 
-#if JPL_ENABLE_VALIDATION
+#if defined(JPL_ENABLE_VALIDATION)// && JPL_ENABLE_VALIDATION
 #include <format>
 #include <iostream>
 #endif // JPL_ENABLE_VALIDATION

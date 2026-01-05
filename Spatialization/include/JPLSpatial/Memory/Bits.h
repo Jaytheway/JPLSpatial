@@ -29,7 +29,7 @@ namespace JPL
     template<std::integral T>
     [[nodiscard]] constexpr T Byteswap(T value) noexcept
     {
-#if __cpp_lib_byteswap >= 202110L
+#if defined(__cpp_lib_byteswap) && __cpp_lib_byteswap >= 202110L
         return std::byteswap(value);
 #else
         static_assert(std::has_unique_object_representations_v<T>, "T may not have padding bits");

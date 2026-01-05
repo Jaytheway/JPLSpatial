@@ -119,7 +119,7 @@ namespace JPL
 		static Vec3Type GetChannelVector(EChannel channel)
 		{
 			/// Standard channel vectors converted to angles
-			static constexpr auto gChannelVectors =
+			static const auto gChannelVectors =
 				std::to_array({
 					std::pair<EChannel, Vec3Type>{ FrontLeft,        { -0.7071f, 0.0f,       -0.7071f } },
 					std::pair<EChannel, Vec3Type>{ FrontRight,       { 0.7071f,  0.0f,       -0.7071f } },
@@ -321,7 +321,7 @@ namespace JPL
 		/// @param getOutGains :    A function to retrieve array of gains to fill for the provided
 		///                         source channel index, the gains written are accumulated and
 		///                         normalized gains of virtual sources associated to this channel group.
-#if JPL_TEST
+#if defined(JPL_TEST) && JPL_TEST
 		template<class ChannelGroupGainsGetter, class OnChannelGeneratedCallback = std::identity>
 		JPL_INLINE void ProcessVBAPData(const SourceLayoutType& sourceLayout,
 										const PanUpdateData& updateData,
@@ -336,7 +336,7 @@ namespace JPL
 			requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>;
 #endif
 
-#if JPL_TEST
+#if defined(JPL_TEST) && JPL_TEST
 		template<class ChannelGroupGainsGetter, class OnChannelGeneratedCallback = std::identity>
 		JPL_INLINE void ProcessVBAPData(const SourceLayoutType& sourceLayout,
 										const PanUpdateDataWithOrientation& updateData,
@@ -361,7 +361,7 @@ namespace JPL
 		static JPL_INLINE void NormalizeWeights(std::span<VirtualSource> virtualSources);
 
 	private:
-#if JPL_TEST
+#if defined(JPL_TEST) && JPL_TEST
 		template<class ChannelGroupGainsGetter, class OnChannelGeneratedCallback>
 		inline void ProcessVBAPDataImpl(const SourceLayoutType& sourceLayout,
 										const PanUpdateData& updateData,
@@ -452,7 +452,7 @@ namespace JPL
 		return bLUTBuildSuccessful;
 	}
 
-#if JPL_TEST
+#if defined(JPL_TEST) && JPL_TEST
 	template<class PannerType, class Traits>
 	template<class ChannelGroupGainsGetter, class OnChannelGeneratedCallback>
 	JPL_INLINE void VBAPannerBase<PannerType, Traits>::ProcessVBAPData(const SourceLayoutType& sourceLayout,
@@ -491,7 +491,7 @@ namespace JPL
 	}
 #endif
 
-#if JPL_TEST
+#if defined(JPL_TEST) && JPL_TEST
 	template<class PannerType, class Traits>
 	template<class ChannelGroupGainsGetter, class OnChannelGeneratedCallback>
 	JPL_INLINE void VBAPannerBase<PannerType, Traits>::ProcessVBAPData(const SourceLayoutType& sourceLayout,
@@ -527,7 +527,7 @@ namespace JPL
 	}
 #endif
 
-#if JPL_TEST
+#if defined(JPL_TEST) && JPL_TEST
 	template<class PannerType, class Traits>
 	template<class ChannelGroupGainsGetter, class OnChannelGeneratedCallback>
 	inline void VBAPannerBase<PannerType, Traits>::ProcessVBAPDataImpl(const SourceLayoutType& sourceLayout,
@@ -593,7 +593,7 @@ namespace JPL
 		JPL_ASSERT(updateData.Spread >= 0.0f && updateData.Spread <= 1.0f);
 
 		// Buffer to mix in source channels and calculate the normalization coefficients
-		float mixBufferData[Traits::MAX_CHANNELS]{ 0.0f };
+		float mixBufferData[Traits::MAX_CHANNELS]{};
 		auto mixBuffer = mixBufferData | stdv::take(mNumChannels);
 
 		// Large enough static buffer
@@ -645,7 +645,7 @@ namespace JPL
 			RotateChannelCap(channelVSs, totalRotation);
 #endif
 
-#if JPL_TEST
+#if defined(JPL_TEST) && JPL_TEST
 			// mainly for debugging and testing
 			if constexpr (!std::same_as<std::remove_cvref_t<OnChannelGeneratedCallback>, std::identity>)
 			{
@@ -676,7 +676,7 @@ namespace JPL
 
 		// Normalize for the number of input channels
 		{
-			float normCoeffsData[Traits::MAX_CHANNELS]{ 0.0f };
+			float normCoeffsData[Traits::MAX_CHANNELS]{};
 			auto normCoeffs = normCoeffsData | stdv::take(mNumChannels);
 
 			const auto numInChannels = static_cast<float>(sourceLayout.ChannelGroups.size());

@@ -213,7 +213,7 @@
 #endif
 
 //==============================================================================
-#if (defined (__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)) || __BIG_ENDIAN__
+#if (defined (__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)) || (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__)
 	#define JPL_LITTLE_ENDIAN 0
 	#define JPL_BIG_ENDIAN    1
 #else

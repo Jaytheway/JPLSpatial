@@ -341,8 +341,9 @@ namespace JPL::VBAP
     //==========================================================================
     template<auto GetSpeakerVectorFunction, class LUTCodec , CVec3 Vec3Type, CLUT LUTType>
     inline LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::LUTBuilder(ChannelMap channelMap, LUTType& outLUT)
-        : mVectors(GetDefaultMemoryResource())
-        , mDummySpeakers(channelMap, mVectors), mLUT(outLUT)
+        : mLUT(outLUT)
+        , mVectors(GetDefaultMemoryResource())
+        , mDummySpeakers(channelMap, mVectors)
         , mTris(GetDefaultMemoryResource())
         , mTrisInvMats(GetDefaultMemoryResource())
     {

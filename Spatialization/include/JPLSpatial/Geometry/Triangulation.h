@@ -223,10 +223,10 @@ namespace JPL
             // 5. Final triangle
 
             int vi[3], k = 0;
-            for (const Node& n : nodes)
+            for (const Node& node : nodes)
             {
-                if (n.Idx != -1)
-                    vi[k++] = n.Idx;
+                if (node.Idx != -1)
+                    vi[k++] = node.Idx;
             }
 
             if (k == 3)
