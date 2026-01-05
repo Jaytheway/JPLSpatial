@@ -54,21 +54,12 @@
 #undef max
 #undef min
 
-#include <cstdint>
-#include <cstdio>
-#include <atomic>
-#include <array>
-#include <iostream>
-#include <source_location>
-
 #include <gtest/gtest.h>
 
+#include <cstdio>
 #include <format>
-
-//==========================================================================
-using AllocationCallbackData = std::atomic<uint64_t>;
-
-inline static std::atomic<uint64_t> sMemoryUsedByEngine{ 0 };
+#include <iostream>
+#include <source_location>
 
 //==========================================================================
 static void JPLTraceCallback(const char* message)
@@ -77,7 +68,6 @@ static void JPLTraceCallback(const char* message)
 }
 
 #if defined(JPL_ENABLE_ASSERTS) || defined(JPL_ENABLE_ENSURE)
-
 static bool AssertionFailedCallback(const char* inExpression, const char* inMessage, const std::source_location location)
 {
 	// Print assertion details to the log
