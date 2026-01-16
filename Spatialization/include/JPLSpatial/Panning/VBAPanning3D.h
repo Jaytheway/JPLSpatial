@@ -24,6 +24,7 @@
 #include "JPLSpatial/Panning/PannerBase.h"
 #include "JPLSpatial/Panning/VBAPLUT3D.h"
 
+#include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/DirectionEncoding.h"
 #include "JPLSpatial/Memory/Bits.h"
 #include "JPLSpatial/Memory/Memory.h"
@@ -90,6 +91,8 @@ namespace JPL
                 static constexpr size_t cMaxNumRings = 8;                                       // Default max number of rings
                 static constexpr size_t cMaxNumSamples = 32;                                    // Default max number of samples per ring
                 static constexpr size_t cMaxNumVirtualSources = cMaxNumRings * cMaxNumSamples;  // Max number samples that can be generated for given VBAPdData
+                static constexpr size_t cMaxNumVirtualSourcesSqrt = 16;                         // Max number samples/rings if computed dimentions are samples=rings
+                static_assert(cMaxNumVirtualSourcesSqrt * cMaxNumVirtualSourcesSqrt == cMaxNumVirtualSources);
 
                 /// Represents dimentions of the virtual source group cap on a 3D sphere.
                 /// This structure serves to distribute "just enough" virtual sources
@@ -404,6 +407,13 @@ namespace JPL::VBAP
                 // since each channel's cap can reach a circumference between poles
                 // at spread 1.0, focus 0.0.
                 samplesPerRing = totalRings;
+
+                // For high channel count target (i.e. small min speaker aperture)
+                // we can overflow max virtual sources, so we need to clamp it
+                if (RoundUpBy4(samplesPerRing) * RoundUpBy4(totalRings) > cMaxNumVirtualSources)
+                {
+                    samplesPerRing = totalRings = cMaxNumVirtualSourcesSqrt;
+                }
             }
             else
             {

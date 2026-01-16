@@ -81,85 +81,88 @@ namespace JPL
 	protected:
 		struct NamedChannelLayout
 		{
-			std::string Name;
+			std::string_view Name;
 			ChannelMap Layout;
+			NamedChannelLayout(uint32 channelMask)
+				: Name(ChannelMask::ToString(channelMask))
+				, Layout(ChannelMap::FromChannelMask(channelMask))
+			{}
 		};
 
 		const std::vector<NamedChannelLayout> mAllChannelMapLayouts
 		{
-			{ "IVNALID", ChannelMap::FromChannelMask(ChannelMask::Invalid) },
+			{ ChannelMask::Invalid },
 
 			//========================================
-			{ "Mono", ChannelMap::FromChannelMask(ChannelMask::Mono) },
-			{ "Stereo", ChannelMap::FromChannelMask(ChannelMask::Stereo) },
-			{ "LCR", ChannelMap::FromChannelMask(ChannelMask::LCR) },
-			{ "LRS", ChannelMap::FromChannelMask(ChannelMask::LRS) },
-			{ "LCRS", ChannelMap::FromChannelMask(ChannelMask::LCRS) },
-			{ "Quad", ChannelMap::FromChannelMask(ChannelMask::Quad) },
-			{ "Pentagonal", ChannelMap::FromChannelMask(ChannelMask::Pentagonal) },
+			{ ChannelMask::Mono },
+			{ ChannelMask::Stereo },
+			{ ChannelMask::LCR },
+			{ ChannelMask::LRS },
+			{ ChannelMask::LCRS },
+			{ ChannelMask::Quad },
 
-			{ "Octagonal", ChannelMap::FromChannelMask(ChannelMask::Octagonal) },
+			{ ChannelMask::Octagonal },
 
 			//========================================
-			{ "Surround 4.1", ChannelMap::FromChannelMask(ChannelMask::Surround_4_1) },
-			{ "Surround 5.0", ChannelMap::FromChannelMask(ChannelMask::Surround_5_0) },
-			{ "Surround 5.1", ChannelMap::FromChannelMask(ChannelMask::Surround_5_1) },
-			{ "Surround 6.0", ChannelMap::FromChannelMask(ChannelMask::Surround_6_0) },
-			{ "Surround 6.1", ChannelMap::FromChannelMask(ChannelMask::Surround_6_1) },
+			{ ChannelMask::Surround_4_1 },
+			{ ChannelMask::Surround_5_0 },
+			{ ChannelMask::Surround_5_1 },
+			{ ChannelMask::Surround_6_0 },
+			{ ChannelMask::Surround_6_1 },
 
 			//========================================
 			// DTS surround setups
-			{ "Surround 7.0", ChannelMap::FromChannelMask(ChannelMask::Surround_7_0) },
-			{ "Surround 7.1", ChannelMap::FromChannelMask(ChannelMask::Surround_7_1) },
+			{ ChannelMask::Surround_7_0 },
+			{ ChannelMask::Surround_7_1 },
 
 			//========================================
-			{ "Surround 5.0.2", ChannelMap::FromChannelMask(ChannelMask::Surround_5_0_2) },
-			{ "Surround 5.1.2", ChannelMap::FromChannelMask(ChannelMask::Surround_5_1_2) },
-			{ "Surround 5.0.4", ChannelMap::FromChannelMask(ChannelMask::Surround_5_0_4) },
-			{ "Surround 5.1.4", ChannelMap::FromChannelMask(ChannelMask::Surround_5_1_4) },
+			{ ChannelMask::Surround_5_0_2 },
+			{ ChannelMask::Surround_5_1_2 },
+			{ ChannelMask::Surround_5_0_4 },
+			{ ChannelMask::Surround_5_1_4 },
 
 			//========================================
 			// Dolby Atmos surround setups
-			{ "Surround 7.0.2", ChannelMap::FromChannelMask(ChannelMask::Surround_7_0_2) },
-			{ "Surround 7.1.2", ChannelMap::FromChannelMask(ChannelMask::Surround_7_1_2) },
-			{ "Surround 7.0.4", ChannelMap::FromChannelMask(ChannelMask::Surround_7_0_4) },
-			{ "Surround 7.1.4", ChannelMap::FromChannelMask(ChannelMask::Surround_7_1_4) },
+			{ ChannelMask::Surround_7_0_2 },
+			{ ChannelMask::Surround_7_1_2 },
+			{ ChannelMask::Surround_7_0_4 },
+			{ ChannelMask::Surround_7_1_4 },
 
-			{ "Surround 7.0.6", ChannelMap::FromChannelMask(ChannelMask::Surround_7_0_6) },
-			{ "Surround 7.1.6", ChannelMap::FromChannelMask(ChannelMask::Surround_7_1_6) },
+			{ ChannelMask::Surround_7_0_6 },
+			{ ChannelMask::Surround_7_1_6 },
 
 			//========================================
 			// Atmos surround setups
-			{ "Surround 9.0.4", ChannelMap::FromChannelMask(ChannelMask::Surround_9_0_4) },
-			{ "Surround 9.1.4", ChannelMap::FromChannelMask(ChannelMask::Surround_9_1_4) },
-			{ "Surround 9.0.6", ChannelMap::FromChannelMask(ChannelMask::Surround_9_0_6) },
-			{ "Surround 9.1.6", ChannelMap::FromChannelMask(ChannelMask::Surround_9_1_6) }
+			{ ChannelMask::Surround_9_0_4 },
+			{ ChannelMask::Surround_9_1_4 },
+			{ ChannelMask::Surround_9_0_6 },
+			{ ChannelMask::Surround_9_1_6 }
 		};
 
 		const std::vector<NamedChannelLayout> mValid3DLayouts
 		{
 			//========================================
-			{ "Surround 5.0.2", ChannelMap::FromChannelMask(ChannelMask::Surround_5_0_2) },
-			{ "Surround 5.1.2", ChannelMap::FromChannelMask(ChannelMask::Surround_5_1_2) },
-			{ "Surround 5.0.4", ChannelMap::FromChannelMask(ChannelMask::Surround_5_0_4) },
-			{ "Surround 5.1.4", ChannelMap::FromChannelMask(ChannelMask::Surround_5_1_4) },
+			{ ChannelMask::Surround_5_0_2 },
+			{ ChannelMask::Surround_5_1_2 },
+			{ ChannelMask::Surround_5_0_4 },
+			{ ChannelMask::Surround_5_1_4 },
 
 			//========================================
 			// Dolby Atmos surround setups
-			{ "Surround 7.0.2", ChannelMap::FromChannelMask(ChannelMask::Surround_7_0_2) },
-			{ "Surround 7.1.2", ChannelMap::FromChannelMask(ChannelMask::Surround_7_1_2) },
-			{ "Surround 7.0.4", ChannelMap::FromChannelMask(ChannelMask::Surround_7_0_4) },
-			{ "Surround 7.1.4", ChannelMap::FromChannelMask(ChannelMask::Surround_7_1_4) },
+			{ ChannelMask::Surround_7_0_2 },
+			{ ChannelMask::Surround_7_1_2 },
+			{ ChannelMask::Surround_7_0_4 },
+			{ ChannelMask::Surround_7_1_4 },
 
-			{ "Surround 7.0.6", ChannelMap::FromChannelMask(ChannelMask::Surround_7_0_6) },
-			{ "Surround 7.1.6", ChannelMap::FromChannelMask(ChannelMask::Surround_7_1_6) },
+			{ ChannelMask::Surround_7_0_6 },
+			{ ChannelMask::Surround_7_1_6 },
 
 			//========================================
 			// Atmos surround setups
-			{ "Surround 9.0.4", ChannelMap::FromChannelMask(ChannelMask::Surround_9_0_4) },
-			{ "Surround 9.1.4", ChannelMap::FromChannelMask(ChannelMask::Surround_9_1_4) },
-			{ "Surround 9.0.6", ChannelMap::FromChannelMask(ChannelMask::Surround_9_0_6) },
-			{ "Surround 9.1.6", ChannelMap::FromChannelMask(ChannelMask::Surround_9_1_6) }
+			{ ChannelMask::Surround_9_0_4 },
+			{ ChannelMask::Surround_9_1_4 },
+			{ ChannelMask::Surround_9_0_6 },
+			{ ChannelMask::Surround_9_1_6 }
 		};
 
 		bool IsValid3DLayout(ChannelMap channelLayout) const
@@ -169,7 +172,47 @@ namespace JPL
 				return channelLayout == chl.Layout;
 			}) != std::ranges::end(mValid3DLayouts);
 		}
+
+		const std::vector<NamedChannelLayout> mValidSourceLayouts
+		{
+			//========================================
+			{ ChannelMask::Mono },
+			{ ChannelMask::Stereo },
+			{ ChannelMask::LCR },
+			{ ChannelMask::LRS },
+			{ ChannelMask::LCRS },
+			{ ChannelMask::Quad },
+
+			{ ChannelMask::Octagonal },
+
+			//========================================
+			{ ChannelMask::Surround_4_1 },
+			{ ChannelMask::Surround_5_0 },
+			{ ChannelMask::Surround_5_1 },
+			{ ChannelMask::Surround_6_0 },
+			{ ChannelMask::Surround_6_1 },
+
+			//========================================
+			// DTS surround setups
+			{ ChannelMask::Surround_7_0 },
+			{ ChannelMask::Surround_7_1 },
+		};
 	};
+
+	TEST_F(VBAP3DTest, VBAPData_AllSupportedLayoutsInitialize)
+	{
+		for (const auto& [targetLayoutName, targetLayoutMap] : mValid3DLayouts)
+		{
+			VBAPanner3D<> panner;
+			ASSERT_TRUE(panner.InitializeLUT(targetLayoutMap)) << targetLayoutName;
+
+			for (const auto& [sourceLayoutName, sourceLayoutMap] : mValidSourceLayouts)
+			{
+				typename VBAPanner3D<>::SourceLayoutType sourceLayout;
+				EXPECT_TRUE(panner.InitializeSourceLayout(sourceLayoutMap, sourceLayout)) << sourceLayoutName;
+			}
+		}
+	}
 
 #if JPL_USE_SIMPLE_SPEAKER_MESHING
 	TEST_F(VBAP3DTest, TriangleCrossing)
