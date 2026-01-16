@@ -22,6 +22,7 @@
 #include "JPLSpatial/Core.h"
 #include "JPLSpatial/ErrorReporting.h"
 #include "JPLSpatial/Math/Math.h"
+#include "JPLSpatial/Math/Vec3Math.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
 
 #include <cmath>
