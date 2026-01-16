@@ -23,6 +23,7 @@
 #include "ErrorReporting.h"
 
 #include <bit>
+#include <string_view>
 
 namespace JPL
 {
@@ -94,6 +95,8 @@ namespace JPL
 	    static constexpr uint32 LRS                 = FrontLeft | FrontRight | BackCenter;
 	    static constexpr uint32 LCRS                = FrontLeft | FrontRight | FrontCenter | BackCenter;
         static constexpr uint32 Quad                = FrontLeft | FrontRight | BackLeft | BackRight;
+
+        // TODO: this clashes with Surround 5.0, we should just remove it, or refactor ChannelMask to be a more than just an integer bitmask
 	    static constexpr uint32 Pentagonal          = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight;
         
         //? Couldn't arrange in a way to preserve channel order across different setups
@@ -135,6 +138,8 @@ namespace JPL
 	    static constexpr uint32 Surround_9_1_4      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
 	    static constexpr uint32 Surround_9_0_6      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
 	    static constexpr uint32 Surround_9_1_6      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
+
+        JPL_INLINE std::string_view ToString(uint32 channelMask);
     }
 
 
@@ -252,3 +257,46 @@ namespace std
         }
     };
 }
+
+namespace JPL
+{
+    JPL_INLINE std::string_view ChannelMask::ToString(uint32 channelMask)
+    {
+        switch (channelMask)
+        {
+        case ChannelMask::Invalid:          return "INVALID";
+        case ChannelMask::Mono:             return "Mono";
+        case ChannelMask::Stereo:           return "Stereo";
+        case ChannelMask::LCR:              return "LCR";
+        case ChannelMask::LRS:              return "LRS";
+        case ChannelMask::LCRS:             return "LCRS";
+        case ChannelMask::Quad:             return "Quad";
+        //case ChannelMask::Pentagonal: return "Pentagonal"; //? clashes with Surround 5.0
+        case ChannelMask::Octagonal:        return "Octagonal";
+        case ChannelMask::Surround_4_1:     return "Surround 4.1";
+        case ChannelMask::Surround_5_0:     return "Surround 5.0";
+        case ChannelMask::Surround_5_1:     return "Surround 5.1";
+        case ChannelMask::Surround_6_0:     return "Surround 6.0";
+        case ChannelMask::Surround_6_1:     return "Surround 6.1";
+        case ChannelMask::Surround_7_0:     return "Surround 7.0";
+        case ChannelMask::Surround_7_1:     return "Surround 7.1";
+        case ChannelMask::Surround_5_0_2:   return "Surround 5.0.2";
+        case ChannelMask::Surround_5_1_2:   return "Surround 5.1.2";
+        case ChannelMask::Surround_5_0_4:   return "Surround 5.0.4";
+        case ChannelMask::Surround_5_1_4:   return "Surround 5.1.4";
+        case ChannelMask::Surround_7_0_2:   return "Surround 7.0.2";
+        case ChannelMask::Surround_7_1_2:   return "Surround 7.1.2";
+        case ChannelMask::Surround_7_0_4:   return "Surround 7.0.4";
+        case ChannelMask::Surround_7_1_4:   return "Surround 7.1.4";
+        case ChannelMask::Surround_7_0_6:   return "Surround 7.0.6";
+        case ChannelMask::Surround_7_1_6:   return "Surround 7.1.6";
+        case ChannelMask::Surround_9_0_4:   return "Surround 9.0.4";
+        case ChannelMask::Surround_9_1_4:   return "Surround 9.1.4";
+        case ChannelMask::Surround_9_0_6:   return "Surround 9.0.6";
+        case ChannelMask::Surround_9_1_6:   return "Surround 9.1.6";
+        default:
+            JPL_ASSERT(false, "Unknown channel mask.");
+            return "< UKNOWN >";
+        }
+    }
+} // namespace JPL
