@@ -243,6 +243,7 @@ namespace JPL
         friend struct std::hash<JPL::ChannelMap>;
         uint32 mChannelMask = ChannelMask::Invalid;
     };
+    struct NamedChannelMask
 } // namespace JPL
 
 //==============================================================================
