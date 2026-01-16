@@ -79,17 +79,7 @@ namespace JPL
 		}
 
 	protected:
-		struct NamedChannelLayout
-		{
-			std::string_view Name;
-			ChannelMap Layout;
-			NamedChannelLayout(uint32 channelMask)
-				: Name(ChannelMask::ToString(channelMask))
-				, Layout(ChannelMap::FromChannelMask(channelMask))
-			{}
-		};
-
-		const std::vector<NamedChannelLayout> mAllChannelMapLayouts
+		const std::vector<NamedChannelMask> mAllChannelMapLayouts
 		{
 			{ ChannelMask::Invalid },
 
@@ -139,7 +129,7 @@ namespace JPL
 			{ ChannelMask::Surround_9_1_6 }
 		};
 
-		const std::vector<NamedChannelLayout> mValid3DLayouts
+		const std::vector<NamedChannelMask> mValid3DLayouts
 		{
 			//========================================
 			{ ChannelMask::Surround_5_0_2 },
@@ -167,13 +157,13 @@ namespace JPL
 
 		bool IsValid3DLayout(ChannelMap channelLayout) const
 		{
-			return std::ranges::find_if(mValid3DLayouts, [channelLayout](const NamedChannelLayout& chl)
+			return std::ranges::find_if(mValid3DLayouts, [channelLayout](const NamedChannelMask& chl)
 			{
 				return channelLayout == chl.Layout;
 			}) != std::ranges::end(mValid3DLayouts);
 		}
 
-		const std::vector<NamedChannelLayout> mValidSourceLayouts
+		const std::vector<NamedChannelMask> mValidSourceLayouts
 		{
 			//========================================
 			{ ChannelMask::Mono },
@@ -330,7 +320,7 @@ namespace JPL
 			printer.PrintLine("");
 		};
 
-		auto runSpekerMeshTest = [this](const NamedChannelLayout& test)
+		auto runSpekerMeshTest = [this](const NamedChannelMask& test)
 		{
 			SCOPED_TRACE(test.Name);
 
@@ -358,7 +348,7 @@ namespace JPL
 #endif
 		};
 
-		for (const NamedChannelLayout& test : mAllChannelMapLayouts)
+		for (const NamedChannelMask& test : mAllChannelMapLayouts)
 			runSpekerMeshTest(test);
 	}
 
@@ -445,7 +435,7 @@ namespace JPL
 		};
 
 
-		for (const NamedChannelLayout& test : mAllChannelMapLayouts)
+		for (const NamedChannelMask& test : mAllChannelMapLayouts)
 		{
 			SCOPED_TRACE(test.Name);
 			testLUTFor(test.Layout);
@@ -472,7 +462,7 @@ namespace JPL
 		auto generateLayout = [&channelVis]<class Params>(
 			ChannelMap targetLayout,
 			ChannelMap sourceLayout,
-			const Params& params) -> ChannelPoints
+			const Params & params) -> ChannelPoints
 		{
 			VBAPanner3D<> panner;
 			if (!panner.InitializeLUT(targetLayout))
@@ -614,7 +604,7 @@ namespace JPL
 		// canonical centre of channel ring
 		static constexpr Vec3 FWD = { 0, 0, -1 }; // engine forwardm change to +Z if needed
 		static constexpr Vec3 UP = { 0, 1, 0 };
-		static constexpr float yawRad = std::numbers::pi_v<float> * 0.5f;
+		static constexpr float yawRad = std::numbers::pi_v<float> *0.5f;
 
 		const std::vector<Vec3> testPanDiections
 		{
@@ -753,7 +743,7 @@ namespace JPL
 							   params.Spread);
 		};
 
-		for (const NamedChannelLayout& test : mValid3DLayouts)
+		for (const NamedChannelMask& test : mValid3DLayouts)
 		{
 			SCOPED_TRACE(std::format("Target Speaker Layout: {}", test.Name));
 

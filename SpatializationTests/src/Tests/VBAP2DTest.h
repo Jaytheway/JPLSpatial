@@ -69,22 +69,16 @@ namespace JPL
 		static constexpr auto toDegrees(std::floating_point auto rads) { return static_cast<decltype(rads)>(rads * (180.0 / std::numbers::pi)); };
 
 	protected:
-		struct ChannelMaskTest
+		const std::vector<NamedChannelMask> mChannelMasks
 		{
-			std::string_view Label;
-			uint32 Mask;
-		};
-
-		const std::vector<ChannelMaskTest> mChannelMasks
-		{
-			{ "IVNALID",		ChannelMask::Invalid },
-			{ "Mono",			ChannelMask::Mono },
-			{ "Stereo",			ChannelMask::Stereo },
-			{ "Quad",			ChannelMask::Quad },
-			{ "Surround 4.1",	ChannelMask::Surround_4_1 },
-			{ "Surround 5.1",	ChannelMask::Surround_5_1 },
-			{ "Surround 6.1",	ChannelMask::Surround_6_1 },
-			{ "Surround 7.1",	ChannelMask::Surround_7_1 },
+			{ ChannelMask::Invalid },
+			{ ChannelMask::Mono },
+			{ ChannelMask::Stereo },
+			{ ChannelMask::Quad },
+			{ ChannelMask::Surround_4_1 },
+			{ ChannelMask::Surround_5_1 },
+			{ ChannelMask::Surround_6_1 },
+			{ ChannelMask::Surround_7_1 },
 		};
 
 		struct NamedChannelLayout
@@ -335,11 +329,11 @@ namespace JPL
 	{
 		VBAPanner2D<> panner;
 
-		for (const ChannelMaskTest& test : mChannelMasks)
+		for (const NamedChannelMask& test : mChannelMasks)
 		{
-			SCOPED_TRACE(std::format("Channel Map: {}", test.Label));
+			SCOPED_TRACE(std::format("Channel Map: {}", test.Name));
 
-			const ChannelMap channelMap = ChannelMap::FromChannelMask(test.Mask);
+			const ChannelMap channelMap = test.Layout;
 			if (!channelMap.IsValid() || channelMap.GetNumChannels() == 1)
 			{
 				EXPECT_FALSE(panner.InitializeLUT(channelMap));
@@ -373,13 +367,11 @@ namespace JPL
 	{
 		struct VBAPDataTest
 		{
-			const ChannelMaskTest ChannelMap;
-			uint32 NumVirtualSources;
+			const NamedChannelMask ChannelMap;
 
 			struct ChannelGroupExpectedData
 			{
 				float Angle;
-				std::vector<float> vsAngles;
 			};
 
 			const std::vector<ChannelGroupExpectedData> ExpectedChannelGroups;
@@ -390,33 +382,26 @@ namespace JPL
 		// (channel groups and virtual sources are sorted by angle)
 		const std::vector<VBAPDataTest> VBAPDataTestCases
 		{
-			// 2 Virtual Sources
 			{
-				.ChannelMap = { "IVNALID", ChannelMask::Invalid },
-				.NumVirtualSources = 2,
+				.ChannelMap = { ChannelMask::Invalid },
 				.ExpectedChannelGroups = {}
 			},
 			{
-				.ChannelMap = { "Mono",	ChannelMask::Mono },
-				.NumVirtualSources = 2,
+				.ChannelMap = { ChannelMask::Mono },
 				.ExpectedChannelGroups = {
 					{
 						.Angle = 0.0f,
-						.vsAngles = { -90.0f, 90.0f }
 					}
 				}
 			},
 			{
-				.ChannelMap = { "Stereo",	ChannelMask::Stereo },
-				.NumVirtualSources = 2,
+				.ChannelMap = { ChannelMask::Stereo },
 				.ExpectedChannelGroups = {
 					{
 						.Angle = 90.0f,
-						.vsAngles = { 45.0f, 135.0f }
 					},
 					{
 						.Angle = -90.0f,
-						.vsAngles = { -135.0f, -45.0f }
 					}
 				}
 			},
@@ -424,24 +409,19 @@ namespace JPL
 				// 90 degree per channel
 				// 45 degrees per virtual source
 				// -22.5 degrees virtual sources offset
-				.ChannelMap = { "Quad",	ChannelMask::Quad },
-				.NumVirtualSources = 2,
+				.ChannelMap = { ChannelMask::Quad },
 				.ExpectedChannelGroups = {
 					{
 						.Angle = 45.0f,
-						.vsAngles = { 22.5f, 67.5f }
 					},
 					{
 						.Angle = 135.0f,
-						.vsAngles = { 112.5f, 157.5f }
 					},
 					{
 						.Angle = -135.0f,
-						.vsAngles = { -157.5f, -112.5f }
 					},
 					{
 						.Angle = -45.0f,
-						.vsAngles = { -67.5f, -22.5f }
 					},
 				}
 			},
@@ -449,123 +429,31 @@ namespace JPL
 				// 72 degree per channel
 				// 36 degrees per virtual source
 				// -18 degrees virtual sources offset
-				.ChannelMap = { "Surround 5.1",	ChannelMask::Surround_5_1 },
-				.NumVirtualSources = 2,
+				.ChannelMap = { ChannelMask::Surround_5_1 },
 				.ExpectedChannelGroups = {
 					{
 						.Angle = 0.0f,
-						.vsAngles = { -18.0f, 18.0f }
 					},
 					{
 						.Angle = 72.0f,
-						.vsAngles = { 54.0f, 90.0f }
 					},
 					{
 						.Angle = 144.0f,
-						.vsAngles = { 126.0f, 162.0f }
 					},
 					{
 						.Angle = -144.0f,
-						.vsAngles = { -162.0f, -126.0f }
 					},
 					{
 						.Angle = -72.0f,
-						.vsAngles = { -90.0f, -54.0f }
 					}
 				}
-			},
-
-			// 3 Virtual Sources
-			{
-				// 360 degree per channel
-				// 120 degrees per virtual source
-				// -120 degrees virtual sources offset
-				.ChannelMap = { "Mono",	ChannelMask::Mono },
-				.NumVirtualSources = 3,
-				.ExpectedChannelGroups = {
-					{
-						.Angle = 0.0f,
-						.vsAngles = { -120.0f, 0.0f, 120.0f }
-					}
-				}
-			},
-			{
-				// 180 degree per channel
-				// 60 degrees per virtual source
-				// -60 degrees virtual sources offset
-				.ChannelMap = { "Stereo",	ChannelMask::Stereo },
-				.NumVirtualSources = 3,
-				.ExpectedChannelGroups = {
-					{
-						.Angle = 90.0f,
-						.vsAngles = { 30.0f, 90.0f, 150.0f }
-					},
-					{
-						.Angle = -90.0f,
-						.vsAngles = { -150.0f, -90.0f, -30.0f }
-					}
-				}
-			},
-			{
-				// 90 degree per channel
-				// 30 degrees per virtual source
-				// -30 degrees virtual sources offset
-				.ChannelMap = { "Quad",	ChannelMask::Quad },
-				.NumVirtualSources = 3,
-				.ExpectedChannelGroups = {
-					{
-						.Angle = 45.0f,
-						.vsAngles = { 15.0f, 45.0f, 75.0f }
-					},
-					{
-						.Angle = 135.0f,
-						.vsAngles = { 105.0f, 135.0f, 165.0f }
-					},
-					{
-						.Angle = -135.0f,
-						.vsAngles = { -165.0f, -135.0f, -105.0f }
-					},
-					{
-						.Angle = -45.0f,
-						.vsAngles = { -75.0f, -45.0f, -15.0f }
-					},
-				}
-			},
-			{
-				// 72 degree per channel
-				// 24 degrees per virtual source
-				// -24 degrees virtual sources offset
-				.ChannelMap = { "Surround 5.1",	ChannelMask::Surround_5_1 },
-				.NumVirtualSources = 3,
-				.ExpectedChannelGroups = {
-					{
-						.Angle = 0.0f,
-						.vsAngles = { -24.0f, 0.0f, 24.0f }
-					},
-					{
-						.Angle = 72.0f,
-						.vsAngles = { 48.0f, 72.0f, 96.0f }
-					},
-					{
-						.Angle = 144.0f,
-						.vsAngles = { 120.0f, 144.0f, 168.0f }
-					},
-					{
-						.Angle = -144.0f,
-						.vsAngles = { -168.0f, -144.0f, -120.0f }
-					},
-					{
-						.Angle = -72.0f,
-						.vsAngles = { -96.0f, -72.0f, -48.0f }
-					}
-				}
-			},
+			}
 		};
 
 		VBAPanner2D<> panner;
 		ASSERT_TRUE(panner.InitializeLUT(ChannelMap::FromNumChannels(4)));
 
-		VBAPanner2D<>::SourceLayoutType data;
+		typename VBAPanner2D<>::SourceLayoutType data;
 
 		// Just test the fact that SourceLayout internally initializes minimum of 2 virtual sources per channel,
 		// the rest of data we can test fot the actual 2 virtual sources test case
@@ -576,12 +464,7 @@ namespace JPL
 
 		for (const auto& test : VBAPDataTestCases)
 		{
-			const uint32 virtualSourcesPerChannel = test.NumVirtualSources;
-
-			SCOPED_TRACE(std::format("Channel Map: {} | VS/channel: {}", test.ChannelMap.Label, virtualSourcesPerChannel));
-
-
-			const ChannelMap channelMap = ChannelMap::FromChannelMask(test.ChannelMap.Mask);
+			const ChannelMap channelMap = test.ChannelMap.Layout;
 			if (!channelMap.IsValid())
 			{
 				EXPECT_FALSE(panner.InitializeSourceLayout(channelMap, data));
