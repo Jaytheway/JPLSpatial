@@ -17,6 +17,9 @@ Functional WIP
 JPLSpatial library is used as a sound spatialization solution in [Hazel Engine](https://hazelengine.com/).
 If you have access to Hazel Engine code, you can check how JPLSpatial is integrated on `dev` or `audio` branch.
 ## Features
+![VBAP 2D Animation: quad source -> 5.1 speaker layout](./assets/VBAP2D.gif)
+![VBAP 3D Animation: stereo source -> 9.1.4 speaker layout](./assets/VBAP3D.gif)
+
 - Vector-Base Amplitude Panning (VBAP) / Multi-Direction Amplitude Panning (MDAP)
 	- Source elevation / Height channels
 
