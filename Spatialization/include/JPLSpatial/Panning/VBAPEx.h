@@ -20,6 +20,7 @@
 #pragma once
 
 #include "JPLSpatial/Core.h"
+#include "JPLSpatial/ErrorReporting.h"
 #include "JPLSpatial/ChannelMap.h"
 
 #include "JPLSpatial/Math/MinimalVec2.h"
@@ -255,20 +256,29 @@ namespace JPL
 				ChannelMap channelMap,
 				ArrayType<ChannelAngle, Args...>& sortedChannelAngles,
 				std::function<float(EChannel)> getChannelAngle,
-				bool skipLFO = true)
+				bool skipLFE = true)
 			{
 				sortedChannelAngles.clear();
-				sortedChannelAngles.reserve(channelMap.GetNumChannels() - skipLFO * channelMap.HasLFE());
+				sortedChannelAngles.reserve(channelMap.GetNumChannels() - skipLFE * channelMap.HasLFE());
 
-				channelMap.ForEachChannel([&sortedChannelAngles, &getChannelAngle, skipLFO](EChannel channel, uint32 channelIndex)
+				channelMap.ForEachChannel([&sortedChannelAngles, &getChannelAngle, channelMap, skipLFE](EChannel channel, uint32 channelIndex)
 				{
 					// We don't use LFE for panning
-					if (skipLFO && channel == EChannel::LFE)
+					if (skipLFE && channel == EChannel::LFE)
 						return;
 
 					// Top channels of the source don't participate in VBAP
 					if (channel >= EChannel::TOP_Channels)
 						return;
+
+					// We don't process LFE in our panning,
+					// but we need contiguous indices.
+					//! Note: we may want to handle this differently
+					//! if the user expects LFE in the audio block
+					//! (e.g. we could skip it in ProcessVBAPData,
+					//! while set mix matrix gains for LFE to 0.0)
+					if (channel > EChannel::LFE && skipLFE && channelMap.HasLFE())
+						channelIndex--;
 
 					const float channelAngle = getChannelAngle(channel);
 

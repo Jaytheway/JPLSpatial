@@ -235,7 +235,7 @@ namespace JPL::Spatial
 		/// The returned channel gains are based on the data computed during the last call to AdvanceSimulation()
 		/// @returns		span of ChannelGains per source channel, if the 'source' is valid and
 		///				the `targetChannelMap` was initialized for that source, empty span otherwise
-		JPL_INLINE std::span<const StandartChannelGains> GetChannelGains(SourceId source, ChannelMap targetChannelMap) const;
+		JPL_INLINE std::span<const float> GetChannelGains(SourceId source, ChannelMap targetChannelMap) const;
 		// TODO: alternatively, we could employ SteamAudio's approach of feeding in buffer and applying all the processing internally
 
 		// Process audio for a source based on data computed during last call to AdvanceSimulation()
@@ -635,7 +635,7 @@ namespace JPL::Spatial
 	}
 
 	template<CVec3 Vec3Type, class VBAPTraits>
-	JPL_INLINE std::span<const StandartChannelGains> SpatialManager<Vec3Type, VBAPTraits>::GetChannelGains(SourceId source, ChannelMap targetChannelMap) const
+	JPL_INLINE std::span<const float> SpatialManager<Vec3Type, VBAPTraits>::GetChannelGains(SourceId source, ChannelMap targetChannelMap) const
 	{
 		return mPanningService.GetChannelGainsFor(mSourceStuff.at(source).PanEffectHandle, targetChannelMap);
 	}

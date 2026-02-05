@@ -493,7 +493,9 @@ namespace JPL
 		// Process all the data
 		spatializer.AdvanceSimulation();
 
-		static constexpr float tolerance = 1e-5f;
+		// TODO: maybe compute or precompute max possible error for given LUT resolution
+		static constexpr float tolerance = 4e-3f;
+
 		for (const auto& testCase : testCases)
 		{
 			//! Note: SCOPED_TRACE allocate and messes up our leak detector,
@@ -511,10 +513,11 @@ namespace JPL
 			static constexpr uint32 sourceChannel = 0;
 
 			const auto& channelGainsRef = channelGains;
-
+			
 			for (uint32 targetChannel = 0; targetChannel < testCase.ExpectedGains.size(); ++targetChannel)
 			{
-				EXPECT_NEAR(channelGainsRef[sourceChannel][targetChannel], testCase.ExpectedGains[targetChannel], tolerance) << testCase.Description << "\n Target channel: " << targetChannel;
+				EXPECT_NEAR(channelGainsRef[sourceChannel * testCase.ExpectedGains.size() + targetChannel],
+							testCase.ExpectedGains[targetChannel], tolerance) << testCase.Description << "\n Target channel: " << targetChannel;
 			}
 		}
 	}

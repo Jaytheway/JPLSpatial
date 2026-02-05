@@ -25,6 +25,7 @@
 #include "JPLSpatial/Panning/DummySpeakers.h"
 #include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/MinimalMat.h"
+#include "JPLSpatial/Math/SIMD.h"
 #include "JPLSpatial/Memory/Memory.h"
 #include "JPLSpatial/Utilities/GainEncoding.h"
 
@@ -56,7 +57,7 @@ namespace JPL::VBAP
     template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
     class LUTBuilder;
 
-    template<CLUT LUTType, class LUTCodec>
+    template<CLUT LUTType, class LUTCodec, CVec3 Vec3TypeImplicit>
     class LUTQuery;
 
     //==========================================================================
@@ -69,7 +70,7 @@ namespace JPL::VBAP
         using Vec3Type = std::remove_cvref_t<decltype(GetSpeakerVectorFunction(EChannel{}))>;
         
         using BuilderType = LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>;
-        using QueryType = LUTQuery<LUTType, LUTCodec>;
+        using QueryType = LUTQuery<LUTType, LUTCodec, Vec3Type>;
 
         //======================================================================
         /// Make LUTBuilder object to build LUT for given 'channelMap' and 'LUTType'
@@ -227,7 +228,7 @@ namespace JPL::VBAP
         
     //==========================================================================
     /// Interface to query LUT gains for a direction
-    template<CLUT LUTType, class LUTCodec>
+    template<CLUT LUTType, class LUTCodec, CVec3 Vec3TypeImplicit>
     class LUTQuery
     {
     public:
@@ -251,7 +252,11 @@ namespace JPL::VBAP
         template<CVec3 Vec3Type>
         void GainsFor(const Vec3Type& direction, VBAPCell& outSpeakerGains) const;
 
-        /// Function to query LUT gains for a direction.
+		inline void GainsFor(const simd& dirX, const simd& dirY, const simd& dirZ,
+							 std::array<SpeakerIdx, 3 * simd::size()>& outIndices,
+							 std::array<float, 3 * simd::size()>& outGains) const;
+
+		/// Function to query LUT gains for a direction.
         /// @param direction : has to be normalized unit vector
         /// @param outGains : must be of size at least number of target speakers the LUT was built for
         template<CVec3 Vec3Type>
@@ -282,6 +287,10 @@ namespace JPL::VBAP
         [[nodiscard]] JPL_INLINE uint32 GetNumRealChannels() const noexcept { return static_cast<uint32>(mVectors.size()) - mDummySpeakers.GetNumDummies(); }
         [[nodiscard]] JPL_INLINE const std::pmr::vector<SpeakerTripletIdx>& GetTris() const noexcept { return mTris; }
         [[nodiscard]] float FindShortestAperture() const;
+
+        // Handle indices >= LFE index, which we don't use internally for trianglation
+        [[nodiscard]] SpeakerTripletIdx SanitizeSpeakerIndex(const SpeakerTripletIdx& triplet) const;
+        [[nodiscard]] uint8 SanitizeSpeakerIndex(SpeakerIdx speakerIndex) const;
 
         /// This has to be called for each direction the LUT needs to
         /// have values for
@@ -320,6 +329,7 @@ namespace JPL::VBAP
         // Potential dynamic data stored in some LUT types
         std::pmr::vector<SpeakerTripletIdx> mTris;
         std::pmr::vector<Math::Mat3<Vec3Type>> mTrisInvMats;
+        uint32 mLFEIndex = ChannelMap::InvalidChannelIndex;
     };
 } // namespace JPL::VBAP
 
@@ -347,10 +357,13 @@ namespace JPL::VBAP
         , mTris(GetDefaultMemoryResource())
         , mTrisInvMats(GetDefaultMemoryResource())
     {
-        // TODO: do we want to use real indices for somethin?
-        channelMap.ForEachChannel([this](EChannel channel/*, uint32 index*/)
+        channelMap.ForEachChannel([this](EChannel channel, uint32 index)
         {
-            if (channel != EChannel::LFE)
+            if (channel == EChannel::LFE)
+            {
+                mLFEIndex = index;
+            }
+            else
             {
                 mVectors.push_back(GetSpeakerVectorFunction(channel));
 
@@ -489,6 +502,22 @@ namespace JPL::VBAP
     }
 
     template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
+    inline SpeakerTripletIdx LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::SanitizeSpeakerIndex(const SpeakerTripletIdx& triplet) const
+    {
+        return SpeakerTripletIdx{
+            SanitizeSpeakerIndex(triplet[0]),
+            SanitizeSpeakerIndex(triplet[1]),
+            SanitizeSpeakerIndex(triplet[2])
+        };
+    }
+
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
+    inline uint8 LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::SanitizeSpeakerIndex(SpeakerIdx speakerIndex) const
+    {
+        return speakerIndex + uint8(speakerIndex >= mLFEIndex);
+    }
+
+    template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
     inline bool LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::ComputeCellFor(const Vec3Type& direction, int lutIndex)
     {
         using LUTGainType = typename LUTType::GainType;
@@ -587,14 +616,14 @@ namespace JPL::VBAP
 
             if constexpr (bLUTStoresTripletIdx)
             {
-                mLUT.Speakers[lutIndex] = triI;
+                mLUT.Speakers[lutIndex] = SanitizeSpeakerIndex(triI);
             }
             else
             {
                 mLUT.Speakers[lutIndex] = {
-                    static_cast<SpeakerIdx>(tri[0]),
-                    static_cast<SpeakerIdx>(tri[1]),
-                    static_cast<SpeakerIdx>(tri[2])
+                    SanitizeSpeakerIndex(static_cast<SpeakerIdx>(tri[0])),
+                    SanitizeSpeakerIndex(static_cast<SpeakerIdx>(tri[1])),
+                    SanitizeSpeakerIndex(static_cast<SpeakerIdx>(tri[2]))
                 };
             }
 
@@ -773,7 +802,8 @@ namespace JPL::VBAP
     template<auto GetSpeakerVectorFunction, class LUTCodec, CVec3 Vec3Type, CLUT LUTType>
     JPL_INLINE uint32 LUTBuilder<GetSpeakerVectorFunction, LUTCodec, Vec3Type, LUTType>::FindReaplacementForDummy(const SpeakerTriangulation::Vec3i& tri) const
     {
-        // Simply increment index until we find one not already in the 'tri'
+        // Simply increment index until we find one not already in the 'tri',
+        // It doesn't matter which speaker it is, since its gain in this tri is going to be 0
         uint32 newI = 0;
         while (std::ranges::find(tri, newI) != std::ranges::end(tri))
             ++newI;
@@ -785,9 +815,9 @@ namespace JPL::VBAP
     }
 
     //==========================================================================
-    template<CLUT LUTType, class LUTCodec>
+    template<CLUT LUTType, class LUTCodec, CVec3 Vec3TypeImplicit>
     template<CVec3 Vec3Type>
-    inline void LUTQuery<LUTType, LUTCodec>::GainsFor(const Vec3Type& direction, VBAPCell& outSpeakerGains) const
+    inline void LUTQuery<LUTType, LUTCodec, Vec3TypeImplicit>::GainsFor(const Vec3Type& direction, VBAPCell& outSpeakerGains) const
     {
         GainPack<float>& outGains = outSpeakerGains.Gains;
         SpeakerTripletIdx& outSpeakers = outSpeakerGains.Speakers;
@@ -854,9 +884,120 @@ namespace JPL::VBAP
         }
     }
 
-    template<CLUT LUTType, class LUTCodec>
+    template<CLUT LUTType, class LUTCodec, CVec3 Vec3TypeImplicit>
+    inline void LUTQuery<LUTType, LUTCodec, Vec3TypeImplicit>::GainsFor(const simd& dirX, const simd& dirY, const simd& dirZ,
+                                                      std::array<SpeakerIdx, 3 * simd::size()>& outSpeakersIndices,
+                                                      std::array<float, 3 * simd::size()>& outSpeakerGains) const
+    {
+        // Convert directions to LUT indices
+        const simd_mask indexPack = LUTCodec::Encode(dirX, dirY, dirZ);
+        std::array<uint32, 4> indices;
+        indexPack.store(indices.data());
+        
+        // For the vectorized GainsFor we can only vectorize the encoding of the direction into LUT indices
+        // the retrieval of the gains from the LUT cannot be vectorized, since the location of gains
+        // for each simd lane differs.
+
+        if constexpr (std::same_as<typename LUTType::SpeakerIndexType, SpeakerTripletIdx>)
+        {
+            for (uint32 i = 0, iout = 0; i < indices.size(); ++i, iout += 3)
+            {
+                const uint32 index = indices[i];
+                std::memcpy(&outSpeakersIndices[iout], &LUT.Speakers[index], sizeof(SpeakerIdx) * 3);
+                ExtractGains(index, std::span<float, 3>(&outSpeakerGains[iout], 3));
+            }
+        }
+        else
+        {
+            if constexpr (bLUTHasGains)
+            {
+                // For the LUT that has gains precomputed, we just need to retrieve them
+                // and copy to the output with an offset
+
+                for (uint32 i = 0, iout = 0; i < indices.size(); ++i, iout += 3)
+                {
+                    // Extract speakers
+                    const uint32 index = indices[i];
+                    const TripletIdx tripletIdx = LUT.Speakers[index];
+                    std::memcpy(&outSpeakersIndices[iout], &LUT.Data[tripletIdx].Tri, sizeof(SpeakerIdx) * 3);
+
+                    // Extract gains
+                    std::array<float, 4> gains{ 0.0f, 0.0f, 0.0f, 0.0f };
+                    ExtractGains(index, std::span<float, 3>(gains.data(), 3));
+
+                    // If one of the speakedrs is dummy, we need to silence it
+                    const uint8 dummyIndex = LUT.Data[tripletIdx].DummyIndex;
+                    gains[dummyIndex] = 0.0f;
+
+                    // Copy valid speaker gains to the output
+                    std::memcpy(&outSpeakerGains[iout], gains.data(), sizeof(float) * 3);
+
+                    JPL_ASSERT(Algo::IsNormalizedL2(std::span<float>(&outSpeakerGains[iout], 3)));
+                }
+            }
+            else // For the LUT that doesn't hold gains, we need to process each direction
+            {
+                // Unpack the directions
+                std::array<Vec3TypeImplicit, 4> directions;
+                float xs[simd::size()]{}; dirX.store(xs);
+                float ys[simd::size()]{}; dirY.store(ys);
+                float zs[simd::size()]{}; dirZ.store(zs);
+                for (uint32 i = 0; i < simd::size(); ++i)
+                {
+                    Vec3TypeImplicit& direction = directions[i];
+                    SetX(direction, xs[i]); SetY(direction, ys[i]); SetZ(direction, zs[i]);
+                }
+
+                // Process each individual direction
+                for (uint32 i = 0, iout = 0; i < indices.size(); ++i, iout += 3)
+                {
+                    const uint32 index = indices[i];
+                    Vec3TypeImplicit& direction = directions[i];
+
+                    // Extract speakers
+                    const TripletIdx tripletIdx = LUT.Speakers[index];
+                    std::memcpy(&outSpeakersIndices[iout], &LUT.Data[tripletIdx].Tri, sizeof(SpeakerIdx) * 3);
+
+                    // Extract gains
+                    std::array<float, 4> gains{ 0.0f, 0.0f, 0.0f, 0.0f };
+                    ExtractGains(index, direction, std::span<float, 3>(gains.data(), 3));
+
+                    // If one of the speakedrs is dummy, we need to silence it
+                    const uint8 dummyIndex = LUT.Data[tripletIdx].DummyIndex;
+
+#if !JPL_NORMALIZE_GAINS_WITH_DUMMY
+                    // If the direction falls directly onto a dummy,
+                    // we just assign the gains to the other speakers
+                    // to ensure consistent output
+                    if (Math::IsNearlyEqual(gains[dummyIndex], 1.0f))
+                    {
+                        gains[0] = 1.0f;
+                        gains[1] = 1.0f;
+                        gains[2] = 1.0f;
+                    }
+                    // Now it's safe to silence the dummy
+                    gains[dummyIndex] = 0.0f;
+
+                    // If we just computed gains, we need to normalize
+                    // here after silencing the dummy.
+                    Algo::NormalizeL2(gains);
+
+                    //JPL_ASSERT(!Math::HasNans(Vec3Type(gains[0], gains[1], gains[2])));
+#else
+                    gains[dummyIndex] = 0.0f;
+#endif
+                    // Copy valid speaker gains to the output
+                    std::memcpy(&outSpeakerGains[iout], gains.data(), sizeof(float) * 3);
+
+                    JPL_ASSERT(Algo::IsNormalizedL2(std::span<float>(&outSpeakerGains[iout], 3)));
+                }
+            }
+        }
+    }
+
+    template<CLUT LUTType, class LUTCodec, CVec3 Vec3TypeImplicit>
     template<CVec3 Vec3Type>
-    JPL_INLINE void LUTQuery<LUTType, LUTCodec>::GainsFor(const Vec3Type& direction, std::span<float> outGains) const
+    JPL_INLINE void LUTQuery<LUTType, LUTCodec, Vec3TypeImplicit>::GainsFor(const Vec3Type& direction, std::span<float> outGains) const
     {
         VBAPCell cell;
         GainsFor(direction, cell);
@@ -866,8 +1007,8 @@ namespace JPL::VBAP
         outGains[cell.Speakers[2]] = cell.Gains[2];
     }
 
-    template<CLUT LUTType, class LUTCodec>
-    JPL_INLINE void LUTQuery<LUTType, LUTCodec>::ExtractGains(int index, std::span<float, 3> outGains) const requires (bLUTHasGains)
+    template<CLUT LUTType, class LUTCodec, CVec3 Vec3TypeImplicit>
+    JPL_INLINE void LUTQuery<LUTType, LUTCodec, Vec3TypeImplicit>::ExtractGains(int index, std::span<float, 3> outGains) const requires (bLUTHasGains)
     {
         if constexpr (std::same_as<typename LUTType::GainType, float>)
         {
@@ -883,9 +1024,9 @@ namespace JPL::VBAP
         }
     }
 
-    template<CLUT LUTType, class LUTCodec>
+    template<CLUT LUTType, class LUTCodec, CVec3 Vec3TypeImplicit>
     template<CVec3 Vec3Type>
-    JPL_INLINE void LUTQuery<LUTType, LUTCodec>::ExtractGains(int index, const Vec3Type& direction, std::span<float, 3> outGains) const requires (!bLUTHasGains)
+    JPL_INLINE void LUTQuery<LUTType, LUTCodec, Vec3TypeImplicit>::ExtractGains(int index, const Vec3Type& direction, std::span<float, 3> outGains) const requires (!bLUTHasGains)
     {
         // Get the triplet index from the LUT
         const TripletIdx triplet = LUT.Speakers[index];

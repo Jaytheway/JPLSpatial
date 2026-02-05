@@ -24,19 +24,30 @@
 
 #include "JPLSpatial/ChannelMap.h"
 
+#include "JPLSpatial/Containers/StaticArray.h"
+
+#include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/MinimalVec3.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
 #include "JPLSpatial/Math/Vec3Math.h"
+#include "JPLSpatial/Math/Vec3Buffer.h"
 #include "JPLSpatial/Math/MinimalQuat.h"
 #include "JPLSpatial/Math/MinimalBasis.h"
 #include "JPLSpatial/Math/Position.h"
+#include "JPLSpatial/Math/SIMD.h"
+#include "JPLSpatial/Math/SIMDMath.h"
+#include "JPLSpatial/Math/Vec3Pack.h"
 #include "JPLSpatial/Memory/Memory.h"
 
 #include "JPLSpatial/Algo/Algorithm.h"
 
 #include "JPLSpatial/Panning/VBAPEx.h"
+#include "JPLSpatial/Utilities/TypeUtilities.h"
 
 #include <array>
+#include <concepts>
+#include <cmath>
+#include <functional>
 #include <optional>
 #include <vector>
 #include <limits>
@@ -46,14 +57,28 @@
 #include <algorithm>
 #include <numeric>
 #include <memory>
+#include <type_traits>
 
 #define JPL_VALIDATE_VBAP_LUT 0
 
 namespace JPL
 {
+#define JPL_SCOPE_TIME(outFloat)
+#define JPL_SCOPE_TIME(outFloat) // TODO
+	// TODO: maybe find a better place for this function
+	JPL_INLINE float GetSpreadFromSourceSize(float sourceSize, float distance)
+	{
+		return distance <= 0.0f
+			? 1.0f
+			: std::atanf((sourceSize * 0.5f) / distance) * JPL_INV_HALF_PI;
+	}
+
 	/// Forward declaration
 	template<CVec3 Vec3>
 	struct VBAPBaseTraits;
+
+	template<class PannerType, class Traits>
+	class VBAPannerBase;
 
 	//======================================================================
 	using VBAPStandartTraits = VBAPBaseTraits<MinimalVec3>;
@@ -72,6 +97,10 @@ namespace JPL
 		/// (though currently ChannelMap interface doesn't support 64-bit masks
 		/// and is not very customizable, e.g. storing in an int mask, not array)
 		static constexpr auto MAX_CHANNELS = 32;
+
+		static constexpr auto MAX_SOURCE_CHANNELS = 8;
+
+		static constexpr auto MAX_CHANNEL_MIX_MAP_SIZE = MAX_SOURCE_CHANNELS * MAX_CHANNELS;
 
 		using ChannelGains = std::array<float, MAX_CHANNELS>;
 
@@ -202,9 +231,6 @@ namespace JPL
 		template<class T> using Array = std::pmr::vector<T>;
 		using ChannelGainsRef = typename Traits::ChannelGains&;
 
-		//======================================================================
-		template<class T> static constexpr bool CGetSpeakerGainsFunction = std::is_invocable_r_v<ChannelGainsRef, T, uint32>;
-
 		// TODO: maybe move these params outside of the template, otherwise we have different types for 2D and 3D traits
 		//======================================================================
 		/// Parameters to update VBAP data for a source
@@ -301,6 +327,10 @@ namespace JPL
 		/// @param outGains : must be of size equals to number of target channels of this panner
 		JPL_INLINE void GetSpeakerGains(const Vec3Type& direction, std::span<float> outGains) const;
 
+		/// Get speaker gains from LUT based on 'direction' vector. Vecrorized version.
+		/// @param outGains : must be of size equals to number of target channels of this panner
+		JPL_INLINE void GetSpeakerGains(const simd& dirX, const simd& dirY, const simd& dirZ, std::span<simd> outGains) const;
+
 
 		/// @returns true if LUT has been initialized and the panner can be used
 		[[nodiscard]] JPL_INLINE bool IsInitialized() const noexcept { return mChannelMap.IsValid() && IsLUTInitialized(); }
@@ -313,43 +343,31 @@ namespace JPL
 		/// Get the channel map the panner is initialized to.
 		[[nodiscard]] JPL_INLINE ChannelMap GetChannelMap() const noexcept { return mChannelMap; }
 
+		/// Get shortest aperture between two speakers (dot product for 3D, angle for 2D panner).
+		/// This is mainly useful for debuggint and verification.
+		[[nodiscard]] JPL_INLINE float GetShortestSpeakerAperture() const noexcept { return mShortestEdgeAperture; }
+
 		//======================================================================
 		/// This function should be called whenever pan data changes to update 
-		/// set gains based on PanUpdateData for each source channel retrieved by `getOutGains` callback.
+		/// set gains based on PanUpdateData for each source channel retrieved
+		/// by `getOutGains` callback.
 		/// SourceLayout must be initialized beforehand.
 		/// E.g. this would be called for each source that has unique channel layout or panning state
-		/// @param getOutGains :    A function to retrieve array of gains to fill for the provided
-		///                         source channel index, the gains written are accumulated and
-		///                         normalized gains of virtual sources associated to this channel group.
-#if defined(JPL_TEST) && JPL_TEST
-		template<class ChannelGroupGainsGetter, class OnChannelGeneratedCallback = std::identity>
+		/// @param outChannelMixMap :	outptut channel mixing map, where for each
+		///							source chanel there's a set of gain values
+		///							for each target (e.g. for Stereo->Stereo
+		///							[ sl_tl, sl_tr, sr_tl, sr_tr ])
+		template<class OnChannelGeneratedCallback = std::identity>
 		JPL_INLINE void ProcessVBAPData(const SourceLayoutType& sourceLayout,
 										const PanUpdateData& updateData,
-										ChannelGroupGainsGetter&& getOutGains,
-										OnChannelGeneratedCallback&& callback = {}) const
-			requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>;
-#else
-		template<class ChannelGroupGainsGetter>
-		JPL_INLINE void ProcessVBAPData(const SourceLayoutType& data,
-										const PanUpdateData& updateData,
-										ChannelGroupGainsGetter&& getOutGains) const
-			requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>;
-#endif
+										std::span<float> outChannelMixMap,
+										OnChannelGeneratedCallback&& onVSsGeneratedCb = {}) const;
 
-#if defined(JPL_TEST) && JPL_TEST
-		template<class ChannelGroupGainsGetter, class OnChannelGeneratedCallback = std::identity>
+		template<class OnChannelGeneratedCallback = std::identity>
 		JPL_INLINE void ProcessVBAPData(const SourceLayoutType& sourceLayout,
 										const PanUpdateDataWithOrientation& updateData,
-										ChannelGroupGainsGetter&& getOutGains,
-										OnChannelGeneratedCallback&& callback = {}) const
-			requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>;
-#else
-		template<class ChannelGroupGainsGetter>
-		JPL_INLINE void ProcessVBAPData(const SourceLayoutType& sourceLayout,
-										const PanUpdateDataWithOrientation& updateData,
-										ChannelGroupGainsGetter&& getOutGains) const
-			requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>;
-#endif
+										std::span<float> outChannelMixMap,
+										OnChannelGeneratedCallback&& onVSsGeneratedCb = {}) const;
 
 		//======================================================================
 		/// Get and accumulate speaker gains for all virtual soruces into @outGains
@@ -361,31 +379,25 @@ namespace JPL
 		static JPL_INLINE void NormalizeWeights(std::span<VirtualSource> virtualSources);
 
 	private:
-#if defined(JPL_TEST) && JPL_TEST
-		template<class ChannelGroupGainsGetter, class OnChannelGeneratedCallback>
+		template<class OnChannelGeneratedCallback = std::identity>
 		inline void ProcessVBAPDataImpl(const SourceLayoutType& sourceLayout,
 										const PanUpdateData& updateData,
 										const Quat<Vec3Type>& panRotation,
-										ChannelGroupGainsGetter&& getOutGains,
-										OnChannelGeneratedCallback&& callback) const
-			requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>;
-#else
-		template<class ChannelGroupGainsGetter>
-		inline void ProcessVBAPDataImpl(const SourceLayoutType& sourceLayout,
-										const PanUpdateData& updateData,
-										const Quat<Vec3Type>& panRotation,
-										ChannelGroupGainsGetter&& getOutGains) const
-			requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>;
-#endif
+										std::span<float> outChannelMixMap,
+										OnChannelGeneratedCallback&& onVSsGeneratedCb = {}) const;
 
 		/// Get and accumulate speaker gains for all virtual soruces into @outGains
 		template<bool bAccumulatePow>
 		inline void ProcessVirtualSourcesImpl(std::span<const VirtualSource> virtualSources,
 											  std::span<float> outGains) const;
 
-		static JPL_INLINE void RotateChannelCap(std::span<Vec3Type> virtualSources, const Basis<Vec3Type>& rotation);
-		static JPL_INLINE void SlerpChannelCap(std::span<Vec3Type> virtualSources, const Vec3Type& targetDirection, float t);
+		template<bool bAccumulatePow>
+		inline void ProcessVirtualSourcesImplSIMD(const Vec3SIMDBufferView& vsDirections,
+												  std::span<const simd> vsWeights,
+												  std::span<float> outGains) const;
 
+		static JPL_INLINE void RotateChannelCap(Vec3SIMDBufferView& virtualSources, const Basis<Vec3Type>& rotation);
+		static JPL_INLINE void SlerpChannelCap(Vec3SIMDBufferView& virtualSources, const Vec3Type& targetDirection, float t);
 	private:
 		pmr_unique_ptr<LUTType> mLUT;
 
@@ -423,6 +435,13 @@ namespace JPL
 	}
 
 	template<class PannerType, class Traits>
+	JPL_INLINE void VBAPannerBase<PannerType, Traits>::GetSpeakerGains(const simd& dirX, const simd& dirY, const simd& dirZ, std::span<simd> outGains) const
+	{
+		JPL_ASSERT(mLUT != nullptr);
+		LUTInterface::Query(*mLUT).GainsFor(dirX, dirY, dirZ, outGains);
+	}
+
+	template<class PannerType, class Traits>
 	inline bool VBAPannerBase<PannerType, Traits>::InitializeLUT(ChannelMap channelMap)
 	{
 		if (auto error = PanType::IsValidTargetChannelMap(channelMap))
@@ -452,14 +471,12 @@ namespace JPL
 		return bLUTBuildSuccessful;
 	}
 
-#if defined(JPL_TEST) && JPL_TEST
 	template<class PannerType, class Traits>
-	template<class ChannelGroupGainsGetter, class OnChannelGeneratedCallback>
+	template<class OnChannelGeneratedCallback>
 	JPL_INLINE void VBAPannerBase<PannerType, Traits>::ProcessVBAPData(const SourceLayoutType& sourceLayout,
 																	   const PanUpdateData& updateData,
-																	   ChannelGroupGainsGetter&& getOutGains,
+																	   std::span<float> outChannelMixMap,
 																	   OnChannelGeneratedCallback&& callback) const
-		requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>
 	{
 		JPL_ASSERT(sourceLayout.GetTargetChannelMap() == mChannelMap, "VBAP Panner can only work with VBAP source layout created for that panner.");
 
@@ -469,36 +486,15 @@ namespace JPL
 		// - Direction defines sound-field/ring forward vector
 		const auto qPan = Math::QuatLookAt(updateData.SourceDirection, cWorldUp);
 
-		ProcessVBAPDataImpl(sourceLayout, updateData, qPan, getOutGains, callback);
+		ProcessVBAPDataImpl(sourceLayout, updateData, qPan, outChannelMixMap, callback);
 	}
-#else
+
 	template<class PannerType, class Traits>
-	template<class ChannelGroupGainsGetter>
-	JPL_INLINE void VBAPannerBase<PannerType, Traits>::ProcessVBAPData(const SourceLayoutType& sourceLayout,
-																	   const PanUpdateData& updateData,
-																	   ChannelGroupGainsGetter&& getOutGains) const
-		requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>
-	{
-		JPL_ASSERT(sourceLayout.GetTargetChannelMap() == mChannelMap, "VBAP Panner can only work with VBAP source layout created for that panner.");
-
-		static const Vec3Type cWorldUp(0, 1, 0); // TODO: Listener UP
-
-		// For panning based only on emitter Direction
-		// - Direction defines sound-field/ring forward vector
-		const auto qPan = Math::QuatLookAt(updateData.SourceDirection, cWorldUp);
-
-		ProcessVBAPDataImpl(sourceLayout, updateData, qPan, getOutGains);
-	}
-#endif
-
-#if defined(JPL_TEST) && JPL_TEST
-	template<class PannerType, class Traits>
-	template<class ChannelGroupGainsGetter, class OnChannelGeneratedCallback>
+	template<class OnChannelGeneratedCallback>
 	JPL_INLINE void VBAPannerBase<PannerType, Traits>::ProcessVBAPData(const SourceLayoutType& sourceLayout,
 																	   const PanUpdateDataWithOrientation& updateData,
-																	   ChannelGroupGainsGetter&& getOutGains,
-																	   OnChannelGeneratedCallback&& callback) const
-		requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>
+																	   std::span<float> outChannelMixMap,
+																	   OnChannelGeneratedCallback&& onVSsGeneratedCb) const
 	{
 		JPL_ASSERT(sourceLayout.GetTargetChannelMap() == mChannelMap, "VBAP Panner can only work with VBAP source layout created for that panner.");
 		// For panning based on Direction + Orientation
@@ -506,46 +502,22 @@ namespace JPL
 		// - Direction defines the target of spread-based contraction
 		const auto qPan = Math::QuatFromUpAndForward(updateData.Orientation.Up, updateData.Orientation.Forward);
 
-		ProcessVBAPDataImpl(sourceLayout, updateData.Pan, qPan, getOutGains, callback);
+		ProcessVBAPDataImpl(sourceLayout, updateData.Pan, qPan, outChannelMixMap, onVSsGeneratedCb);
 	}
-#else
+
 	template<class PannerType, class Traits>
-	template<class ChannelGroupGainsGetter>
-	JPL_INLINE void VBAPannerBase<PannerType, Traits>::ProcessVBAPData(const SourceLayoutType& sourceLayout,
-																	   const PanUpdateDataWithOrientation& updateData,
-																	   ChannelGroupGainsGetter&& getOutGains) const
-		requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>
-	{
-		JPL_ASSERT(sourceLayout.GetTargetChannelMap() == mChannelMap, "VBAP Panner can only work with VBAP source layout created for that panner.");
-
-		// For panning based on Direction + Orientation
-		// - Orientation (emitter relative to listeners) defines sound-field/ring forward vector
-		// - Direction defines the target of spread-based contraction
-		const auto qPan = Math::QuatFromUpAndForward(updateData.Orientation.Up, updateData.Orientation.Forward);
-
-		ProcessVBAPDataImpl(sourceLayout, updateData.Pan, qPan, getOutGains);
-	}
-#endif
-
-#if defined(JPL_TEST) && JPL_TEST
-	template<class PannerType, class Traits>
-	template<class ChannelGroupGainsGetter, class OnChannelGeneratedCallback>
+	template<class OnChannelGeneratedCallback>
 	inline void VBAPannerBase<PannerType, Traits>::ProcessVBAPDataImpl(const SourceLayoutType& sourceLayout,
 																	   const PanUpdateData& updateData,
 																	   const Quat<Vec3Type>& panRotation,
-																	   ChannelGroupGainsGetter&& getOutGains,
-																	   OnChannelGeneratedCallback&& callback) const
-		requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>
-#else
-	template<class PannerType, class Traits>
-	template<class ChannelGroupGainsGetter>
-	inline void VBAPannerBase<PannerType, Traits>::ProcessVBAPDataImpl(const SourceLayoutType& sourceLayout,
-																	   const PanUpdateData& updateData,
-																	   const Quat<Vec3Type>& panRotation,
-																	   ChannelGroupGainsGetter&& getOutGains) const
-		requires CGetSpeakerGainsFunction<ChannelGroupGainsGetter>
-#endif
+																	   std::span<float> outChannelMixMap,
+																	   [[maybe_unused]] OnChannelGeneratedCallback&& onVSsGeneratedCb) const
 	{
+		JPL_SCOPE_TIME(Time_ProcessVBAPDataImpl);
+
+		JPL_ASSERT(outChannelMixMap.size() == (sourceLayout.ChannelGroups.size() * GetNumChannels()),
+				   "outChannelMixMap size must be equal to [num source channels] * [num target channels]");
+
 		// The gains are normalized for the number of input channels to ensure stable power
 		/*
 			- For each output channel, the square of the gains of all contributing input channels are summed together.
@@ -579,12 +551,8 @@ namespace JPL
 		namespace stdr = std::ranges;
 		namespace stdv = std::views;
 
-		// Clear all channel group gains
-		stdr::for_each(sourceLayout.ChannelGroups, [&getOutGains](const ChannelGroup& channelGroup)
-		{
-			ChannelGainsRef channelGains = getOutGains(channelGroup.Channel);
-			stdr::fill(channelGains, 0.0f);
-		});
+		// Clear the output channel mix map
+		stdr::fill(outChannelMixMap, 0.0f);
 
 		// General idea is to generate new channel cap relative to nominal
 		// pan direction then rotate it by channel offset + target pan
@@ -592,92 +560,128 @@ namespace JPL
 		JPL_ASSERT(updateData.Focus >= 0.0f && updateData.Focus <= 1.0f);
 		JPL_ASSERT(updateData.Spread >= 0.0f && updateData.Spread <= 1.0f);
 
-		// Buffer to mix in source channels and calculate the normalization coefficients
-		float mixBufferData[Traits::MAX_CHANNELS]{};
-		auto mixBuffer = mixBufferData | stdv::take(mNumChannels);
+		static constexpr auto vsBufferCapacity = static_cast<uint32>(SourceLayoutType::GetMaxNumVirtualSources());
+		static constexpr uint32 vsSIMDCapacity = GetNumSIMDOps(vsBufferCapacity);
+		const auto vsBufferSize = static_cast<uint32>(sourceLayout.GetNumVirtualSources());
+		const uint32 vsSIMDSize = GetNumSIMDOps(vsBufferSize);
 
-		// Large enough static buffer
-		Vec3Type vsVecBuffer[(SourceLayoutType::GetMaxNumVirtualSources()) * 2];
+		// Large enough static buffer for directions
+		Vec3SIMDBuffer<vsSIMDCapacity> vsDirBuffer;
+		auto vsDirCanonBuffer = vsDirBuffer.MakeView(vsSIMDSize);
 
-		// Designate buffer space
-		const size_t vsBufferSize = sourceLayout.GetNumVirtualSources();
-		auto vsDirCanonBuffer = std::span(vsVecBuffer, vsBufferSize);
-		auto vsDirScratchBuffer = std::span(&vsVecBuffer[vsBufferSize], vsBufferSize);
-
-		// Initialize scratch buffer for virtual sources with correct weight,
-		// wich is constant for panning SourceLayoutType
-		std::array<VirtualSource, SourceLayoutType::GetMaxNumVirtualSources()> vsBuffer;
-		for (VirtualSource& vs : vsBuffer)
-			vs.Weight = sourceLayout.GetDefaultVSWeight();
-
-		auto channelGroupVSs = std::span(vsBuffer.begin(), vsBufferSize);
-
-		// Generate canon channel cap of virtual sources for the requrested focus
-		sourceLayout.GenerateSpreadCap(vsDirCanonBuffer, updateData.Focus);
-
-		const auto& qPan = panRotation;
-
-		for (const auto& channelGroup : sourceLayout.ChannelGroups)
 		{
-#if JPL_SLERP_SPREAD
+			JPL_SCOPE_TIME(Time_GenerateSpreadCap); // 40-34 ns
 
-			// 1. Copy canon cap to scratch buffer for channel-specific modifications
-			std::ranges::copy(vsDirCanonBuffer, vsDirScratchBuffer.begin());
+			// Generate canon channel cap of virtual sources for the requrested focus
 
-			const Quat<Vec3Type>& qYaw = channelGroup.Rotation;
-			const Basis totalRotation = (qPan * qYaw).ToBasis(); // yaw-after-pan (local up axis)
-			//const Basis totalRotation = (qYaw * qPan).ToBasis(); // yaw-after-pan (local up axis)
+			// Note: clamp focus slightly below 1, to retain some information in the two axis
+			// we need for 3D -> 2D conversion when the source is pointing directly Up
+			const float focus = updateData.Focus == 1.0f ? 0.9999f : updateData.Focus;
+			sourceLayout.GenerateSpreadCap(vsDirCanonBuffer, focus);
+		}
 
-			// 2. Rotate channel cap towards pan rotation + channel offset
-			RotateChannelCap(vsDirScratchBuffer, totalRotation);
+		auto rotateChannelCap = [&panRotation](Vec3SIMDBufferView& dirs, const Quat<Vec3Type>& channelRotation)
+		{
+			// pan * yaw
+			const Basis totalRotation = (panRotation * channelRotation).ToBasis(); // yaw-after-pan (local up axis)
+			//const Basis totalRotation = (qYaw * panRotation).ToBasis(); // yaw-after-pan (local up axis)
+
+			RotateChannelCap(dirs, totalRotation);
+		};
+
+		uint32 currentVsDirOffset = 0;
+
+		{
+			JPL_SCOPE_TIME(Time_RotateVirtualSources); // 32-76 ns
+
+			// Start from second channel to avoid copying cannon buffer if we have only one channel
+			for (uint32 channelIndex = 1; channelIndex < sourceLayout.ChannelGroups.size(); ++channelIndex)
+			{
+				const auto& channelGroup = sourceLayout.ChannelGroups[channelIndex];
+				JPL_ASSERT(channelGroup.Channel == channelIndex, "Channel groups must be sorted by channel index.");
+
+				currentVsDirOffset += vsSIMDSize;
+				auto vsDirScratchBuffer = vsDirBuffer.MakeView(currentVsDirOffset, vsSIMDSize);
+
+				// 1. Copy canon cap to scratch buffer for channel-specific modifications
+				vsDirCanonBuffer.CopyTo(vsDirScratchBuffer);
+
+				// 2. Rotate channel cap towards pan rotation + channel offset
+				rotateChannelCap(vsDirScratchBuffer, channelGroup.Rotation);
+			}
+
+			// 2. The first source channel can use the initial channel cap generated,
+			// after it has been reused by all other channels
+			{
+				const auto& channelGroup = sourceLayout.ChannelGroups[0];
+				JPL_ASSERT(channelGroup.Channel == 0, "Channel groups must be sorted by channel index.");
+
+				rotateChannelCap(vsDirCanonBuffer, channelGroup.Rotation);
+			}
+		}
+
+		const uint32 numVsUsed = currentVsDirOffset + vsSIMDSize;
+		{
+			JPL_SCOPE_TIME(Time_SlerpVirtualSources); // 192-252 ns
+
+			auto allUsedVss = vsDirBuffer.MakeView(numVsUsed);
 
 			// 3. Move virtual sources towards pan direction based on spread
 			// (this is most expansive operation, requiring slerping each vs individually)
-			SlerpChannelCap(vsDirScratchBuffer, updateData.SourceDirection, 1.0f - updateData.Spread);
 
-#else
-			const Quat<Vec3Type> qYaw = Math::Slerp(channelGroup.Rotation, Quat<Vec3Type>::Identity(), (1.0f - spread));
-			const Basis<Vec3Type> totalRotation = (qPan * qYaw).ToBasis();
+			// Note: clamp spread slightly above 0, to retain some information in the two axis
+			// we need for 3D -> 2D conversion when the source is pointing directly Up
+			const float spread = updateData.Spread == 0.0f ? 0.0001f : updateData.Spread;
 
-			const float capSpread = GetNominalChannelCapSpread() * updateData.Spread * (1.0f - updateData.Focus);
-			GenerateSpreadCap(channelVSs, capSpread, numRings, numSamples);
+			SlerpChannelCap(allUsedVss, updateData.SourceDirection, 1.0f - spread);
 
-			RotateChannelCap(channelVSs, totalRotation);
-#endif
-
-#if defined(JPL_TEST) && JPL_TEST
-			// mainly for debugging and testing
+			// Mainly for debugging and testing
 			if constexpr (!std::same_as<std::remove_cvref_t<OnChannelGeneratedCallback>, std::identity>)
 			{
-				(void)callback(vsDirScratchBuffer, channelGroup.Channel);
+				StaticArray<Vec3Type, vsBufferCapacity> vsDirections(vsBufferSize);
+
+				for (uint32 vsDirOffset = 0, channelIndex = 0; vsDirOffset < numVsUsed; vsDirOffset += vsSIMDSize, ++channelIndex)
+				{
+					auto vsChannelDirs = vsDirBuffer.MakeView(vsDirOffset, vsSIMDSize);
+					vsChannelDirs.Unpack(std::span(vsDirections));
+
+					(void)onVSsGeneratedCb(vsDirections, channelIndex);
+				}
 			}
-#endif
-			// Assign new directions for our weighted virtual sources
-			for (uint32 i = 0; i < vsDirScratchBuffer.size(); ++i)
-				channelGroupVSs[i].Direction = vsDirScratchBuffer[i];
+		}
 
-			ChannelGainsRef outGainsRef = getOutGains(channelGroup.Channel);
-			JPL_ASSERT(outGainsRef.size() >= mNumChannels);
+		// Buffer to mix in source channels and calculate the normalization coefficients
+		StaticArray<float, Traits::MAX_CHANNELS> mixBuffer(mNumChannels, 0.0f);
 
-			auto gains = outGainsRef | stdv::take(mNumChannels);
+		// Initialize buffer with virtual source weights,
+		// wich is constant for panning SourceLayoutType
+		{
+			JPL_SCOPE_TIME(Time_ProcessVirtualSourcesImpl); // 148-230 ns
 
-			// Clear channel group gains
-			stdr::fill(gains, 0.0f);
+			StaticArray<simd, vsSIMDCapacity> weights(vsSIMDSize, simd(sourceLayout.GetDefaultVSWeight()));
 
-			// Compute new gains
-			//ProcessVirtualSources(channelGroupVSs, gains);
-			static constexpr bool bAccumulatePow = true;
-			ProcessVirtualSourcesImpl<bAccumulatePow>(channelGroupVSs, gains);
+			// Compute new gains for each source channel
+			for (uint32 vsDirOffset = 0, mixMapOffset = 0; vsDirOffset < numVsUsed; vsDirOffset += vsSIMDSize, mixMapOffset += mNumChannels)
+			{
+				auto vsChannelDirs = vsDirBuffer.MakeView(vsDirOffset, vsSIMDSize);
+				auto gains = outChannelMixMap.subspan(mixMapOffset, mNumChannels);
 
+				static constexpr bool bAccumulatePow = true;
+				ProcessVirtualSourcesImplSIMD<bAccumulatePow>(vsChannelDirs, weights, gains);
 
-			// Accumulate output channel gain squares
-			stdr::transform(gains, mixBuffer, mixBuffer.begin(), std::plus<float>{});
+				// Accumulate output channel gain squares
+				for (uint32 i = 0; i < mixBuffer.size(); ++i)
+				{
+					mixBuffer[i] += gains[i];
+				}
+			}
 		}
 
 		// Normalize for the number of input channels
 		{
-			float normCoeffsData[Traits::MAX_CHANNELS]{};
-			auto normCoeffs = normCoeffsData | stdv::take(mNumChannels);
+			JPL_SCOPE_TIME(Time_NormalizeGains); // 32-45 ns
+
+			StaticArray<float, Traits::MAX_CHANNELS> normCoeffs(mNumChannels);
 
 			const auto numInChannels = static_cast<float>(sourceLayout.ChannelGroups.size());
 
@@ -689,12 +693,13 @@ namespace JPL
 			}
 
 			// Pre-normalize source out channel gains
-			for (const auto& channelGroup : sourceLayout.ChannelGroups)
+			for (uint32 channelOffset = 0; channelOffset < outChannelMixMap.size(); channelOffset += mNumChannels)
 			{
-				auto gains = getOutGains(channelGroup.Channel) | stdv::take(mNumChannels);
-
+				auto gains = outChannelMixMap.subspan(channelOffset, mNumChannels);
 				for (uint32 i = 0; i < gains.size(); ++i)
+				{
 					gains[i] *= normCoeffs[i];
+				}
 			}
 
 			// ..now the input channels can be mixed into the output channels with simple add
@@ -770,8 +775,7 @@ namespace JPL
 			std::ranges::for_each(virtualSources, [&](const VirtualSource& vs)
 			{
 				// Retrieve gains from the LUT
-				// TODO: this -Z is weird
-				GetSpeakerGains(Vec3Type(GetX(vs.Direction), GetY(vs.Direction), -GetZ(vs.Direction)), vsSpeakerGains);
+				GetSpeakerGains(vs.Direction, vsSpeakerGains);
 
 				// Accumulate weighted linear gains (to be normalized later)
 				for (uint32 s = 0; s < outGains.size(); ++s)
@@ -786,6 +790,78 @@ namespace JPL
 					}
 				}
 			});
+		}
+	}
+
+	template<class PannerType, class Traits>
+	template<bool bAccumulatePow>
+	inline void VBAPannerBase<PannerType, Traits>::ProcessVirtualSourcesImplSIMD(const Vec3SIMDBufferView& vsDirections,
+																				 std::span<const simd> vsWeights,
+																				 std::span<float> outGains) const
+	{
+		JPL_ASSERT(vsDirections.size() == vsWeights.size());
+		JPL_ASSERT(outGains.size() <= GetNumChannels());
+
+		using QueryType = typename LUTInterface::QueryType;
+
+		if constexpr (requires{ typename QueryType::VBAPCell; }) // 3D panning (with height channels)
+		{
+			for (uint32 i = 0; i < vsDirections.size(); ++i)
+			{
+				// Retrieve gains from the LUT
+				std::array<uint8, simd::size() * 3> speakers;
+				std::array<float, simd::size() * 3> gains;
+
+				LUTInterface::Query(*mLUT).GainsFor(*vsDirections.X, *vsDirections.Y, *vsDirections.Z, speakers, gains);
+
+				const simd& vsWeight = vsWeights[i];
+
+				for (uint32 i = 0; i < gains.size(); i += simd::size())
+				{
+					float* gp = &gains[i];
+					simd gs(gp);
+
+					if constexpr (bAccumulatePow)
+					{
+						// Accumulate linear gains
+						(vsWeight * gs * gs).store(gp);
+					}
+					else
+					{
+						// Accumulate weighted linear gains (to be normalized later)
+						(vsWeight * gs).store(gp);
+					}
+				}
+
+				for (uint32 i = 0; i < gains.size(); ++i)
+				{
+					outGains[speakers[i]] += gains[i];
+				}
+			}
+		}
+		else // 2D panning (without height channels)
+		{
+			StaticArray<simd, Traits::MAX_CHANNELS> vsSpeakerGains(outGains.size());
+
+			for (uint32 i = 0; i < vsDirections.size(); ++i)
+			{
+				GetSpeakerGains(*vsDirections.X, *vsDirections.Y, *vsDirections.Z, vsSpeakerGains);
+
+				const simd& vsWeight = vsWeights[i];
+
+				// Accumulate weighted linear gains (to be normalized later)
+				for (uint32 s = 0; s < outGains.size(); ++s)
+				{
+					if constexpr (bAccumulatePow)
+					{
+						outGains[s] += (vsWeight * vsSpeakerGains[s] * vsSpeakerGains[s]).reduce();
+					}
+					else
+					{
+						outGains[s] += (vsWeight * vsSpeakerGains[s]).reduce();
+					}
+				}
+			}
 		}
 	}
 
@@ -806,22 +882,43 @@ namespace JPL
 	}
 
 	template<class PannerType, class Traits>
-	JPL_INLINE void VBAPannerBase<PannerType, Traits>::RotateChannelCap(std::span<Vec3Type> virtualSources, const Basis<Vec3Type>& rotation)
+	JPL_INLINE void VBAPannerBase<PannerType, Traits>::RotateChannelCap(Vec3SIMDBufferView& virtualSources, const Basis<Vec3Type>& rotation)
 	{
-		for (Vec3Type& vs : virtualSources)
-			vs = rotation.Transform(vs);
+		for (uint32 i = 0; i < virtualSources.size(); ++i)
+		{
+			rotation.Transform(virtualSources.X[i], virtualSources.Y[i], virtualSources.Z[i]);
+		}
 	}
 
 	template<class PannerType, class Traits>
-	JPL_INLINE void VBAPannerBase<PannerType, Traits>::SlerpChannelCap(std::span<Vec3Type> virtualSources, const Vec3Type& targetDirection, float t)
+	JPL_INLINE void VBAPannerBase<PannerType, Traits>::SlerpChannelCap(Vec3SIMDBufferView& virtualSources, const Vec3Type& targetDirection, float t)
 	{
-		for (Vec3Type& vs : virtualSources)
-			vs = Math::Slerp(vs, targetDirection, t);
+		const Vec3Pack target(targetDirection);
+
+		for (uint32 i = 0; i < virtualSources.size(); ++i)
+		{
+			// This copy doesn't mater for performance,
+			// if we use something like a reference wrapper
+			// the resulting performance is no different
+			Vec3Pack inOutVs(virtualSources.X[i], virtualSources.Y[i], virtualSources.Z[i]);
+			Math::Slerp(inOutVs, target, t);
+			virtualSources.X[i] = inOutVs.X;
+			virtualSources.Y[i] = inOutVs.Y;
+			virtualSources.Z[i] = inOutVs.Z;
+		}
 	}
 
 	template<class PannerType, class Traits>
 	inline bool VBAPannerBase<PannerType, Traits>::VBAPLayoutBase::InitializeBase(ChannelMap channelMap, ChannelMap targetMap, uint32 numVirtualSourcesPerChannel)
 	{
+#if 0 // !defined(JPL_TEST)
+		if (channelMap.HasLFE())
+		{
+			JPL_INFO_TAG("VBAP Panner", "Requested source channel map with LFE, LFE is going to be skipped in the resulting channel mix map "
+										"(e.g. 5.1 source channel set going to have 5 channels, not 6).");
+		}
+#endif
+
 		mTargetChannelMap = targetMap;
 
 		// Cache normalization factors for later
@@ -870,7 +967,13 @@ namespace JPL
 			*/
 		}
 
+		// Now that we have assigned the angels, we need to sort
+		// by the usual order of the channels in an audio block to make our lives easier later
+		std::ranges::sort(ChannelGroups, [](const ChannelGroup& lhs, const ChannelGroup& rhs) { return lhs.Channel < rhs.Channel; });
+
 		return true;
 	}
 
 } // namespace JPL
+
+#undef JPL_SCOPE_TIME

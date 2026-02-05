@@ -23,8 +23,10 @@
 #include "JPLSpatial/ErrorReporting.h"
 #include "JPLSpatial/ChannelMap.h"
 #include "JPLSpatial/Memory/Memory.h"
+#include "JPLSpatial/Panning/ChannelConversionMaps.h"
 
 #include <array>
+#include <bit>
 #include <vector>
 #include <utility>
 
@@ -74,7 +76,7 @@ namespace JPL
     };
 
     // Paramerers have to be valid indices of cChannelPlaneRatios
-    static JPL_INLINE float CalculateChannelPositionRectangularWeight(uint32 channelPositionA, uint32 channelPositionB)
+    [[nodiscard]] JPL_INLINE constexpr float CalculateChannelPositionRectangularWeight(uint32 channelPositionA, uint32 channelPositionB)
     {
         const float contribution =
             cChannelPlaneRatios[channelPositionA][0] * cChannelPlaneRatios[channelPositionB][0] +
@@ -86,6 +88,12 @@ namespace JPL
 
         return contribution;
     }
+
+    [[nodiscard]] JPL_INLINE constexpr int ToChannelPos(EChannel channel) noexcept
+    {
+        return std::bit_width(static_cast<uint32>(channel) - 1);
+    };
+
 
     /// Utility helper to access 2D array kind of weights
     class ChannelConversionWeights
@@ -158,8 +166,6 @@ namespace JPL
             return channel != EChannel::LFE && channel != EChannel::FrontCenter && channel != EChannel::Invalid;
         };
 
-        static auto toChannelPos = [](EChannel channel) { return std::bit_width(static_cast<uint32>(channel) - 1); };
-
         // We need to make sure all channels that are present in both channel maps have a 1:1 mapping.
         channelMapIn.ForEachChannel([channelMapOut, &outWeights](EChannel channelIn, uint32 iChannelIn)
         {
@@ -184,7 +190,7 @@ namespace JPL
                 if (!isSpatialChannel(channelOut))
                     return;
 
-                const float weight = CalculateChannelPositionRectangularWeight(toChannelPos(channelIn), toChannelPos(channelOut));
+                const float weight = CalculateChannelPositionRectangularWeight(ToChannelPos(channelIn), ToChannelPos(channelOut));
                 //const uint32 offset = iChannelOut * numChannelsIn + iChannelIn;
 
                 if (outWeights[iChannelOut][iChannelIn] == 0.0f)
@@ -210,7 +216,7 @@ namespace JPL
                 if (!isSpatialChannel(channelIn))
                     return;
 
-                const float weight = CalculateChannelPositionRectangularWeight(toChannelPos(channelOut), toChannelPos(channelIn));
+                const float weight = CalculateChannelPositionRectangularWeight(ToChannelPos(channelOut), ToChannelPos(channelIn));
                 //const uint32 offset = iChannelOut * numChannelsIn + iChannelIn;
 
                 if (outWeights[iChannelOut][iChannelIn] == 0.0f)

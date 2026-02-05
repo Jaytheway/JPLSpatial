@@ -28,12 +28,14 @@
 #include "JPLSpatial/Math/MinimalVec2.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
 #include "JPLSpatial/Math/MinimalMat.h"
+#include "JPLSpatial/Math/SIMD.h"
 #include "JPLSpatial/Memory/Memory.h"
 #include "JPLSpatial/Algo/Algorithm.h"
 #include "JPLSpatial/Math/DirectionEncoding.h"
 
 #include "JPLSpatial/Panning/VBAPEx.h"
 
+#include <cmath>
 #include <limits>
 #include <span>
 #include <type_traits>
@@ -52,17 +54,54 @@ namespace JPL::VBAP
     /// Look-up table containing channel gains for each direction
     class LUT2D
     {
-        //======================================================================
-        /// Consts and defaults
-        static constexpr int sCorrectionLUTSize = 1024;
-        static constexpr int sCorrectionLUTMask = sCorrectionLUTSize - 1;
-
-        static constexpr uint16 sDeafultLUTResolution = 512;
 
     public:
+        //==================================================================
+        /* Note on resolution:
+            (values in degrees)
+            
+            at 256:
+            - LUT step mean width: 1.40625
+            - step variance: 0.288304
+            - step min: 0.909371
+            - step max: 1.78992
+            - step max-min: 0.880548
+
+            at 512:
+            - LUT step mean width: 0.703125
+            - step variance: 0.144059
+            - step min: 0.45112
+            - step max: 0.895192
+            - step max-min: 0.444072
+            
+            at 1024:
+            - LUT step mean width: 0.351562
+            - step variance: 0.072
+            - step min: 0.224686 
+            - step max: 0.447623 
+            - step max-min: 0.222937
+            
+            at 2048:
+            - LUT step mean width: 0.175781
+            - step variance: 0.0359921
+            - step min: 0.112124 
+            - step max: 0.223812 
+            - step max-min: 0.111687
+        */
+        static constexpr struct LUTStats // These values were pre-computed in tests
+        {
+            static constexpr uint16 Resolution = 1024;
+            static constexpr float StepWidth = 0.351562f;
+            static constexpr float StepVariance = 0.072f;
+            static constexpr float StepMin = 0.224686f;
+            static constexpr float StepMax = 0.447623f;
+            static constexpr float StepMinMaxGap = StepMax - StepMin;
+        } cLUTStats;
+
         template<class T>
         using Array = std::pmr::vector<T>;
 
+        //==================================================================
         LUT2D() = default;
 
         [[nodiscard]] JPL_INLINE bool IsInitialized() const noexcept { return !mData.empty(); }
@@ -107,9 +146,14 @@ namespace JPL::VBAP
         /// Get preprocessed speaker gains from LUT based on direction vector
         JPL_INLINE void GetSpeakerGains(const Vec2& direction, std::span<float> outGains) const;
 
+        /// Get preprocessed speaker gains from LUT based on direction vector
+        JPL_INLINE void GetSpeakerGains(const simd& dirX, const simd& dirY, std::span<simd> outGains) const;
+
         /// Get LUT position from direction vector
         [[nodiscard]] JPL_INLINE int CartesianToLUTPosition(float x, float y) const;
 
+        /// Get LUT position from direction vector
+        [[nodiscard]] JPL_INLINE simd_mask CartesianToLUTPosition(const simd& x, const simd& y) const;
 
         /// Build a table of size M_corr that maps
         /// diamond-parameter bins to 'uniform-angle' indices in [0, N_uniform).
@@ -126,7 +170,6 @@ namespace JPL::VBAP
         template<auto GetSpeakerAngleFunction>
         friend class LUTBuilder2D;
         Array<float> mData{ GetDefaultMemoryResource() };
-        Array<uint32> mDiamondCorrectionLUT{ GetDefaultMemoryResource() }; // Small LUT to correct for non-uniform diamond direction encoding
 
         /// Total number of discreet values for 360-degrees field.
         /// The actual size of the LUT data is mLUTResolution * number of output channels.
@@ -136,7 +179,7 @@ namespace JPL::VBAP
         uint8 mNumTargetChannels = 0;
     };
 
-    //==========================================================================
+    //=======================================================================
     /// Interface to query LUT gains for a direction
     class LUTQuery2D
     {
@@ -149,9 +192,26 @@ namespace JPL::VBAP
         template<CVec3 Vec3Type>
         JPL_INLINE void GainsFor(const Vec3Type& direction, std::span<float> outGains) const
         {
+            // Normalize Vec2 we query.
+            //! Note: this is needed unless we use atan2 path for scalar query.
+            Vec3Type dir(direction);
+            SetY(dir, 0.0f);
+            Normalize(dir);
+
             LUT.GetSpeakerGains({
-                static_cast<float>(GetX(direction)),
-                static_cast<float>(GetZ(direction)) },
+                static_cast<float>(GetX(dir)),
+                static_cast<float>(GetZ(dir)) },
+                outGains);
+        }
+
+        /// Function to query LUT gains for a direction.
+        /// @param direction : has to be normalized unit vector
+        /// @param outGains : must be of size at least number of target speakers the LUT was built for
+        JPL_INLINE void GainsFor(const simd& dirX, const simd& dirY, const simd& dirZ, std::span<simd> outGains) const
+        {
+            LUT.GetSpeakerGains(
+                dirX,
+                dirZ,
                 outGains);
         }
 
@@ -267,8 +327,10 @@ namespace JPL::VBAP
     {
         JPL_ASSERT(IsInitialized());
 
-        const int pos = static_cast<int>((angleNormalised * JPL_INV_TWO_PI) * mLUTResolution + 0.5f);
-        return pos & mLUTResolutionMask;
+        return static_cast<int>(
+            ToDiamond({ std::sinf(angleNormalised), -std::cosf(angleNormalised) })
+            * mLUTResolution + 0.5f
+            ) & mLUTResolutionMask;
     }
 
     JPL_INLINE int LUT2D::AngleToLUTPosition(float angleInRadians) const
@@ -281,13 +343,13 @@ namespace JPL::VBAP
 
     JPL_INLINE int LUT2D::CartesianToLUTPosition(float x, float y) const
     {
-#if 1
+#if 1 // The LUT built with uniform steps of diamond encoding
+        const float diamond = ToDiamond(Vec2(x, y));
+        return static_cast<int>(Math::FMA(static_cast<float>(mLUTResolution), diamond, 0.5f)) & mLUTResolutionMask;
+#elif 0
         JPL_ASSERT(!mDiamondCorrectionLUT.empty());
 
-        // TODO: consider fast atan2 implementation
-
         // Diamond to uniform index
-
         const float diamond = ToDiamond(Vec2(x, y));
         const auto angleT = static_cast<int>(diamond * sCorrectionLUTSize + 0.5f) & sCorrectionLUTMask;
 
@@ -295,7 +357,6 @@ namespace JPL::VBAP
         return mDiamondCorrectionLUT[angleT];
 
 #if 0   // If correction LUT is just uniforming the angles, not directly to target indices
-
         // normalized angle in [0,1)
         const float uniformAngleT = mDiamondCorrectionLUT[angleT];
 
@@ -308,6 +369,17 @@ namespace JPL::VBAP
         const float angle = std::atan2(x, z);
         return AngleToLUTPosition(angle);
 #endif
+    }
+
+    JPL_INLINE simd_mask LUT2D::CartesianToLUTPosition(const simd& x, const simd& y) const
+    {
+        //! For diamond encoding we need to normalize Vec2(x, y) direction
+        const simd invLen = Math:: InvSqrtFast(x * x + y * y);
+        const simd xN = x * invLen;
+        const simd yN = y * invLen;
+
+        const simd diamond = ToDiamond(xN, yN);
+        return FMA(diamond, simd(mLUTResolution), 0.5f).to_mask() & mLUTResolutionMask;
     }
 
     inline void LUT2D::Resize(uint16 resolution, uint32 numTargetChannels)
@@ -325,14 +397,15 @@ namespace JPL::VBAP
         mLUTResolutionMask = mLUTResolution - 1;
         mInvLUTResolution = 1.0f / mLUTResolution;
         mNumTargetChannels = static_cast<uint8>(numTargetChannels);
-
-        BuildDiamondToUniformIndexLUT(mDiamondCorrectionLUT, mLUTResolution, sCorrectionLUTSize);
     }
 
     JPL_INLINE auto LUT2D::LUTPositionToAngle(int pos) const -> float
     {
-        JPL_ASSERT(IsInitialized());
-        return (static_cast<float>(pos) * static_cast<float>(mInvLUTResolution)) * JPL_TWO_PI;
+        const Vec2 direction = FromDiamond((static_cast<float>(pos) * static_cast<float>(mInvLUTResolution)));
+        float angle = std::atan2f(direction.Y, direction.X);
+        if (angle < 0.0f)
+            angle += JPL_TWO_PI;
+        return angle;
     }
 
     JPL_INLINE void LUT2D::GetSpeakerGains(int lutPosition, std::span<float> outGains) const
@@ -346,6 +419,42 @@ namespace JPL::VBAP
     JPL_INLINE void LUT2D::GetSpeakerGains(const Vec2& direction, std::span<float> outGains) const
     {
         GetSpeakerGains(CartesianToLUTPosition(direction.X, direction.Y), outGains);
+    }
+
+    JPL_INLINE void LUT2D::GetSpeakerGains(const simd& dirX, const simd& dirY, std::span<simd> outGains) const
+    {
+        // For each speaker we compute 4 directions.
+        // We can vectorize the encoding of the direction into LUT index,
+        // however we have to retrieve the channel gains individually per direction index,
+        // since the location for each simd lane in LUT differs.
+
+        uint32 lutPositions[4];
+        (CartesianToLUTPosition(dirX, dirY) * mNumTargetChannels).store(lutPositions);
+
+        static constexpr std::size_t bufferSize = 32 * simd::size();
+        JPL_ASSERT(bufferSize >= outGains.size() * simd::size());
+
+        float buffer[bufferSize];
+        const uint32 offsets[]{
+            0,
+            mNumTargetChannels,
+            static_cast<uint32>(mNumTargetChannels) << 1,
+            (static_cast<uint32>(mNumTargetChannels) << 1) + mNumTargetChannels
+        };
+
+        // Retrieve gains from the LUT and write contiguously
+        // d1[ch1, ch2], dr2[ch1, ch2]...
+        for (uint32 i = 0, dest = 0; i < simd_mask::size(); ++i, dest += mNumTargetChannels)
+        {
+            std::memcpy(&buffer[dest], &mData[lutPositions[i]], sizeof(float) * mNumTargetChannels);
+        }
+
+        // Copy gains from the buffer strided into out simd lanes
+        for (uint32 si = 0; si < outGains.size(); ++si)
+        {
+            // dr1[ch1], dr2[ch1], dr3[ch1], dr4[ch1]
+            outGains[si] = simd(buffer[si], buffer[si + offsets[1]], buffer[si + offsets[2]], buffer[si + offsets[3]]);
+        }
     }
 
     inline void LUT2D::BuildDiamondToUniformIndexLUT(Array<uint32>& outCorrectionLut, uint32 N_uniform, uint32 M_corr /*= 1024*/)
@@ -405,6 +514,7 @@ namespace JPL::VBAP
         }
     }
 
+
 #if 0
     JPL_INLINE float CircularLerp01(float a, float b, float t)
     {
@@ -447,7 +557,7 @@ namespace JPL::VBAP
             ComputeChannelConversionRectangularWeights(mChannelMapInternal, mChannelMapTarget, mChannelConversionWeights);
         }
 
-        mLUT.Resize(LUTType::sDeafultLUTResolution, mNumTargetChannels);
+        mLUT.Resize(LUTType::LUTStats::Resolution, mNumTargetChannels);
     }
 
     template<auto GetSpeakerAngleFunction>
@@ -507,14 +617,18 @@ namespace JPL::VBAP
     inline bool LUTBuilder2D<GetSpeakerAngleFunction>::BuildForAllDirections()
     {
         bool bAnyFailed = false;
-        // Build a LUT with uniform angle steps
-        for (uint32 pos = 0; pos < mLUT.GetLUTResolution(); ++pos)
-        {
-            const float theta = mLUT.LUTPositionToAngle(pos);
-            const auto [s, c] = Math::SinCos(theta);
-            const Vec2 direction(s, -c); // TODO: this -c is fishy
 
-            // Position of the next angle value in the LUT
+        // Build a LUT with uniform diamond steps
+        const float step = 1.0f / mLUT.GetLUTResolution();
+        float diamond = 0.0f;
+
+        for (uint32 pos = 0; pos < mLUT.GetLUTResolution(); ++pos, diamond += step)
+        {
+            JPL_ASSERT(diamond <= 1.0f);
+
+            const Vec2 direction = FromDiamond(diamond);
+
+            // Position of the next diamond step value in the LUT
             // (number of channels stride)
             const uint32 offset = mNumTargetChannels * pos;
 

@@ -543,12 +543,17 @@ namespace JPL
 			return points;
 		};
 
-		const auto layout54 = ChannelMap::FromChannelMask(ChannelMask::Surround_5_0_4);
-		const auto layoutSurround = ChannelMap::FromChannelMask(ChannelMask::Surround_5_0);
-		const auto layoutQuad = ChannelMap::FromChannelMask(ChannelMask::Quad);
-		const auto layoutMono = ChannelMap::FromChannelMask(ChannelMask::Mono);
-		const auto layoutStereo = ChannelMap::FromChannelMask(ChannelMask::Stereo);
-		const auto layoutLCR = ChannelMap::FromChannelMask(ChannelMask::LCR);
+
+		const NamedChannelMask layout916(ChannelMask::Surround_9_1_6);
+		const NamedChannelMask layout70(ChannelMask::Surround_7_0);
+		const NamedChannelMask layout54(ChannelMask::Surround_5_0_4);
+		const NamedChannelMask layout52(ChannelMask::Surround_5_0_2);
+		const NamedChannelMask layoutOcta(ChannelMask::Octagonal);
+		const NamedChannelMask layoutSurround(ChannelMask::Surround_5_0);
+		const NamedChannelMask layoutQuad(ChannelMask::Quad);
+		const NamedChannelMask layoutMono(ChannelMask::Mono);
+		const NamedChannelMask layoutStereo(ChannelMask::Stereo);
+		const NamedChannelMask layoutLCR(ChannelMask::LCR);
 
 
 #if 0
@@ -567,12 +572,15 @@ namespace JPL
 #endif
 		const typename VBAPanner3D<>::PanUpdateData params
 		{
-			.SourceDirection = Vec3(1.0f, 1.0f, -1.0f).Normalize(), // checking there's no roll
+			//.SourceDirection = Vec3(1.0f, 1.0f, -1.0f).Normalize(), // checking there's no roll
+			.SourceDirection = Vec3(0.0f, 0.0f, -1.0f).Normalize(), // checking there's no roll
 			.Focus = 0.0f,
-			.Spread = 0.5f,
+			.Spread = 1.0f,
 		};
 
-		ChannelPoints points = generateLayout(layout54, layoutStereo, params);
+#if 0
+		ChannelPoints points = generateLayout(layout54.Layout, layoutQuad.Layout, params);
+
 		//ChannelPoints points = generateSingleDirectionVis(layout54, Vec3(-0.5f, -1.0f, 0.3f).Normalize());
 
 #if 0	//! override visualization to debug 2, 5, 6 triplet
@@ -594,6 +602,21 @@ namespace JPL
 
 			// for the visualization with plot_vbap.py
 		SaveToJSON(points, channelVis, "visdata.json");
+#endif
+
+		auto genMultiple = [&generateLayout, &params, &channelVis](std::initializer_list<NamedChannelMask> sources, std::initializer_list<NamedChannelMask> targets)
+		{
+			for (const NamedChannelMask& source : sources)
+			{
+				for (const NamedChannelMask& target : targets)
+				{
+					ChannelPoints points = generateLayout(target.Layout, source.Layout, params);
+					SaveToJSON(points, channelVis, std::format("visdata_{}_{}.json", source.Name, target.Name));
+				}
+			}
+		};
+
+		genMultiple({ layoutMono, layoutStereo, layoutLCR, layoutQuad, layout70, layoutOcta }, { layout52, layout54, layout916 });
 	}
 #endif
 
@@ -663,7 +686,7 @@ namespace JPL
 		}
 	}
 
-	TEST_F(VBAP3DTest, VBAPPannedGainsL2Normalzied)
+	TEST_F(VBAP3DTest, VBAPPannedGainsL2Normalized)
 	{
 		VBAPanner3D<> panner;
 
@@ -769,18 +792,13 @@ namespace JPL
 				ASSERT_TRUE(panner.InitializeSourceLayout(sourceChannels, data));
 
 				//const uint32 numTargetChannels = panner.GetNumChannels();
-				const uint32 numChannels = sourceChannels.GetNumChannels();
+				const uint32 numChannels = sourceChannels.GetNumChannels() - sourceChannels.HasLFE();
 
-				std::vector<typename VBAPStandartTraits::ChannelGains> sourceChannelGains(numChannels);
-				for (auto& chg : sourceChannelGains)
-					chg.fill(0.0f);
+				std::array<float, VBAPStandartTraits::MAX_CHANNEL_MIX_MAP_SIZE> gainsData;
+				std::span<float> gains(gainsData.data(), numChannels * panner.GetNumChannels());
+				std::ranges::fill(gains, 0.0f);
 
-				auto getSourcChannelGroupGains = [&sourceChannelGains](uint32 sourceChannelIndex) -> typename VBAPanner2D<>::ChannelGainsRef
-				{
-					return sourceChannelGains[sourceChannelIndex];
-				};
-
-				panner.ProcessVBAPData(data, params, getSourcChannelGroupGains);
+				panner.ProcessVBAPData(data, params, gains);
 
 				SCOPED_TRACE(std::format("Source number of channels: {} | Parameters: {}",
 										 numChannels, paramsToString(params)));
@@ -789,8 +807,9 @@ namespace JPL
 				accumulatedGains.fill(0.0f);
 
 				// Accumulate per output channel gains
-				for (const auto& channelGains : sourceChannelGains)
+				for (uint32 i = 0; i < numChannels * panner.GetNumChannels(); i += panner.GetNumChannels())
 				{
+					std::span<const float> channelGains = gains.subspan(i, panner.GetNumChannels());
 					for (uint32 outChannelI = 0; outChannelI < channelGains.size(); ++outChannelI)
 						accumulatedGains[outChannelI] += channelGains[outChannelI];
 				}
@@ -948,7 +967,7 @@ namespace JPL
 			const float panRad = toRad(testCase.PanAngleDegrees);
 			typename PannerType::PanUpdateData positionData
 			{
-				.SourceDirection = Vec3{ std::sin(panRad), 0.0f, -std::cos(panRad) },
+				.SourceDirection = Vec3{ std::sin(panRad), 0.0f, -std::cos(panRad) }	,
 				.Focus = testCase.Focus,
 				.Spread = testCase.Spread
 			};
@@ -956,7 +975,7 @@ namespace JPL
 			typename VBAPStandartTraits::ChannelGains gains;
 			gains.fill(0.0f);
 
-			panner.ProcessVBAPData(data, positionData, [&gains](uint32 channel) -> auto& { return gains; });
+			panner.ProcessVBAPData(data, positionData, std::span(gains.data(), panner.GetNumChannels()));
 
 			ASSERT_TRUE(testCase.ExpectedGains.size() <= gains.size());
 			for (size_t i = 0; i < testCase.ExpectedGains.size(); ++i)
@@ -965,7 +984,6 @@ namespace JPL
 			}
 		}
 	}
-
 
 	TEST_F(VBAP3DTest, WorksWithDifferentVec3Types)
 	{
@@ -1037,5 +1055,29 @@ namespace JPL
 #endif
 		testVec3Type.operator()<glm::vec3>();
 		testVec3Type.operator()<MinimalVec3>();
+	}
+
+	TEST_F(VBAP3DTest, SourceLayoutsLeaveNoGapsInTargetSpeakerLayouts)
+	{
+		static constexpr float tolerance = JPL_FLOAT_EPS;
+
+		for (const auto& [targetLayoutName, targetLayoutMap] : mValid3DLayouts)
+		{
+			VBAPanner3D<> panner;
+			ASSERT_TRUE(panner.InitializeLUT(targetLayoutMap)) << targetLayoutName;
+
+			for (const auto& [sourceLayoutName, sourceLayoutMap] : mValidSourceLayouts)
+			{
+				typename VBAPanner3D<>::SourceLayoutType sourceLayout;
+				ASSERT_TRUE(panner.InitializeSourceLayout(sourceLayoutMap, sourceLayout)) << sourceLayoutName;
+
+				const float minDistanceBetweenSamples = sourceLayout.GetMinDistanceBetweenSamples();
+				const float shortestSpeakerAperture = std::acos(panner.GetShortestSpeakerAperture());
+
+				EXPECT_GT(shortestSpeakerAperture - minDistanceBetweenSamples, tolerance)
+					<< "Source: " << sourceLayoutName << " " << Math::ToDegrees(minDistanceBetweenSamples) << " Rings: " << sourceLayout.GetDimensions().NumRings
+					<< " -> Target: " << targetLayoutName << " " << Math::ToDegrees(shortestSpeakerAperture);
+			}
+		}
 	}
 } // namespace JPL

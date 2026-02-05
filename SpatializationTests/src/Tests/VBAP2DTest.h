@@ -116,8 +116,6 @@ namespace JPL
 
 		struct SpeakerVisualization
 		{
-			using ChannelGains = typename VBAPStandartTraits::ChannelGains;
-
 			void SetLayout(ChannelMap targetLayout)
 			{
 				Reset();
@@ -130,18 +128,18 @@ namespace JPL
 			}
 
 			// Accumulate single source channel gains per output channel
-			void AddChannelGains(const ChannelGains sourceGains)
+			void AddChannelGains(std::span<const float> sourceGains)
 			{
 				for (uint32 ch = 0; ch < Points.size(); ++ch)
 					Points[ch].Intensity += sourceGains[ch];
 			}
 
-			// Accumulate multiple source channel gains per output channel
-			void AddChannelGains(const std::vector<ChannelGains>& sourceChannelGains)
-			{
-				for (const ChannelGains& sourceGains : sourceChannelGains)
-					AddChannelGains(sourceGains);
-			}
+			//// Accumulate multiple source channel gains per output channel
+			//void AddChannelGains(std::span<const float> sourceChannelGains)
+			//{
+			//	for (const ChannelGains& sourceGains : sourceChannelGains)
+			//		AddChannelGains(sourceGains);
+			//}
 
 			void Reset()
 			{
@@ -151,74 +149,6 @@ namespace JPL
 			std::vector<IntencityPoint<Vec3>> Points;
 		};
 	};
-
-	TEST_F(VBAPTest, LUTPositionToAngle)
-	{
-		VBAPanner2D<> panner;
-		ASSERT_TRUE(panner.InitializeLUT(ChannelMap::FromNumChannels(4)));
-
-		std::array<float, 4> lutAngles;
-		std::array<float, 4> lutAnglesExpected
-		{
-			0.0f,
-			90.0f,
-			180.0f,
-			270.0f,
-		};
-
-		static constexpr std::array<int, 4> positionsToTest
-		{
-			0,
-			128,
-			256,
-			384
-		};
-
-		for (int i = 0; i < positionsToTest.size(); ++i)
-		{
-			lutAngles[i] = toDegrees(panner.GetLUT()->LUTPositionToAngle(positionsToTest[i]));
-		}
-
-		for (auto i = 0; i < positionsToTest.size(); ++i)
-		{
-			SCOPED_TRACE(std::format("LUT position {}/{}", positionsToTest[i], panner.GetLUT()->GetLUTResolution()));
-			EXPECT_FLOAT_EQ(lutAngles[i], lutAnglesExpected[i]);
-		}
-	}
-
-	TEST_F(VBAPTest, CartesianToLUTPosition)
-	{
-		VBAPanner2D<> panner;
-		ASSERT_TRUE(panner.InitializeLUT(ChannelMap::FromNumChannels(4)));
-
-		std::array<int, 4> positions;
-		std::array<float, 4> anglesToTest
-		{
-			0.0f,
-			90.0f,
-			180.0f,
-			270.0f,
-		};
-
-		static constexpr std::array<int, 4> expectedPositions
-		{
-			0,
-			128,
-			256,
-			384
-		};
-
-		for (int i = 0; i < anglesToTest.size(); ++i)
-		{
-			positions[i] = panner.GetLUT()->CartesianToLUTPosition(std::sin(toRad(anglesToTest[i])), std::cos(toRad(anglesToTest[i])));
-		}
-
-		for (auto i = 0; i < anglesToTest.size(); ++i)
-		{
-			SCOPED_TRACE(std::format("Angle {}", anglesToTest[i]));
-			EXPECT_EQ(positions[i], expectedPositions[i]);
-		}
-	}
 
 	TEST_F(VBAPTest, InitializeLUT_PrecomputedGains)
 	{
@@ -284,6 +214,8 @@ namespace JPL
 			// Add more configurations...
 		};
 
+		// TODO: reconsider the testing methodology. Test LUT quantization and variance first
+
 		for (const auto& testCase : testCases)
 		{
 			SCOPED_TRACE(testCase.description);
@@ -298,10 +230,13 @@ namespace JPL
 				EXPECT_TRUE(panner.InitializeLUT(testCase.channelMap));
 			}
 
-			for (size_t i = 0; i < testCase.angleTests.size(); ++i)
+			std::vector<float> lutGains(panner.GetNumChannels(), 0.0f);
+
+			for (const auto& angleTest : testCase.angleTests)
 			{
-				const float testAngleDeg = testCase.angleTests[i].testAngleDegrees;
+				const float testAngleDeg = angleTest.testAngleDegrees;
 				const float testAngleRad = toRad(testAngleDeg);
+#if 0
 				const int pos = panner.GetLUT()->AngleToLUTPosition(testAngleRad);
 
 				// Retrieve gains from LUT
@@ -311,10 +246,17 @@ namespace JPL
 				{
 					lutGains[ch] = panner.GetLUT()->GetLUTValue(offset + ch);
 				}
+#else
+				const Vec2 direction(std::sinf(testAngleRad), -std::cosf(testAngleRad));
+				panner.GetLUT()->GetSpeakerGains(direction, lutGains);
+#endif
 
-				const std::vector<float>& expectedGains = testCase.angleTests[i].expectedGains;
-
+				const std::vector<float>& expectedGains = angleTest.expectedGains;
+#if 0
 				SCOPED_TRACE(std::format("Angle {} degrees, Position {}", testAngleDeg, pos));
+#else
+				SCOPED_TRACE(std::format("Angle {} degrees", testAngleDeg));
+#endif
 				for (uint32 ch = 0; ch < panner.GetNumChannels(); ++ch)
 				{
 					SCOPED_TRACE(std::format("Channel {}", ch));
@@ -379,7 +321,7 @@ namespace JPL
 
 		// First virtual source of a channel is positioned according to the following formula:
 		// ChannelAngle - HalfChannelWidth + HalfVirtualSourceWidth
-		// (channel groups and virtual sources are sorted by angle)
+		// (channel groups and virtual sources are sorted by index the channel appears in the channel set/map)
 		const std::vector<VBAPDataTest> VBAPDataTestCases
 		{
 			{
@@ -398,10 +340,10 @@ namespace JPL
 				.ChannelMap = { ChannelMask::Stereo },
 				.ExpectedChannelGroups = {
 					{
-						.Angle = 90.0f,
+						.Angle = -90.0f,
 					},
 					{
-						.Angle = -90.0f,
+						.Angle = 90.0f,
 					}
 				}
 			},
@@ -412,16 +354,16 @@ namespace JPL
 				.ChannelMap = { ChannelMask::Quad },
 				.ExpectedChannelGroups = {
 					{
-						.Angle = 45.0f,
+						.Angle = -45.0f,
 					},
 					{
-						.Angle = 135.0f,
+						.Angle = 45.0f,
 					},
 					{
 						.Angle = -135.0f,
 					},
 					{
-						.Angle = -45.0f,
+						.Angle = 135.0f,
 					},
 				}
 			},
@@ -432,19 +374,19 @@ namespace JPL
 				.ChannelMap = { ChannelMask::Surround_5_1 },
 				.ExpectedChannelGroups = {
 					{
-						.Angle = 0.0f,
+						.Angle = -72.0f,
 					},
 					{
 						.Angle = 72.0f,
 					},
 					{
-						.Angle = 144.0f,
+						.Angle = 0.0f,
 					},
 					{
 						.Angle = -144.0f,
 					},
 					{
-						.Angle = -72.0f,
+						.Angle = 144.0f,
 					}
 				}
 			}
@@ -488,7 +430,6 @@ namespace JPL
 
 				SCOPED_TRACE(std::format("Channel: {}", channelGroup.Channel));
 
-				// invert axis direction for rotation right-nandedness
 				const float channelGroupRotationAngle = channelGroup.Rotation.GetRotationAngle(Vec3(0.0f, -1.0f, 0.0f));
 				EXPECT_NEAR(toDegrees(channelGroupRotationAngle), excpectedChannelGroup.Angle, 1e-4f);
 
@@ -625,6 +566,8 @@ namespace JPL
 			// Add more tests if needed...
 		};
 
+		static constexpr float gainToleranse = 1e-4f;
+
 		for (const auto& testCase : testCases)
 		{
 			SCOPED_TRACE(testCase.Description);
@@ -641,19 +584,16 @@ namespace JPL
 				.Spread = testCase.Spread
 			};
 
-			std::array<float, TraitsOverride::MAX_CHANNELS> gainsData;
-			typename TraitsOverride::ChannelGains gains(gainsData.data(), panner.GetNumChannels());
+			std::array<float, TraitsOverride::MAX_CHANNEL_MIX_MAP_SIZE> gainsData;
+			std::span<float> gains(gainsData.data(), 1 * panner.GetNumChannels());
+			std::ranges::fill(gains, 0.0f);
 
-			panner.ProcessVBAPData(data, positionData,
-								   [&gains](uint32 channel) -> typename TraitsOverride::ChannelGains&
-			{
-				return gains;
-			});
+			panner.ProcessVBAPData(data, positionData, gains);
 
 			ASSERT_TRUE(testCase.ExpectedGains.size() <= gains.size());
 			for (size_t i = 0; i < testCase.ExpectedGains.size(); ++i)
 			{
-				EXPECT_NEAR(gains[i], testCase.ExpectedGains[i], 1e-4f) << "at index " << i;
+				EXPECT_NEAR(gains[i], testCase.ExpectedGains[i], gainToleranse) << "at index " << i;
 			}
 		}
 
@@ -673,36 +613,65 @@ namespace JPL
 				.Spread = 1.0f
 			};
 
-			alignas(16) float gainsData[numSourceChannels * 4]{};
-			typename TraitsOverride::ChannelGains gains;
+			std::array<float, TraitsOverride::MAX_CHANNEL_MIX_MAP_SIZE> gainsData;
+			std::span<float> gains(gainsData.data(), numSourceChannels * panner.GetNumChannels());
+			std::ranges::fill(gains, 0.0f);
 
 			const uint32 numOutputChannels = panner.GetNumChannels();
 
-			panner.ProcessVBAPData(data, positionData,
-								   [&](uint32 channel) -> typename TraitsOverride::ChannelGains&
-			{
-				gains = typename TraitsOverride::ChannelGains{
-					&gainsData[channel * numOutputChannels],
-					numOutputChannels
-				};
-				return gains;
-			});
+			panner.ProcessVBAPData(data, positionData, gains);
 
 			// Expect left channel to output only to FL and BL, and the same amount
 			EXPECT_GT(  gainsData[0], 1e-4f);
-			EXPECT_NEAR(gainsData[0], gainsData[2], 1e-4f);
+			EXPECT_NEAR(gainsData[0], gainsData[2], gainToleranse);
 			EXPECT_NEAR(gainsData[1], 0.0f, 1e-4f);
 			EXPECT_NEAR(gainsData[3], 0.0f, 1e-4f);
 
-			// Expect rithg channel to output only to FR and BR, and the same amount
+			// Expect right channel to output only to FR and BR, and the same amount
 			EXPECT_GT(  gainsData[numOutputChannels + 1], 1e-4f);
-			EXPECT_NEAR(gainsData[numOutputChannels + 1], gainsData[numOutputChannels + 3], 1e-4f);
+			EXPECT_NEAR(gainsData[numOutputChannels + 1], gainsData[numOutputChannels + 3], gainToleranse);
 			EXPECT_NEAR(gainsData[numOutputChannels + 0], 0.0f, 1e-4f);
 			EXPECT_NEAR(gainsData[numOutputChannels + 2], 0.0f, 1e-4f);
 		}
+
+		//! We don't really care where the LUT puts the direction straight UP,
+		//! it's user's/integrator's choice where to shift the direction edge-cases 
+#if 0
+		{
+			SCOPED_TRACE("Source above the listener");
+			static constexpr uint32 numSourceChannels = 1;
+
+			typename PannerType::SourceLayoutType data;
+			ASSERT_TRUE(panner.InitializeSourceLayout(ChannelMap::FromNumChannels(numSourceChannels), data));
+
+			typename PannerType::PanUpdateData positionData
+			{
+				.SourceDirection = Vec3D(0.0f, 1.0f, 0.0f),
+				.Focus = 0.0f,
+				.Spread = 0.0f
+			};
+
+			std::array<float, TraitsOverride::MAX_CHANNEL_MIX_MAP_SIZE> gainsData;
+			std::span<float> gains(gainsData.data(), numSourceChannels* panner.GetNumChannels());
+			std::ranges::fill(gains, 0.0f);
+
+			const uint32 numOutputChannels = panner.GetNumChannels();
+
+			panner.ProcessVBAPData(data, positionData, gains);
+
+			// Expecting forward as a fallback
+			const std::array<float, 4> expectedGains{ 0.7071f, 0.7071f, 0.0f, 0.0f };
+
+			// Expect left channel to output only to FL and BL, and the same amount
+			EXPECT_NEAR(gainsData[0], expectedGains[0], gainToleranse);
+			EXPECT_NEAR(gainsData[1], expectedGains[1], gainToleranse);
+			EXPECT_NEAR(gainsData[3], expectedGains[2], gainToleranse);
+			EXPECT_NEAR(gainsData[3], expectedGains[3], gainToleranse);
+		}
+#endif
 	}
 
-	TEST_F(VBAPTest, VBAPPannedGainsL2Normalzied)
+	TEST_F(VBAPTest, VBAPPannedGainsL2Normalized)
 	{
 		VBAPanner2D<> panner;
 
@@ -814,18 +783,12 @@ namespace JPL
 				ASSERT_TRUE(panner.InitializeSourceLayout(sourceChannels, data));
 
 				const uint32 numTargetChannels = panner.GetNumChannels();
-				const uint32 numChannels = sourceChannels.GetNumChannels();
+				const uint32 numChannels = sourceChannels.GetNumChannels() - sourceChannels.HasLFE();
 
-				std::vector<typename VBAPStandartTraits::ChannelGains> sourceChannelGains(numChannels, { 0.0f });
-				for (auto& chg : sourceChannelGains)
-					chg.fill(0.0f);
+				std::array<float, VBAPStandartTraits::MAX_CHANNEL_MIX_MAP_SIZE> gainsData;
+				std::span<float> gains(gainsData.data(), numChannels * panner.GetNumChannels());
 
-				auto getSourcChannelGroupGains = [&sourceChannelGains](uint32 sourceChannelIndex) -> typename VBAPanner2D<>::ChannelGainsRef
-				{
-					return sourceChannelGains[sourceChannelIndex];
-				};
-
-				panner.ProcessVBAPData(data, params, getSourcChannelGroupGains);
+				panner.ProcessVBAPData(data, params, gains);
 
 				SCOPED_TRACE(std::format("Source number of channels: {} | Parameters: {}",
 										 numChannels, paramsToString(params)));
@@ -834,8 +797,9 @@ namespace JPL
 				accumulatedGains.fill(0.0f);
 
 				// Accumulate per output channel gains
-				for (const auto& channelGains : sourceChannelGains)
+				for (uint32 i = 0; i < numChannels * panner.GetNumChannels(); i += panner.GetNumChannels())
 				{
+					std::span<const float> channelGains = gains.subspan(i, panner.GetNumChannels());
 					for (uint32 outChannelI = 0; outChannelI < channelGains.size(); ++outChannelI)
 						accumulatedGains[outChannelI] += channelGains[outChannelI];
 				}
@@ -866,19 +830,15 @@ namespace JPL
 
 			const int numChannels = sourceLayout.GetNumChannels() - sourceLayout.HasLFE();
 
-			std::vector<typename VBAPStandartTraits::ChannelGains> sourceChannelGains(numChannels, { 0.0f });
-
-			auto getSourcChannelGroupGains = [&sourceChannelGains](uint32 sourceChannelIndex) -> typename VBAPanner2D<>::ChannelGainsRef
-			{
-				return sourceChannelGains[sourceChannelIndex];
-			};
+			std::vector<float> sourceChannelGains(numChannels * targetLayout.GetNumChannels(), 0.0f);
 
 			VBAPanner2D<>::SourceLayoutType data;
 			panner.InitializeSourceLayout(sourceLayout, data);
 
 			speakerVis.Reset();
 
-			panner.ProcessVBAPData(data, params, getSourcChannelGroupGains, sourceVis);
+			// TODO: BUG. 2D channel caps laid out incorrectly again
+			panner.ProcessVBAPData(data, params, sourceChannelGains, sourceVis);
 
 			// Accumulate speaker energy visualization for target layout
 			speakerVis.SetLayout(targetLayout);
@@ -957,11 +917,12 @@ namespace JPL
 
 		const typename VBAPanner2D<>::PanUpdateData params
 		{
-			.SourceDirection = Vec3(1.0f, 1.0f, -1.0f).Normalize(), // checking there's no roll
-			.Focus = 0.0f,
-			.Spread = 0.5f,
+			//.SourceDirection = Vec3(1.0f, 1.0f, -1.0f).Normalize(), // checking there's no roll
+			.SourceDirection = Vec3(0.0f, 0.0f, -1.0f).Normalize(),
+			.Focus = 0.5f,
+			.Spread = 1.0f,
 		};
-		generateLayout(layoutSurround, layoutQuad, params);
+		generateLayout(layoutStereo, layoutStereo, params);
 		//ChannelPoints points = generateSingleDirectionVis(layout54, Vec3(-0.5f, -1.0f, 0.3f).Normalize());
 
 		/*std::cout << "Per channel gains: " << '\n';
@@ -1046,4 +1007,33 @@ namespace JPL
 		testVec3Type.operator()<MinimalVec3>();
 	}
 
+	TEST_F(VBAPTest, SourceLayoutsLeaveNoGapsInTargetSpeakerLayouts)
+	{
+		static constexpr float tolerance = 1e-4f;
+
+		for (const auto& [targetLayoutName, targetLayoutMap] : mChannelMasks)
+		{
+			if (not targetLayoutMap.IsValid() || targetLayoutMap.GetNumChannels() < 2)
+				continue;
+
+			VBAPanner2D<> panner;
+			ASSERT_TRUE(panner.InitializeLUT(targetLayoutMap)) << targetLayoutName;
+
+			for (const auto& [sourceLayoutName, sourceLayoutMap] : mChannelMasks)
+			{
+				if (not sourceLayoutMap.IsValid())
+					continue;
+
+				typename VBAPanner2D<>::SourceLayoutType sourceLayout;
+				ASSERT_TRUE(panner.InitializeSourceLayout(sourceLayoutMap, sourceLayout)) << sourceLayoutName;
+
+				const float minDistanceBetweenSamples = sourceLayout.GetMinDistanceBetweenSamples();
+				const float shortestSpeakerAperture = panner.GetShortestSpeakerAperture();
+
+				EXPECT_LT(minDistanceBetweenSamples - tolerance, shortestSpeakerAperture)
+					<< "Source: " << sourceLayoutName << " " << Math::ToDegrees(minDistanceBetweenSamples) << " Num VSs: " << sourceLayout.GetNumVirtualSources()
+					<< " -> Target: " << targetLayoutName << " " << Math::ToDegrees(shortestSpeakerAperture);
+			}
+		}
+	}
 } // namespace JPL

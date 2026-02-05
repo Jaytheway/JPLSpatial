@@ -27,14 +27,17 @@
 #include "JPLSpatial/Panning/VBAPLUT2D.h"
 
 #include "JPLSpatial/Math/Math.h"
+#include "JPLSpatial/Math/SIMD.h"
+#include "JPLSpatial/Math/SIMDMath.h"
+#include "JPLSpatial/Math/Vec3Buffer.h"
 #include "JPLSpatial/Memory/Bits.h"
 
-#include <span>
 #include <algorithm>
-
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <optional>
+#include <span>
 
 namespace JPL
 {
@@ -85,6 +88,11 @@ namespace JPL
                 [[nodiscard]] JPL_INLINE size_t GetNumVirtualSources() const noexcept { return mNumVirtualSourcesPerChannel; }
                 [[nodiscard]] static JPL_INLINE constexpr size_t GetMaxNumVirtualSources() noexcept { return cMaxNumVirtualSources; }
 
+                /// Rerturns minimal distance between two virtual source samples.
+                /// This is mostly needed for debugging and verification.
+                /// Must be called only after the Source Layout has been initialized by a panner.
+                [[nodiscard]] JPL_INLINE float GetMinDistanceBetweenSamples() const noexcept { return mPhiTerm; }
+
             private:
                 friend Base;
                 /// Initialize VBAP data for standard channel map panning.
@@ -94,11 +102,17 @@ namespace JPL
                 /// Generate canonical spread cap for given `spreadNormalized` value.
                 /// Spread of the cap from the perspective of our MDAP implementation is the Focus parameter
                 /// (called by paner in ProcessVBAPData)
+                void GenerateSpreadCap(Vec3SIMDBufferView& outBuffer, float spreadNormalized) const;
+#if 0           // scalar version for a reference
                 void GenerateSpreadCap(std::span<Vec3Type> outBuffer, float spreadNormalized) const;
+#endif
 
             private:
                 uint32 mNumVirtualSourcesPerChannel;
-                float mPhiTerm;                     // Cached term to generate spread cap
+                
+                // Here phi is the distance between two samples on a ring (2 * PI / num samples)
+                float mPhiTerm;     // Cached term to generate spread cap
+                float mOffsetTerm;
             };
 
             //==================================================================
@@ -163,14 +177,72 @@ namespace JPL::VBAP
             return RoundUpBy4(std::max(totalRings / numChannels, 1u));
         }(numChannels, shortestEdgeApertureAngle);
 
-        JPL_ASSERT(mNumVirtualSourcesPerChannel <= cMaxNumVirtualSources);
+        JPL_ASSERT(mNumVirtualSourcesPerChannel * numChannels <= cMaxNumVirtualSources);
 
         // Cache for arranging virtual sources later
         mPhiTerm = JPL_TWO_PI / (mNumVirtualSourcesPerChannel * numChannels);
 
+        // As we increase the focus, we need to offset the start of the cap to contract towards channel center angle.
+        // Note: this doesn't apply for mono source, since we mirror half samples around the channel center angle.
+        mOffsetTerm = numChannels > 1 ? mPhiTerm * mNumVirtualSourcesPerChannel * 0.5f : 0.0f;
+
         return LayoutBase::InitializeBase(channelMap, targetMap, mNumVirtualSourcesPerChannel);
     }
 
+    template<class Traits>
+    inline void Panning2D<Traits>::SourceLayout::GenerateSpreadCap(Vec3SIMDBufferView& outBuffer, float spreadNormalized) const
+    {
+        JPL_ASSERT(outBuffer.size() == GetNumSIMDOps(mNumVirtualSourcesPerChannel));
+
+        simd* destX = outBuffer.X;
+        simd* destY = outBuffer.Y;
+        simd* destZ = outBuffer.Z;
+
+        // We don't use Y coordinate in 2D panning
+        std::fill(destY, destY + outBuffer.size(), simd::zero());
+
+        const uint32 toMirror = static_cast<uint32>(FloorToDiv2(outBuffer.size()));
+        const uint32 tail = static_cast<uint32>(GetDiv2Tail(outBuffer.size()));
+
+        // How much we can potentially "mirror"
+        const uint32 halfSamples = toMirror >> 1;
+
+        // Generate half that we can mirror + tail,
+        // mirror only that half
+        const uint32 halfAndTail = halfSamples + tail;
+
+        // Generate canon half ring
+        {
+            const float spread = (1.0f - spreadNormalized);
+            const float phiTerm = spread * mPhiTerm; // apply spread
+            const simd offset(-spread * mOffsetTerm);
+            const simd rampFirst = simd(0.5f, 1.5f, 2.5f, 3.5f); // start with an offset to make mirroring work
+
+            simd phi = FMA(phiTerm, rampFirst, offset);
+            const simd delta(4.0f * phiTerm);
+
+            for (uint32 i = 0; i < halfAndTail; ++i)
+            {
+                Math::SinCos(phi, (*destX++), (*destZ++));
+                phi += delta;
+            }
+        }
+
+        // Generate the rest of ring by mirroring vectors
+        if (halfSamples)
+        {
+            // Copy first half ring's only Z component 
+            std::memcpy(destZ, outBuffer.Z, halfSamples * sizeof(simd));
+
+            // Copy and flip first half ring's X component to make a full ring
+            for (uint32 i = 0; i < halfSamples; ++i)
+            {
+                (*destX++) = -outBuffer.X[i];
+            }
+        }
+    }
+
+#if 0
     template<class Traits>
     inline void Panning2D<Traits>::SourceLayout::GenerateSpreadCap(std::span<Vec3Type> outBuffer, float spreadNormalized) const
     {
@@ -222,4 +294,5 @@ namespace JPL::VBAP
                 SetX(mirror, -GetX(mirror));
         }
     }
+#endif
 } // namespace JPL::VBAP

@@ -21,18 +21,25 @@
 
 #include "JPLSpatial/Core.h"
 
+#include "JPLSpatial/Containers/StaticArray.h"
+
 #include "JPLSpatial/Panning/PannerBase.h"
 #include "JPLSpatial/Panning/VBAPLUT3D.h"
 
 #include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/DirectionEncoding.h"
+#include "JPLSpatial/Math/SIMD.h"
+#include "JPLSpatial/Math/SIMDMath.h"
+#include "JPLSpatial/Math/Vec3Buffer.h"
 #include "JPLSpatial/Memory/Bits.h"
 #include "JPLSpatial/Memory/Memory.h"
 
+#include <cstring>
 #include <vector>
 #include <ranges>
 #include <utility>
 #include <limits>
+#include <span>
 
 namespace JPL
 {
@@ -88,11 +95,9 @@ namespace JPL
                 //  Initializing SourceLayout dimensions with these defaults results in
                 //  'cMaxNumVirtualSources` directions to process when runtime data changes.
                 //  See `Dimensions` comment
-                static constexpr size_t cMaxNumRings = 8;                                       // Default max number of rings
-                static constexpr size_t cMaxNumSamples = 32;                                    // Default max number of samples per ring
+                static constexpr size_t cMaxNumRings = 12;                                      // Default max number of rings
+                static constexpr size_t cMaxNumSamples = 24;                                    // Default max number of samples per ring
                 static constexpr size_t cMaxNumVirtualSources = cMaxNumRings * cMaxNumSamples;  // Max number samples that can be generated for given VBAPdData
-                static constexpr size_t cMaxNumVirtualSourcesSqrt = 16;                         // Max number samples/rings if computed dimentions are samples=rings
-                static_assert(cMaxNumVirtualSourcesSqrt * cMaxNumVirtualSourcesSqrt == cMaxNumVirtualSources);
 
                 /// Represents dimentions of the virtual source group cap on a 3D sphere.
                 /// This structure serves to distribute "just enough" virtual sources
@@ -114,9 +119,14 @@ namespace JPL
                 };
 
             public:
-                [[nodiscard]] JPL_INLINE Dimensions GetDimentions() const noexcept { return mDimensions; }
+                [[nodiscard]] JPL_INLINE Dimensions GetDimensions() const noexcept { return mDimensions; }
                 [[nodiscard]] JPL_INLINE size_t GetNumVirtualSources() const noexcept;
                 [[nodiscard]] JPL_INLINE static constexpr size_t GetMaxNumVirtualSources() noexcept;
+
+                /// Rerturns minimal distance between two virtual source samples.
+                /// This is mostly needed for debugging and verification.
+                /// Must be called only after the Source Layout has been initialized by a panner.
+                [[nodiscard]] JPL_INLINE float GetMinDistanceBetweenSamples() const noexcept { return std::min(mPhiTerm, JPL_TWO_PI / mDimensions.NumSamplesPerRing); }
 
             private:
                 friend Base;
@@ -124,18 +134,25 @@ namespace JPL
                 /// (called by the panner that has the value for `shortestEdgeApertureDot`)
                 bool Initialize(ChannelMap channelMap, ChannelMap targetMap, float shortestEdgeApertureDot = std::numeric_limits<float>::max());
 
+                void PrecomputeAzimuth();
+
                 /// Generate canonical spread cap for given `spreadNormalized` value.
                 /// Spread of the cap from the perspective of our MDAP implementation is the Focus parameter
                 /// (called by paner in ProcessVBAPData)
+                void GenerateSpreadCap(Vec3SIMDBufferView& outBuffer, float spreadNormalized) const;
+#if 0           // scalar version for a reference
                 void GenerateSpreadCap(std::span<Vec3Type> outBuffer, float spreadNormalized) const;
-
+#endif
             private:
-                float mNominalChannelCapSpread;                 // Cached nominal per cap spread for given channel count
                 Dimensions mDimensions;                         // Dimensions for virtual source distribution for a spread cap
-                float mPhiTerm;                                 // Cached term to generate spread cap
+
+                // Phi is essentially distance between rings of samples.
+                // While Theta is the distance between two samples on a ring (2 * PI / num samples)
+                float mPhiTerm;                                 // Cached term to generate spread cap.
 
                 // Cached sin/cos to generate spread cap
-                std::pmr::vector<std::pair<float, float>> mSamplesSinCos{ GetDefaultMemoryResource() };
+                std::pmr::vector<simd> mSamplesSin{ GetDefaultMemoryResource() };
+                std::pmr::vector<simd> mSamplesCos{ GetDefaultMemoryResource() };
             };
 
             //======================================================================
@@ -236,39 +253,60 @@ namespace JPL::VBAP
 
         JPL_ASSERT(mDimensions.GetSize() <= cMaxNumVirtualSources);
 
-        mNominalChannelCapSpread = [](uint32 numChannels, uint32 numRings)
-        {
-            // This compensation ensures the gap between neigbouring
-            // channel zones equals to distance between rings
-            const uint32 channelSpreadComp = numChannels / 2;
-            return static_cast<float>(numRings) / (numRings * numChannels - channelSpreadComp);
-        }(numChannels, mDimensions.NumRings);
-
         // Precompute phi term to generte rings
-        mPhiTerm = JPL_PI / (mDimensions.NumRings + 1);
-        // +1 avoids last rim at spread 1.0 to fall onto a single point
+        mPhiTerm = numChannels == 1
+            ? JPL_PI / (mDimensions.NumRings + 1)
+            : JPL_PI / (mDimensions.NumRings * numChannels + numChannels * 0.5f);
+        // +1 for mono avoids last rim at spread 1.0 to fall onto a single point
         // and to distribute positions more evenly, since each position
         // is "centre" rather than edge of the contribution to the field
+        // 
+        // + numChannels * 0.5 adds the gaps between channel caps into account,
+        // to make them equal to the gap between rings
 
         // Precompute azimuth of each ring
-        {
-            const uint32 quadrantSamples = mDimensions.NumSamplesPerRing >> 2;
-            mSamplesSinCos.resize(quadrantSamples);
-
-            const float thetaTerm = JPL_TWO_PI / mDimensions.NumSamplesPerRing;
-
-            float theta = thetaTerm * 0.5f; // start with an offset to make mirroring work
-            for (auto& sampleCS : mSamplesSinCos)
-            {
-                sampleCS = Math::SinCos(theta);
-                theta += thetaTerm;
-            }
-        }
+        PrecomputeAzimuth();
 
         const auto numVirtualSorucesPerChannel = static_cast<uint32>(mDimensions.GetSize());
         return LayoutBase::InitializeBase(channelMap, targetMap, numVirtualSorucesPerChannel);
     }
 
+    template<class Traits, auto cLUTType>
+    inline void Panning3D<Traits, cLUTType>::SourceLayout::PrecomputeAzimuth()
+    {
+        // TODO: if halfSamples is stil quite large, we might want to still resort to quarter + double mirror
+
+        const uint32 numSIMDOps = GetNumSIMDOps(mDimensions.NumSamplesPerRing);
+        JPL_ASSERT(numSIMDOps >= 1);
+
+        // TODO: this is valid for single axis mirroring, for 2 axis we need half samples to also be divisible,
+        const std::size_t toMirror = FloorToDiv2(numSIMDOps);
+        const std::size_t tail = GetDiv2Tail(numSIMDOps);
+
+        // How much we can potentially "mirror"
+        const uint32 halfSamples = toMirror >> 1;
+
+        // Generate half that we can mirror + tail,
+        // mirrored only the half
+        const uint32 halfAndTail = halfSamples + tail;
+
+        mSamplesSin.resize(halfAndTail);
+        mSamplesCos.resize(halfAndTail);
+
+        const float thetaTerm = JPL_TWO_PI / mDimensions.NumSamplesPerRing;
+        static const simd rampFirst(0.5f, 1.5f, 2.5f, 3.5f);
+
+        simd theta = simd(thetaTerm) * rampFirst;
+        const simd thetaDelta(thetaTerm * 4.0f);
+
+        for (uint32 i = 0; i < halfAndTail; ++i)
+        {
+            Math::SinCos(theta, mSamplesSin[i], mSamplesCos[i]);
+            theta += thetaDelta;
+        }
+    }
+
+#if 0
     template<class Traits, auto cLUTType>
     inline void Panning3D<Traits, cLUTType>::SourceLayout::GenerateSpreadCap(std::span<Vec3Type> outBuffer, float spreadNormalized) const
     {
@@ -295,7 +333,7 @@ namespace JPL::VBAP
 
         // Precompute centre of each ring
         {
-            const float capSpread = mNominalChannelCapSpread * (1.0f - spreadNormalized);
+            const float capSpread = (1.0f - spreadNormalized);
             const float phiTerm = capSpread * mPhiTerm;
 
             float phi = phiTerm;
@@ -311,8 +349,10 @@ namespace JPL::VBAP
         // Generate canon sphere quadrant
         for (const auto& [sinPhi, cosPhi] : ringCSs)
         {
-            for (const auto& [sinTheta, cosTheta] : mSamplesSinCos)
+            for (uint32 i = 0; i < mSamplesSin.size(); ++i)
             {
+                const float sinTheta = mSamplesSin[i];
+                const float cosTheta = mSamplesCos[i];
                 *destination++ = Vec3Type{
                     sinPhi * cosTheta,
                     sinPhi * sinTheta,
@@ -355,6 +395,124 @@ namespace JPL::VBAP
         outBuffer[i] = Vec3(0.0f, 0.0f, 1.0f);
 #endif
     }
+#endif
+
+    template<class Traits, auto cLUTType>
+    inline void Panning3D<Traits, cLUTType>::SourceLayout::GenerateSpreadCap(Vec3SIMDBufferView& outBuffer, float spreadNormalized) const
+    {
+        // Small static buffer should be enough
+        static constexpr size_t BUF_SIZE = cMaxNumSamples;
+        JPL_ASSERT(Math::IsPositiveAndBelow(mDimensions.NumRings, BUF_SIZE + 1));
+
+        StaticArray<float, BUF_SIZE> ringSs(mDimensions.NumRings);
+        StaticArray<float, BUF_SIZE> ringCs(mDimensions.NumRings);
+     
+        // Precompute centre of each ring
+        {
+            static const simd ramp(1.0f, 2.0f, 3.0f, 4.0f);
+
+            const float capSpread = (1.0f - spreadNormalized);
+            const float phiTermS = capSpread * mPhiTerm;
+
+            simd phiTerm = simd(phiTermS) * ramp;
+            const simd delta(4.0f * phiTermS);
+
+            uint32 i = 0;
+            for (; i < FloorToSIMDSize(ringCs.size()); i += simd::size())
+            {
+                simd ringSin, ringCos;
+                Math::SinCos(phiTerm, ringSin, ringCos);
+                ringSin.store(&ringSs[i]);
+                ringCos.store(&ringCs[i]);
+
+                phiTerm += delta;
+            }
+
+            const uint32 tail = GetSIMDTail(ringCs.size());
+            float phiTermTail[4]{};
+            phiTerm.store(phiTermTail);
+
+            for (uint32 t = 0; t < tail; ++t, ++i)
+            {
+                const auto [ringSin, ringCos] = Math::SinCos(phiTermTail[t]);
+                ringSs[i] = ringSin;
+                ringCs[i] = ringCos;
+            }
+        }
+
+        simd* destX = outBuffer.X;
+        simd* destY = outBuffer.Y;
+        simd* destZ = outBuffer.Z;
+
+        const uint32 numSIMDOps = GetNumSIMDOps(mDimensions.NumSamplesPerRing);
+        JPL_ASSERT(numSIMDOps >= 1);
+        JPL_ASSERT(outBuffer.size() == numSIMDOps * mDimensions.NumRings + JPL_ADD_CENTER_VS);
+
+        // TODO: this is valid for single axis mirroring, for 2 axis we need half samples to also be divisible by 2
+        const std::size_t toMirror = FloorToDiv2(numSIMDOps);
+        const std::size_t tail = GetDiv2Tail(numSIMDOps);
+
+        // How much we can potentially "mirror"
+        const uint32 halfSamples = toMirror >> 1;
+
+        // Generate half that we can mirror + tail,
+        // mirrored only the half
+        const uint32 halfAndTail = halfSamples + tail;
+
+        // Generate canon sphere half (or fuill, if NumSamplesPerRing == simd::size())
+        if (halfSamples)
+        {
+            simd* ringsX = destX;
+            simd* ringsY = destY;
+            simd* ringsZ = destZ;
+
+            for (uint32 sci = 0; sci < ringSs.size(); ++sci)
+            {
+                const auto sinPhi = simd(ringSs[sci]);
+                const auto cosPhi = simd(ringCs[sci]);
+
+                for (uint32 i = 0; i < halfSamples; ++i)
+                {
+                    ringsX[i] = sinPhi * mSamplesCos[i];
+                    ringsY[i] = sinPhi * mSamplesSin[i];
+                    ringsZ[i] = cosPhi;
+                }
+
+                ringsX += halfSamples;
+                ringsY += halfSamples;
+                ringsZ += halfSamples;
+            }
+
+            const uint32 totalNumHalfSamples = ringSs.size() * halfSamples;
+            const std::size_t sizeOfHalfSamples = totalNumHalfSamples * sizeof(simd);
+
+            // Duplicate half sphere
+            std::memcpy(ringsX, destX, sizeOfHalfSamples);
+            std::memcpy(ringsZ, destZ, sizeOfHalfSamples);
+
+            // Mirror half sphere to make a whole sphere
+            for (uint32 i = 0; i < totalNumHalfSamples; ++i)
+            {
+                ringsY[i] = -destY[i];
+            }
+            destX = &ringsX[totalNumHalfSamples];
+            destY = &ringsY[totalNumHalfSamples];
+            destZ = &ringsZ[totalNumHalfSamples];
+        }
+
+        if (tail)
+        {
+            for (uint32 sci = 0; sci < ringSs.size(); ++sci)
+            {
+                const auto sinPhi = simd(ringSs[sci]);
+                const auto cosPhi = simd(ringCs[sci]);
+
+                destX[sci] = sinPhi * mSamplesCos[halfSamples];
+                destY[sci] = sinPhi * mSamplesSin[halfSamples];
+                destZ[sci] = cosPhi;
+            }
+        }
+    }
 
     template<class Traits, auto cLUTType>
     JPL_INLINE size_t Panning3D<Traits, cLUTType>::SourceLayout::GetNumVirtualSources() const noexcept
@@ -394,7 +552,9 @@ namespace JPL::VBAP
             // Since we distribute our channels along the equator,
             // we can just divide the circumference by max allowed aperture
             const float m = std::acos(maxGeoDistanceDot); // geodesic threshold (radians)
-            totalRings = static_cast<uint32>(std::ceil(JPL_TWO_PI / std::max(m, 1e-6f)));
+            //totalRings = static_cast<uint32>(std::ceil(JPL_TWO_PI / std::max(m, 1e-6f)));
+            //! we probably want half the circumfrance to distribute between rings, since rings cross equator in two places
+            totalRings = static_cast<uint32>(std::ceil(JPL_PI / std::max(m, 1e-6f)));
 
             // circumference of a cap rim given angular diameter d
             // static auto getCapCircumference = [](float d) { return JPL_TWO_PI * std::sin(0.5f * d); };
@@ -406,18 +566,11 @@ namespace JPL::VBAP
                 // For 1-2 channels we can reuse the same distribution as totalRings
                 // since each channel's cap can reach a circumference between poles
                 // at spread 1.0, focus 0.0.
-                samplesPerRing = totalRings;
-
-                // For high channel count target (i.e. small min speaker aperture)
-                // we can overflow max virtual sources, so we need to clamp it
-                if (RoundUpBy4(samplesPerRing) * RoundUpBy4(totalRings) > cMaxNumVirtualSources)
-                {
-                    samplesPerRing = totalRings = cMaxNumVirtualSourcesSqrt;
-                }
+                // (x2 because unlike ring slices, samples spread the entire circumfrance)
+                samplesPerRing = totalRings << 1;
             }
             else
             {
-
                 // ..while for > 2 channels we need to compute geodesic distance
                 // to estimate minimum number of samples per ring
 
@@ -434,14 +587,23 @@ namespace JPL::VBAP
             }
         }
 
-        // TODO: totalRings can be smaller than numChannels,
-        // if we're willing to sacrifice vectorization,
-        // we can move max out:
-        //      std::max(RoundUpBy4(totalRings / numChannels), 2u))
+        // For high channel count target (i.e. small min speaker aperture)
+        // we can overflow max virtual sources, so we need to clamp it
+        if (RoundUpBy4(samplesPerRing) * totalRings > cMaxNumVirtualSources)
+        {
+            // Floor to divisible by simd size
+            samplesPerRing = FloorToSIMDSize(cMaxNumVirtualSources / totalRings);
+        }
 
         // Create sample distribution for the number of channels.
         return Dimensions{
-            .NumRings = RoundUpBy4(std::max(totalRings / numChannels, 1u)),
+            // Sacrificin vectorization for rings seems worth it,
+            // since it reduces the number of samples we need to comput by the order of magnitude.
+            .NumRings = std::max(1u,
+                static_cast<uint32>(std::ceil(totalRings / static_cast<float>(numChannels)))),
+                // we need to ceil because we can loose almost half the rings required to fill the gaps
+                // for high channel count source (e.g. 12 rings / 7 channels, we get 1, and loose 5 rings total)
+
             .NumSamplesPerRing = RoundUpBy4(samplesPerRing)
         };
     }

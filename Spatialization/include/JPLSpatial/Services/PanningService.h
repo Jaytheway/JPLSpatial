@@ -28,6 +28,7 @@
 #include "JPLSpatial/Panning/VBAPanning2D.h"
 #include "JPLSpatial/Utilities/IDType.h"
 
+#include <algorithm>
 #include <concepts>
 #include <span>
 #include <memory>
@@ -40,7 +41,6 @@ namespace JPL
 {
 	using StandartPanner = VBAPanner2D<VBAPStandartTraits>;
 	using StandartSourceLayout = typename StandartPanner::SourceLayoutType;
-	using StandartChannelGains = typename VBAPStandartTraits::ChannelGains;
 	using StandartPanData = typename StandartPanner::PanUpdateData;
 	using StandartPanDataWithOrientation = typename StandartPanner::PanUpdateDataWithOrientation;
 
@@ -144,7 +144,6 @@ namespace JPL
 
 		using PannerType = VBAPanner2D<PannerTraits>;
 		using SourceLayout = typename PannerType::SourceLayoutType;
-		using ChannelGains = typename PannerTraits::ChannelGains;
 		using PanData = typename PannerType::PanUpdateData;
 		using PanDataWithOrientation = typename PannerType::PanUpdateDataWithOrientation;
 
@@ -201,10 +200,10 @@ namespace JPL
 		/// @returns				false if the source hanlde is invalid, true otherwise
 		JPL_INLINE bool EvaluateDirection(PanEffectHandle source, const Position<Vec3Type>& position, ESpatializationType spatialziationType);
 
-		/// @returns		span of channel gains for the source and target channel map,
+		/// @returns		channel mix map gains for the source and target channel map,
 		///				empty span if source targets have never been added to the source.
 		///				The span contains the gains evaluated at the last call of EvaluateDirection
-		JPL_INLINE std::span<const ChannelGains> GetChannelGainsFor(PanEffectHandle source, ChannelMap targetChannelMap) const;
+		JPL_INLINE std::span<const float> GetChannelGainsFor(PanEffectHandle source, ChannelMap targetChannelMap) const;
 
 		//==========================================================================
 		/// Low level API
@@ -225,7 +224,7 @@ namespace JPL
 		// Initialize channel gains for source channel map.
 		// Returned gains must be managed by the user.
 		// This overload is meant for the case when using Panners directly.
-		JPL_INLINE bool CreateChannelGainsFor(ChannelMap targetChannelMap, ChannelMap sourceChannelMap, std::pmr::vector<ChannelGains>& outChannelGains) const;
+		JPL_INLINE bool CreateChannelGainsFor(ChannelMap targetChannelMap, ChannelMap sourceChannelMap, std::pmr::vector<float>& outChannelGains) const;
 
 		// Initialize channel gains for source. This is called internally in AddSourceTargets function.
 		// The gains are manaded by PanningService and used to cache results of the last call to EvaluateDirection
@@ -253,9 +252,9 @@ namespace JPL
 		// Dynamic parameters that can be changed at runtime
 		FlatMapType<PanEffectHandle, PanEffectParameters> mPanningParams{ GetDefaultMemoryResource() };
 
-		// Per target map - store ChannelGains of each source channel
-		// vector size = number of source channels
-		FlatMapType<PanningCacheKey, std::pmr::vector<ChannelGains>> mPanningCache{ GetDefaultMemoryResource() };
+		// Per target map - store channel mix map
+		// vector size = number of source channels * number of target channels
+		FlatMapType<PanningCacheKey, std::pmr::vector<float>> mPanningCache{ GetDefaultMemoryResource() };
 	};
 } // namespace JPL
 
@@ -336,14 +335,13 @@ namespace JPL
 	template<class VBAPTraits>
 	JPL_INLINE bool PanningService<VBAPTraits>::CreateChannelGainsFor(ChannelMap targetChannelMap,
 																	   ChannelMap sourceChannelMap,
-																	   std::pmr::vector<ChannelGains>& outChannelGains) const
+																	   std::pmr::vector<float>& outChannelGains) const
 	{
 		if (!targetChannelMap.IsValid() || !sourceChannelMap.IsValid())
 			return false;
 
-		outChannelGains.resize(sourceChannelMap.GetNumChannels());
-		for (auto& gains : outChannelGains)
-			gains.fill(0.0f);
+		outChannelGains.resize(sourceChannelMap.GetNumChannels() * targetChannelMap.GetNumChannels());
+		std::ranges::fill(outChannelGains, 0.0f);
 
 		return true;
 	}
@@ -364,16 +362,15 @@ namespace JPL
 				.TargetChannelMap = targetChannelMap
 			}];
 
-			channelGains.resize(mSourceLayouts[source]->ChannelGroups.size());
-			for (auto& gains : channelGains)
-				gains.fill(0.0f);
+		channelGains.resize(mSourceLayouts[source]->ChannelGroups.size() * targetChannelMap.GetNumChannels());
+		std::ranges::fill(channelGains, 0.0f);
 
-			return true;
+		return true;
 	}
 
 	template<class VBAPTraits>
 	JPL_INLINE auto PanningService<VBAPTraits>::GetChannelGainsFor(PanEffectHandle source, ChannelMap targetChannelMap) const
-		-> std::span<const ChannelGains>
+		-> std::span<const float>
 	{
 		auto cache = mPanningCache.find(
 			PanningCacheKey{
@@ -436,7 +433,7 @@ namespace JPL
 	{
 		return mSourceLayouts.erase(source)
 			+ mPanningParams.erase(source)
-			+ mPanningCache.erase_if([source](const std::pair<const PanningCacheKey, std::pmr::vector<ChannelGains>>& pair)
+			+ mPanningCache.erase_if([source](const std::pair<const PanningCacheKey, std::pmr::vector<float>>& pair)
 		{
 			return pair.first.Handle == source;
 		});
@@ -474,6 +471,28 @@ namespace JPL
 		return AddSourceTargets(source, std::span(targetChannelMaps));
 	}
 
+	namespace Impl
+	{
+		// If the source direction is pointing directly up, bias towards forward
+		template<CVec3 Vec3Type>
+		JPL_INLINE Vec3Type SanitizeSourceDir(const Vec3Type sourceDirection)
+		{
+			using Float = Vec3FloatType<Vec3Type>;
+
+			// TODO: This is a substantial offset, maybe we could revise some of the rotaion math to fall back to forward without needing this
+			static const Vec3Type fallbackDir = Normalized(Vec3Type(0, 1, -static_cast<Float>(5e-2))); // bias towards 2D forward (3D Z -> 2D Y axis)
+
+			Vec3Type sanitizedDirection = Math::IsNearlyEqual(
+				Math::Abs(GetY(sourceDirection)),
+				static_cast<Float>(1.0))
+				? fallbackDir
+				: sourceDirection;
+
+			SetY(sanitizedDirection, std::copysign(GetY(sanitizedDirection), GetY(sourceDirection))); // We need to preserve the sign
+			return sanitizedDirection;
+		}
+	}
+
 	template<class VBAPTraits>
 	JPL_INLINE bool PanningService<VBAPTraits>::EvaluateDirection(PanEffectHandle source, const Position<Vec3Type>& position, ESpatializationType spatialziationType)
 	{
@@ -495,8 +514,6 @@ namespace JPL
 
 				JPL_ASSERT(sourceLayout);
 
-				auto getOutGains = [&gains](uint32 channel) -> auto& { return gains[channel]; };
-
 				// TODO: move this switch statement outside of the loop
 				switch (spatialziationType)
 				{
@@ -510,11 +527,11 @@ namespace JPL
 				{
 					const PanData updateData
 					{
-						.SourceDirection = position.Location, // location is direction
+						.SourceDirection = Impl::SanitizeSourceDir(position.Location), // location is direction
 						.Focus = params.Focus,
 						.Spread = params.Spread,
 					};
-					mPanners[key.TargetChannelMap].ProcessVBAPData(*sourceLayout, updateData, getOutGains);
+					mPanners[key.TargetChannelMap].ProcessVBAPData(*sourceLayout, updateData, gains);
 				}
 				break;
 				case ESpatializationType::PositionAndOrientation:
@@ -522,13 +539,13 @@ namespace JPL
 					const PanDataWithOrientation updateData
 					{
 						.Pan = {
-							.SourceDirection = position.Location,
+							.SourceDirection = Impl::SanitizeSourceDir(position.Location),
 							.Focus = params.Focus,
 							.Spread = params.Spread
 						},
 						.Orientation = position.Orientation // TODO: orientation is actually up and forward
 					};
-					mPanners[key.TargetChannelMap].ProcessVBAPData(*sourceLayout, updateData, getOutGains);
+					mPanners[key.TargetChannelMap].ProcessVBAPData(*sourceLayout, updateData, gains);
 				}
 				break;
 				default:
