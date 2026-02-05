@@ -64,6 +64,36 @@ namespace JPL
             return *this;
         }
 
+        JPL_INLINE constexpr MinimalVec3 SafeNormal(const MinimalVec3& fallbackDirection, float tolerance = JPL_FLOAT_EPS) const noexcept
+        {
+            const float length2 = LengthSquared();
+            if (Math::IsNearlyZero(length2, tolerance))
+            {
+                return fallbackDirection;
+            }
+            else
+            {
+                const float invLength = Math::InvSqrt(length2);
+                return MinimalVec3{ X * invLength, Y * invLength, Z * invLength };
+            }
+        }
+
+        JPL_INLINE constexpr MinimalVec3 SafeNormal(float& outLength, const MinimalVec3& fallbackDirection, float tolerance = JPL_FLOAT_EPS) const noexcept
+        {
+            const float length2 = LengthSquared();
+            if (Math::IsNearlyZero(length2, tolerance))
+            {
+                outLength = 0.0f;
+                return fallbackDirection;
+            }
+            else
+            {
+                outLength = Math::Sqrt(length2);
+                const float invLength = 1.0f / outLength;
+                return MinimalVec3{ X * invLength, Y * invLength, Z * invLength };
+            }
+        }
+
         [[nodiscard]] JPL_INLINE constexpr MinimalVec3 operator-() const { return MinimalVec3(-X, -Y, -Z); }
         [[nodiscard]] JPL_INLINE constexpr MinimalVec3 operator-(const MinimalVec3& V) const { return MinimalVec3(X - V.X, Y - V.Y, Z - V.Z); }
         [[nodiscard]] JPL_INLINE constexpr MinimalVec3 operator+(const MinimalVec3& V) const { return MinimalVec3(X + V.X, Y + V.Y, Z + V.Z); }
