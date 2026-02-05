@@ -1,4 +1,9 @@
+<div align="center">
+	
 [![Build](https://github.com/Jaytheway/JPLSpatial/actions/workflows/build.yml/badge.svg)](https://github.com/Jaytheway/JPLSpatial/actions/workflows/build.yml) ![GitHub License](https://img.shields.io/github/license/Jaytheway/JPLSpatial)
+
+</div>
+
 # JPLSpatial
 
 Sound spatialization and propagation library.
