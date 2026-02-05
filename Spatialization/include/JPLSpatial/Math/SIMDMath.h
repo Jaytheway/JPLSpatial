@@ -481,56 +481,58 @@ namespace JPL
 			outTaylorSin = fma(outTaylorSin, x2 * x, x);
 		}
 	}
-
-	//==========================================================================
-	/// Sin and Cos for 4-wide 32-bit float vector
-	inline void SinCos(simd x, simd& outSin, simd& outCos) noexcept
+	namespace Math
 	{
-		// Adopted from "Simple SSE and SSE2 (and now NEON) optimized sin, cos, log and exp"
-		// by Julien Pommier (http://gruntthepeon.free.fr/ssemath/),
-		// and adapted to C++.
-		// 
-		// Some concepts referenced from JoltPhysics library
-		// by Jorrit Rouwe (https://github.com/jrouwe/JoltPhysics)
+		//==========================================================================
+		/// Sin and Cos for 4-wide 32-bit float vector
+		inline void SinCos(simd x, simd& outSin, simd& outCos) noexcept
+		{
+			// Adopted from "Simple SSE and SSE2 (and now NEON) optimized sin, cos, log and exp"
+			// by Julien Pommier (http://gruntthepeon.free.fr/ssemath/),
+			// and adapted to C++.
+			// 
+			// Some concepts referenced from JoltPhysics library
+			// by Jorrit Rouwe (https://github.com/jrouwe/JoltPhysics)
 
-		// Make argument positive and remember sign for sin only
-		// since cos is symmetric around x (highest bit of a float is the sign bit)
-		simd_mask sin_sign_bit = signbit(x); // extract the sign bit (upper one)
-		x = abs(x); // take the absolute value
+			// Make argument positive and remember sign for sin only
+			// since cos is symmetric around x (highest bit of a float is the sign bit)
+			simd_mask sin_sign_bit = signbit(x); // extract the sign bit (upper one)
+			x = abs(x); // take the absolute value
 
-		// Store the integer part of y in quadrant
-		// x * cephes::c_FOPI: scale by 4/Pi
-		simd_mask quadrant = fma(cephes::c_FOPI, x, constant::c_i1.to_simd()).to_mask() & constant::c_iinv1;
-		simd float_quadrant = quadrant.to_simd();
+			// Store the integer part of y in quadrant
+			// x * cephes::c_FOPI: scale by 4/Pi
+			simd_mask quadrant = fma(cephes::c_FOPI, x, constant::c_i1.to_simd()).to_mask() & constant::c_iinv1;
+			simd float_quadrant = quadrant.to_simd();
 
-		// The magic pass: "Extended precision modular arithmetic"
-		// x = ((x - y * DP1) - y * DP2) - y * DP3;
-		x = fma(float_quadrant, cephes::c_minus_DP1, x);
-		x = fma(float_quadrant, cephes::c_minus_DP2, x);
-		x = fma(float_quadrant, cephes::c_minus_DP3, x);
+			// The magic pass: "Extended precision modular arithmetic"
+			// x = ((x - y * DP1) - y * DP2) - y * DP3;
+			x = fma(float_quadrant, cephes::c_minus_DP1, x);
+			x = fma(float_quadrant, cephes::c_minus_DP2, x);
+			x = fma(float_quadrant, cephes::c_minus_DP3, x);
 
-		// Evaluate polynomials
-		simd taylor_cos, taylor_sin;
-		sincos::polynomials(x, taylor_cos, taylor_sin);
+			// Evaluate polynomials
+			simd taylor_cos, taylor_sin;
+			sincos::polynomials(x, taylor_cos, taylor_sin);
 
-		// Get the polynom selection mask for the sine
-		simd_mask mask = (quadrant & constant::c_i2) == simd_mask::zero();
+			// Get the polynom selection mask for the sine
+			simd_mask mask = (quadrant & constant::c_i2) == simd_mask::zero();
 
-		// Select which one of the results is sin and which one is cos
-		simd s = simd::select(mask, taylor_sin, taylor_cos);
-		simd c = simd::select(mask, taylor_cos, taylor_sin);
+			// Select which one of the results is sin and which one is cos
+			simd s = simd::select(mask, taylor_sin, taylor_cos);
+			simd c = simd::select(mask, taylor_cos, taylor_sin);
 
-		// Update the signs
-		simd_mask bit1 = quadrant << 30;
-		simd_mask bit2 = ((quadrant << 29) & constant::c_sign_mask);
+			// Update the signs
+			simd_mask bit1 = quadrant << 30;
+			simd_mask bit2 = ((quadrant << 29) & constant::c_sign_mask);
 
-		sin_sign_bit = (sin_sign_bit ^ bit2);
-		simd_mask sign_bit_cos = bit1 ^ bit2;
+			sin_sign_bit = (sin_sign_bit ^ bit2);
+			simd_mask sign_bit_cos = bit1 ^ bit2;
 
-		// Correct the signs
-		outSin = (s ^ sin_sign_bit.as_simd());
-		outCos = (c ^ sign_bit_cos.as_simd());
-	}
+			// Correct the signs
+			outSin = (s ^ sin_sign_bit.as_simd());
+			outCos = (c ^ sign_bit_cos.as_simd());
+		}
+	} // namespace Math
 
 	//==========================================================================
 	/// Sin implementation for 4-wide 32-bit flaot vector

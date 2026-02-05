@@ -20,9 +20,13 @@
 #pragma once
 
 #include "JPLSpatial/Math/Math.h"
+#include "JPLSpatial/Math/SIMD.h"
+#include "JPLSpatial/Math/SIMDMath.h"
+#include "JPLSpatial/Math/Vec3Pack.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
 
 #include <cmath>
+#include <concepts>
 #include <numbers>
 #include <limits>
 
@@ -114,10 +118,21 @@ namespace JPL::Math
 		return v0 + t * (v1 - v0);
 	}
 
+	[[nodiscard]] JPL_INLINE Vec3Pack Lerp(const Vec3Pack& v0, const Vec3Pack& v1, simd t) noexcept
+	{
+		//return v0 + t * (v1 - v0);
+		return FMA(t, (v1 - v0), v0);
+	}
+
 	/// Linearly interpolate v0 towards v1 and normalize.
 	/// Input vectors must be normalized
 	template<CVec3 Vec3>
 	[[nodiscard]] JPL_INLINE Vec3 Nlerp(const Vec3& v0, const Vec3& v1, float t) noexcept
+	{
+		return Normalized(Lerp(v0, v1, t));
+	}
+
+	[[nodiscard]] JPL_INLINE Vec3Pack Nlerp(const Vec3Pack& v0, const Vec3Pack& v1, simd t) noexcept
 	{
 		return Normalized(Lerp(v0, v1, t));
 	}
@@ -157,8 +172,14 @@ namespace JPL::Math
 				axis = Vec3(0.0, 1.0, 0.0);
 			}
 
+#if 0
 			// The rotation axis is perpendicular to v0.
 			axis = CrossProduct(v0, axis);
+			const auto proj = CrossProduct(axis, v0);
+#else
+			// proj = basis projected onto plane perpendicular to v0
+			const auto proj = Normalized((axis - v0 * DotProduct(v0, axis)));
+#endif
 
 			// Rotate v0 by t * 180 degrees around the chosen axis.
 			// This is equivalent to a half-rotation of a quaternion.
@@ -168,7 +189,7 @@ namespace JPL::Math
 			// Optimized for unit vectors and axis perpendicular to v:
 			// (axis . v) = 0
 			// So: v_rot = v * cos(a) + (axis x v) * sin(a)
-			return Normalized(v0 * cosAngle + (CrossProduct(axis, v0)) * sinAngle);
+			return Normalized(v0 * cosAngle + proj * sinAngle);
 		}
 
 		// Case 3: General case (vectors are neither very close nor opposite)
@@ -179,6 +200,110 @@ namespace JPL::Math
 		const FloatType w1 = std::sin(t * theta) * invSinTheta;
 
 		return Normalized(v0 * w0 + v1 * w1);
+	}
+
+	/// Input vectors must be normalized
+	[[nodiscard]] inline void Slerp(
+		Vec3Pack& inOutV0,
+		const Vec3Pack& V1,
+		const simd& t) noexcept
+	{
+		using FloatType = simd;
+		static const FloatType one(1.0f);
+		
+		// Clamp dot product to handle floating point inaccuracies
+		// (values slightly outside [-1, 1] can cause acos to return NaN)
+		const FloatType dot = clamp(DotProduct(inOutV0, V1), -one, one);
+
+		static constexpr float EPSILON =
+			(std::numeric_limits<float>::epsilon() * 100.0f);
+
+		static const FloatType oneMinusEps(1.0f - EPSILON);
+		static const FloatType minusOnePlusEps(-1.0f + EPSILON);
+
+		// Case 1: Vectors are very close (parallel or nearly parallel)
+		// This provides good enough results for nearly parallel vectors.
+		const simd_mask isParallel = dot > oneMinusEps;
+
+		// Case 2: Vectors are opposite (dot product approx -1)
+		const simd_mask isOpposite = dot < minusOnePlusEps;
+
+		// Opposite Case
+		// --------------------------------------------------------------
+		// When vectors are opposite, SLERP is ambiguous.
+		// We pick an arbitrary axis perpendicular to v0 to rotate around.
+		Vec3Pack axis(1.0f, 0.0f, 0.0f);
+
+		// If v0 is too close to X-axis, try Y-axis
+		const simd_mask isClose = abs(DotProduct(inOutV0, axis)) > oneMinusEps;
+		axis = {
+				simd::select(isClose, simd::c_0, simd::c_1),	// X
+				simd::select(isClose, simd::c_1, simd::c_0),	// Y
+				simd::c_0										// Z
+		};
+
+#if 0
+		// The rotation axis is perpendicular to v0.
+		axis = CrossProduct(inOutV0, axis);
+		const Vec3simd proj = CrossProduct(axis, inOutV0)
+#else
+		// proj = basis projected onto plane perpendicular to v0
+		const Vec3Pack proj = (axis - inOutV0 * DotProduct(inOutV0, axis)).Normalize();
+
+		// Rotate v0 by t * 180 degrees around the chosen axis.
+		// This is equivalent to a half-rotation of a quaternion.
+		const FloatType angle = t * simd::c_pi;
+		
+		FloatType sinAngle;
+		FloatType oppositeCaseTermA; // cosAngle
+		Math::SinCos(angle, sinAngle, oppositeCaseTermA);
+#endif
+		const Vec3Pack oppositeCaseTermB = proj * sinAngle;
+
+		// Case 3: General case (vectors are neither very close nor opposite)
+		// --------------------------------------------------------------
+#if 0
+		const FloatType theta = ::JPL::acos(dot); // Angle between vectors
+		const FloatType invSinTheta = one / ::JPL::sin(theta); 
+		const FloatType w0 = ::JPL::sin((one - t) * theta) * invSinTheta;
+		const FloatType w1 = ::JPL::sin(t * theta) * invSinTheta;
+#else
+		const FloatType invSinTheta = Math::InvSqrtFast(one - dot * dot); //? May be close to zero here, but we'll select parallelCase
+		const FloatType theta = ::JPL::acos(dot);
+		FloatType sinT, cosT;
+		Math::SinCos(t * theta, sinT, cosT);
+		const FloatType w1 = sinT * invSinTheta;
+		const FloatType w0 = cosT - dot * w1;
+#endif
+		// --------------------------------------------------------------
+
+#if 1
+		// Combine all three cases into single FMA
+		inOutV0 = FMA(
+			Vec3Pack::select(isParallel,
+							 (V1 - inOutV0),
+							 inOutV0),
+			simd::select(isParallel,
+						 t,
+						 simd::select(isOpposite, oppositeCaseTermA, w0)),
+			Vec3Pack::select(isParallel,
+							 inOutV0,
+							 Vec3Pack::select(isOpposite, oppositeCaseTermB, V1 * w1)));
+#else
+		// Use linear interpolation for parallelCase
+		const Vec3simd parallelCase = FMA((V1 - inOutV0), t, inOutV0);// Lerp(inOutV0, V1, t);
+
+		inOutV0 = FMA(
+			inOutV0
+			, simd::select(isOpposite, oppositeCaseTermA, w0)
+			, Vec3simd::select(isOpposite, oppositeCaseTermB, V1 * w1)
+		);
+		
+		inOutV0 = Vec3simd::select(isParallel, parallelCase, inOutV0);
+#endif
+
+		// Normalize once at the end
+		inOutV0.Normalize();
 	}
 
 } // namespace JPL::Math

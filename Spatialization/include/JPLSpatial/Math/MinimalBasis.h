@@ -23,6 +23,7 @@
 #include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/Vec3Math.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
+#include "JPLSpatial/Math/SIMD.h"
 
 #include <cmath>
 
@@ -51,7 +52,7 @@ namespace JPL
 		[[nodiscard]] JPL_INLINE static Basis FromForward(const Vec3& forward) noexcept
 		{
 			Basis basis{ .Z = forward };
-			CreateOrthonormalBasis(forward, basis.X, basis.Y);
+			Math::CreateOrthonormalBasis(forward, basis.X, basis.Y);
 			return basis;
 		}
 
@@ -108,6 +109,21 @@ namespace JPL
 		{
 			// 3 FMAs, or 9 mul + 6 add
 			return GetX(vector) * X + GetY(vector) * Y + GetZ(vector) * Z;
+		}
+
+		/// Apply rotation local -> world.
+		/// Performs transform on 4 directions packed into simd vectors at the same time.
+		[[nodiscard]] JPL_INLINE void Transform(simd& inOutX, simd& inOutY, simd& inOutZ) const noexcept
+		{
+			// Take a copy of the original input values
+			// because we modify them as we compute next component
+			const simd inX = inOutX;
+			const simd inY = inOutY;
+			const simd inZ = inOutZ;
+
+			inOutX = FMA(simd(GetX(X)), inX, FMA(simd(GetX(Y)), inY, simd(GetX(Z)) * inZ));
+			inOutY = FMA(simd(GetY(X)), inX, FMA(simd(GetY(Y)), inY, simd(GetY(Z)) * inZ));
+			inOutZ = FMA(simd(GetZ(X)), inX, FMA(simd(GetZ(Y)), inY, simd(GetZ(Z)) * inZ));
 		}
 
 		/// Compose orientations: apply 'this' basis mapping to the other's axes.
