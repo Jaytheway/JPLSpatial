@@ -23,7 +23,7 @@
 #include "JPLSpatial/ErrorReporting.h"
 #include "JPLSpatial/ChannelMap.h"
 #include "JPLSpatial/Memory/Memory.h"
-#include "JPLSpatial/Panning/ChannelConversionMaps.h"
+//#include "JPLSpatial/Panning/ChannelConversionMaps.h"
 
 #include <array>
 #include <bit>
