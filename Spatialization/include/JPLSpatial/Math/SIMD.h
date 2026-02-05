@@ -21,6 +21,7 @@
 
 #include "JPLSpatial/Core.h"
 #include "JPLSpatial/ErrorReporting.h"
+#include "JPLSpatial/Math/Math.h"
 
 #include <bit>
 #include <limits>
@@ -74,6 +75,10 @@ namespace JPL
 		JPL_INLINE simd(float v0, float v1, float v2, float v3) noexcept;
 		JPL_INLINE simd(const float* mem);
 
+		/// Gather 4 floats from memory at base + offsets[i] * Scale
+		template <int Scale>
+		static JPL_INLINE simd gather(const float* base, const simd_mask& offsets);
+
 		/// Vector with all zeros
 		static JPL_INLINE simd zero() noexcept;
 		
@@ -86,6 +91,7 @@ namespace JPL
 		static const simd c_0;
 		static const simd c_1;
 		static const simd c_0p5;
+		static const simd c_pi;
 
 		/// Get number of element of the vector
 		static constexpr std::size_t size() noexcept { return 4; }
@@ -124,6 +130,9 @@ namespace JPL
 		/// Divide vector by float
 		JPL_INLINE simd& operator /= (float value) noexcept;
 
+		/// Divide vector by vector
+		JPL_INLINE simd& operator /= (const simd& other) noexcept;
+
 		/// Add two float vectors (component wise)
 		JPL_INLINE simd	operator + (const simd& other) const noexcept;
 
@@ -150,6 +159,10 @@ namespace JPL
 
 		/// Component-wise logical AND
 		JPL_INLINE void operator &= (const simd& other) noexcept;
+
+		/// Replicate component at LaneIndex to all components
+		template<uint32 LaneIndex> requires (LaneIndex < 4)
+		JPL_INLINE simd	splat() const;
 
 		/// Returns sum of all components
 		JPL_INLINE float reduce() const noexcept;
@@ -222,6 +235,10 @@ namespace JPL
 
 		/// Store values from simd to provided memory location
 		JPL_INLINE void store(uint32* mem) const;
+
+		/// Get float component by index known at compile-time
+		template<uint32 LaneIndex> requires (LaneIndex < 4)
+		JPL_INLINE uint32 get_lane() const noexcept;
 		
 		/// Test if all of the components are true
 		JPL_INLINE bool all_of() const noexcept;
@@ -340,10 +357,17 @@ namespace JPL
 	namespace Math
 	{
 		/// Component-wise square root
-		JPL_INLINE simd Sqrt(const simd& vec) noexcept;
+		[[nodiscard]] JPL_INLINE simd Sqrt(const simd& vec) noexcept;
 
 		/// Component-wise inverse square root (1 / sqrt(x))
-		JPL_INLINE simd InvSqrt(const simd& vec) noexcept;
+		[[nodiscard]] JPL_INLINE simd InvSqrt(const simd& vec) noexcept;
+
+		// TODO: TEST
+		/// Sign2 returns -1 for negative values, 1 otherwise
+		[[nodiscard]] JPL_INLINE simd Sign2(const simd& vec) noexcept;
+		
+		// TODO: TEST
+		[[nodiscard]] JPL_INLINE simd_mask IsNearlyZero(const simd& vec, float tolerance = JPL_FLOAT_EPS) noexcept;
 	}
 	
 	/// Element-wise max
@@ -359,6 +383,9 @@ namespace JPL
 
 	/// Element-wise fused multiply-add
 	JPL_INLINE simd fma(const simd& mul1, const simd& mul2, const simd& addV) noexcept;
+
+	/// An overload to match our scalar version in Math.h
+	JPL_INLINE simd FMA(const simd& mul1, const simd& mul2, const simd& addV) noexcept { return fma(mul1, mul2, addV); }
 
 	/// Element-wise floor
 	JPL_INLINE simd floor(const simd& vec) noexcept;
@@ -412,6 +439,7 @@ namespace JPL
 	inline const simd simd::c_0 = simd::zero();
 	inline const simd simd::c_1 = 1.0f;
 	inline const simd simd::c_0p5 = 0.5f;
+	inline const simd simd::c_pi = simd(JPL_PI);
 
 	//==========================================================================
 	JPL_INLINE simd::simd(float value) noexcept
@@ -450,6 +478,33 @@ namespace JPL
 	{
 		load(mem);
 	}
+
+	template<int Scale>
+	JPL_INLINE simd simd::gather(const float* inBase, const simd_mask& offsets)
+	{
+#if defined(JPL_USE_SSE)
+#ifdef JPL_USE_AVX2
+		return _mm_i32gather_ps(inBase, offsets.mNative, Scale);
+#else
+		const uint8* base = reinterpret_cast<const uint8*>(inBase);
+		Type x = _mm_load_ss(reinterpret_cast<const float*>(base + offsets.get_lane<0>() * Scale));
+		Type y = _mm_load_ss(reinterpret_cast<const float*>(base + offsets.get_lane<1>() * Scale));
+		Type xy = _mm_unpacklo_ps(x, y);
+		Type z = _mm_load_ss(reinterpret_cast<const float*>(base + offsets.get_lane<2>() * Scale));
+		Type w = _mm_load_ss(reinterpret_cast<const float*>(base + offsets.get_lane<3>() * Scale));
+		Type zw = _mm_unpacklo_ps(z, w);
+		return _mm_movelh_ps(xy, zw);
+#endif
+#else
+		const uint8* base = reinterpret_cast<const uint8*>(inBase);
+		float x = *reinterpret_cast<const float*>(base + offsets.get_lane<0>() * Scale);
+		float y = *reinterpret_cast<const float*>(base + offsets.get_lane<1>() * Scale);
+		float z = *reinterpret_cast<const float*>(base + offsets.get_lane<2>() * Scale);
+		float w = *reinterpret_cast<const float*>(base + offsets.get_lane<3>() * Scale);
+		return { x, y, z, w };
+#endif
+	}
+
 
 	JPL_INLINE simd simd::zero() noexcept
 	{
@@ -625,6 +680,19 @@ namespace JPL
 #else
 		for (int i = 0; i < 4; ++i)
 			mNative[i] /= value;
+#endif
+		return *this;
+	}
+
+	JPL_INLINE simd& simd::operator/=(const simd& other) noexcept
+	{
+#if defined(JPL_USE_SSE)
+		mNative = _mm_div_ps(mNative, other);
+#elif defined(JPL_USE_NEON)
+		mNative = vdivq_f32(mNative, other);
+#else
+		for (int i = 0; i < 4; ++i)
+			mNative[i] /= other.mNative[i];
 #endif
 		return *this;
 	}
@@ -820,6 +888,18 @@ namespace JPL
 		);
 #else
 		return (a.as_mask() & b.as_mask()).as_simd();
+#endif
+	}
+
+	template<uint32 LaneIndex> requires(LaneIndex < 4)
+	JPL_INLINE simd simd::splat() const
+	{
+#if defined(JPL_USE_SSE)
+		return _mm_shuffle_ps(mNative, mNative, _MM_SHUFFLE(LaneIndex, LaneIndex, LaneIndex, LaneIndex));
+#elif defined(JPL_USE_NEON)
+		return vdupq_laneq_f32(mNative, LaneIndex);
+#else
+		return { mNative[LaneIndex], mNative[LaneIndex], mNative[LaneIndex], mNative[LaneIndex] };
 #endif
 	}
 
@@ -1039,6 +1119,18 @@ namespace JPL
 		mem[1] = mNative[1];
 		mem[2] = mNative[2];
 		mem[3] = mNative[3];
+#endif
+	}
+
+	template<uint32 LaneIndex> requires (LaneIndex < 4)
+	JPL_INLINE uint32 simd_mask::get_lane() const noexcept
+	{
+#if defined(JPL_USE_SSE)
+		return static_cast<uint32>(_mm_cvtsi128_si32(_mm_shuffle_epi32(mNative, _MM_SHUFFLE(0, 0, 0, LaneIndex))));
+#elif defined(JPL_USE_NEON)
+		return vgetq_lane_u32(mNative, LaneIndex);
+#else
+		return mNative[LaneIndex];
 #endif
 	}
 
@@ -1569,12 +1661,11 @@ namespace JPL
 #endif
 		}
 
-		JPL_INLINE simd InvSqrt(const simd& vec) noexcept
+		// @param NR : number of Newton's refinements.
+		// 0: estimate, 1: ~16b, 2: ~23-24b (near float)
+		template<int NR> requires(NR > 0 && NR <= 2)
+		JPL_INLINE simd InvSqrtImpl(const simd& vec) noexcept
 		{
-			// Number of Newton's refinements.
-			// 0: estimate, 1: ~16b, 2: ~23-24b (near float)
-			static constexpr int NR = 2;
-			
 			using Type = typename simd::Type;
 
 #if defined(JPL_USE_SSE)
@@ -1646,6 +1737,26 @@ namespace JPL
 				1.0f / std::sqrt(vec.mNative[3])
 			);
 #endif
+		}
+
+		JPL_INLINE simd InvSqrt(const simd& vec) noexcept
+		{
+			return InvSqrtImpl<2>(vec);
+		}
+
+		JPL_INLINE simd InvSqrtFast(const simd& vec) noexcept
+		{
+			return InvSqrtImpl<1>(vec);
+		}
+
+		JPL_INLINE simd Sign2(const simd& vec) noexcept
+		{
+			return simd::select(vec < simd::c_0, -simd::c_1, simd::c_1);
+		}
+
+		JPL_INLINE simd_mask IsNearlyZero(const simd& vec, float tolerance) noexcept
+		{
+			return abs(vec) <= tolerance;
 		}
 	}
 

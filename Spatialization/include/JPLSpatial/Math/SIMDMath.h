@@ -23,9 +23,66 @@
 #include "JPLSpatial/Math/SIMD.h"
 
 #include <numbers>
+#include <concepts>
 
 namespace JPL
 {
+	static_assert(simd::size() == 4 && "The SIMD counter math below assumes simd::size() is 4.");
+
+	/// Floor `count` to 4-wide simd vector
+	[[nodiscard]] JPL_INLINE constexpr auto FloorToSIMDSize(std::unsigned_integral auto count) noexcept
+	{
+		return count & 0xFFFFFFFC;
+	}
+
+	/// Floor `count` to 8-wide simd vector
+	[[nodiscard]] JPL_INLINE constexpr auto FloorToSIMDSizeDouble(std::unsigned_integral auto count) noexcept
+	{
+		return count & 0xFFFFFFF8;
+	}
+
+	/// Get the remaining tail from `count` that won't fill a simd vector
+	[[nodiscard]] JPL_INLINE constexpr auto GetSIMDTail(std::unsigned_integral auto count) noexcept
+	{
+		return count & 3;
+	}
+
+	/// Get number of SIMD operations that can fit into the `count`
+	[[nodiscard]] JPL_INLINE constexpr auto GetNumSIMDOps(std::unsigned_integral auto count) noexcept
+	{
+		return count >> 2;
+	}
+
+	/// Get number of 8-wide simd operations that can fit into the `count`
+	[[nodiscard]] JPL_INLINE constexpr auto GetNumSIMDOpsDouble(std::unsigned_integral auto count) noexcept
+	{
+		return count >> 3;
+	}
+
+	/// Get the remaining tail from `count` that won't fill 8-wide simd vector
+	[[nodiscard]] JPL_INLINE constexpr auto GetSIMDTailDouble(std::unsigned_integral auto count) noexcept
+	{
+		return count & 7;
+	}
+
+	/// Round `count` up to the next simd width
+	[[nodiscard]] JPL_INLINE constexpr auto RoundUpToSIMD(std::unsigned_integral auto count) noexcept
+	{
+		return (count + 3) >> 2;
+	}
+
+	/// Floor `count` to divisible by 2
+	[[nodiscard]] JPL_INLINE constexpr auto FloorToDiv2(std::unsigned_integral auto count) noexcept
+	{
+		return count & (~1llu);
+	}
+
+	/// @returns 1 if `count` is uneven, 0 otherwise
+	[[nodiscard]] JPL_INLINE constexpr auto GetDiv2Tail(std::unsigned_integral auto count) noexcept
+	{
+		return count & 1;
+	}
+
 	//==========================================================================
 	/// Declare some SIMD constants
 
@@ -53,6 +110,9 @@ namespace JPL
 		JPL_INT_CONSTANT(2, 2);
 		JPL_INT_CONSTANT(4, 4);
 		JPL_INT_CONSTANT(0x7f, 0x7f);
+
+		JPL_FL_CONSTANT(pi, std::numbers::pi_v<float>);
+		JPL_FL_CONSTANT(half_pi, std::numbers::pi_v<float> * 0.5f);
 	}
 
 	//==========================================================================
@@ -602,7 +662,148 @@ namespace JPL
 		return tan;
 	}
 
-	// TODO: atan, atan2
+	namespace asinacos
+	{
+		JPL_INLINE simd polynomial(const simd& x, const simd& x2)
+		{
+			simd y = +0.4197454825e-1f;
+			y = fma(y, x2, +0.2424046025e-1f);
+			y = fma(y, x2, +0.4547423869e-1f);
+			y = fma(y, x2, +0.7495029271e-1f);
+			y = fma(y, x2, +0.1666677296e+0f);
+			y = fma(y, x * x2, x);
+			return y;
+		}
+	}
+
+	/// Calculate the arc sine for each element of this vector (returns value in the range [-PI / 2, PI / 2])
+	/// Note that all input values will be clamped to the range [-1, 1] and this function will not return NaNs like std::asin
+	inline simd asin(const simd& in)
+	{
+		const simd_mask asin_sign = signbit(in);
+		simd a = abs(in);
+		
+		// asin is not defined outside the range [-1, 1] but it often happens that a value is slightly above 1 so we just clamp here
+		a = min(a, simd::c_1);
+
+		// When |x| < 0.5 we use the asin approximation
+		// When |x| >= 0.5 we use the identity asin(x) = PI / 2 - 2 * asin(sqrt((1 - x) / 2))
+		const simd_mask o = a < simd::c_0p5;
+
+		const simd x2 = simd::select(o, (a * a), ((simd::c_1 - a) * 0.5f));
+		const simd x = simd::select(o, a, Math::Sqrt(x2));
+
+		// Polynomial approximation of asin
+		const simd u = asinacos::polynomial(x, x2);
+		
+		// If |x| >= 0.5 we need to apply the remainder of the identity above
+		const simd r = simd::select(o, u, (constant::c_half_pi - (u + u)));
+
+		// Put the sign back
+		return r ^ asin_sign.as_simd();
+	}
+
+	/// Calculate the arc cosine for each element of this vector (returns value in the range [0, PI])
+	/// Note that all input values will be clamped to the range [-1, 1] and this function will not return NaNs like std::acos
+	inline simd acos(const simd& in)
+	{
+#if 1
+		// Not super accurate, but good enough
+		return constant::c_half_pi - asin(in);
+#else
+		// See comments in `asin()`...
+
+		const simd_mask asin_sign = signbit(in);
+		simd a = abs(in);
+		a = min(a, simd::c_1);
+		const simd_mask o = a < simd::c_0p5;
+
+		const simd x2 = simd::select(o, (a * a), ((simd::c_1 - a) * 0.5f));
+		const simd x = simd::select(a == simd::c_1,
+									simd::c_0,
+									simd::select(o, a, Math::Sqrt(x2)));
+
+		const simd u = asinacos::polynomial(x, x2);
+		const simd y = constant::c_half_pi - (u ^ asin_sign.as_simd());
+		
+		simd r = simd::select(o, y, (u + u));
+		r = simd::select((~o) & (in < simd::c_0), constant::c_pi - r, r);
+
+		return r;
+#endif
+	}
+
+	// TODO: atan
+
+	namespace arctangent2
+	{
+		inline simd polynomial(simd x)
+		{
+			// Store the coefficients
+			const simd a1(0.99997726f);
+			const simd a3(-0.33262347f);
+			const simd a5(0.19354346f);
+			const simd a7(-0.11643287f);
+			const simd a9(0.05265332f);
+			const simd a11(-0.01172120f);
+
+			// Compute the polynomial
+			simd x2 = x * x;
+			simd result;
+			result = a11;
+			result = fma(x2, result, a9);
+			result = fma(x2, result, a7);
+			result = fma(x2, result, a5);
+			result = fma(x2, result, a3);
+			result = fma(x2, result, a1);
+			result *= x;
+
+			return result;
+		}
+	}
+
+	inline simd atan2(const simd& y, const simd& x)
+	{
+		// Adopted from AVX implementaion in "Speeding up atan2f by 50x"
+		// https://mazzo.li/posts/vectorized-atan2.html
+
+		const simd_mask swap_mask = abs(y) > abs(x);
+		
+		// Create the atan input by "blending" `y` and `x`, according to the mask computed
+		// above. In our case we need the number of larger magnitude to
+		// be the denominator.
+		const simd atan_input =
+			simd::select(swap_mask, x, y) / // pick the lowest between |y| and |x| for each number
+			simd::select(swap_mask, y, x);  // and the highest.
+			
+		// Approximate atan
+		simd result = arctangent2::polynomial(atan_input);
+
+		// If swapped, adjust atan output. We use blending again to leave
+		// the output unchanged if we didn't swap anything.
+		//
+		// If we need to adjust it, we simply carry the sign over from the input
+		// to `pi_2` by using the `sign_mask`. This avoids a more expensive comparison,
+		// and also handles edge cases such as -0 better.
+		result = simd::select(swap_mask,
+							  (constant::c_half_pi | signbit(atan_input).as_simd()) - result,
+							  result);
+
+		// Adjust the result depending on the input quadrant.
+		//
+		// We create a mask for the sign of `x` using an arithmetic right shift:
+		// the mask will be all 0s if the sign if positive, and all 1s
+		// if the sign is negative. This avoids a further (and slower) comparison
+		// with 0.
+		const simd x_sign_mask = x.as_mask().ashr<31>().as_simd();
+		
+		// Then use the mask to perform the adjustment only when the sign
+		// is positive, and use the sign bit of `y` to know whether to add
+		// `pi` or `-pi`.
+		result += ((constant::c_pi ^ signbit(y).as_simd()) & x_sign_mask);
+
+		return result;
+	}
 
 } // namespace JPL
 

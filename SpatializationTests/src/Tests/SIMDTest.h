@@ -207,6 +207,24 @@ namespace JPL
 		EXPECT_EQ(s3, Util::cTestSplat1);
 	}
 
+	TEST(SIMD, GatherCorrect)
+	{
+		std::array<float, 8> data{ 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f };
+
+		{
+			simd_mask offset(0, 1, 2, 3);
+			simd s = simd::gather<4>(data.data(), offset);
+			Util::simd_check expected{ 0.0f, 1.0f, 2.0f, 3.0f };
+			EXPECT_EQ(s, expected);
+		}
+		{
+			simd_mask offset(0, 1, 2, 3);
+			simd s = simd::gather<8>(data.data(), offset);
+			Util::simd_check expected{ 0.0f, 2.0f, 4.0f, 6.0f };
+			EXPECT_EQ(s, expected);
+		}
+	}
+
 	TEST(SIMD, IndexOperator_GetsCorrectComponent)
 	{
 		simd s(Util::cTest0123.data());
@@ -219,12 +237,22 @@ namespace JPL
 
 	TEST(SIMD, get_lane_GetsCorrectComponent)
 	{
-		simd s(Util::cTest0123.data());
+		{
+			simd s(Util::cTest0123.data());
 
-		EXPECT_EQ(s.get_lane<0>(), Util::cTest0123[0]);
-		EXPECT_EQ(s.get_lane<1>(), Util::cTest0123[1]);
-		EXPECT_EQ(s.get_lane<2>(), Util::cTest0123[2]);
-		EXPECT_EQ(s.get_lane<3>(), Util::cTest0123[3]);
+			EXPECT_EQ(s.get_lane<0>(), Util::cTest0123[0]);
+			EXPECT_EQ(s.get_lane<1>(), Util::cTest0123[1]);
+			EXPECT_EQ(s.get_lane<2>(), Util::cTest0123[2]);
+			EXPECT_EQ(s.get_lane<3>(), Util::cTest0123[3]);
+		}
+		{
+			simd_mask s(0, 1, 2, 3);
+
+			EXPECT_EQ(s.get_lane<0>(), 0u);
+			EXPECT_EQ(s.get_lane<1>(), 1u);
+			EXPECT_EQ(s.get_lane<2>(), 2u);
+			EXPECT_EQ(s.get_lane<3>(), 3u);
+		}
 	}
 
 	TEST(SIMD, MultiplyWithSIMDCorrect)
@@ -254,6 +282,17 @@ namespace JPL
 		simd result = s1 / value;
 		Util::simd_check expected(Util::cTest0123, Util::divide_by(value));
 		EXPECT_EQ(result, expected);
+	}
+
+	TEST(SIMD, DivieBySIMDInPlaceCorrect)
+	{
+		simd s1(Util::cTest0123.data());
+		Util::simd_ref arg2{ 1.0f, 2.0f, 4.0f, 3.0f };
+		s1 /= simd(arg2.data());
+		Util::simd_check expected =
+			Util::cTest0123.apply(arg2,
+								  std::divides<float>());
+		EXPECT_EQ(s1, expected);
 	}
 
 	TEST(SIMD, InPlaceMultiplyWithFloatCorrect)
@@ -904,6 +943,95 @@ namespace JPL
 #endif
 	}
 
+	TEST(SIMD, ASinCorrect)
+	{
+		{
+			Util::simd_ref arg1{ -0.6f, 0.6f, -0.2f, 0.2f };
+			simd result = asin(simd(arg1.data()));
+			Util::simd_check expected{ arg1, asinf };
+			EXPECT_EQ(result, expected);
+		}
+		{
+			Util::simd_ref arg1{ -1.0f, 1.0f, -0.01f, 0.0f };
+			simd result = asin(simd(arg1.data()));
+			Util::simd_check expected{ arg1, asinf };
+			EXPECT_EQ(result, expected);
+		}
+	}
+
+	TEST(SIMD, ACosCorrect)
+	{
+		{
+			Util::simd_ref arg1{ -0.6f, 0.6f, -0.2f, 0.2f };
+			simd result = acos(simd(arg1.data()));
+			Util::simd_check expected{ arg1, acosf };
+			EXPECT_EQ(result, expected);
+		}
+		{
+			Util::simd_ref arg1{ -1.0f, 1.0f, -0.01f, 0.0f };
+			simd result = acos(simd(arg1.data()));
+			Util::simd_check expected{ arg1, acosf };
+			EXPECT_EQ(result, expected);
+		}
+		{
+			Util::simd_ref arg1{ -0.5001f, -0.4999f, 0.4999f, 0.5001f };
+			simd result = acos(simd(arg1.data()));
+			Util::simd_check expected{ arg1, acosf };
+			EXPECT_EQ(result, expected);
+		}
+		{
+			Util::simd_ref arg1{ -0.99999994f, 0.99999994f, -0.9999f, 0.9999f };
+			simd result = acos(simd(arg1.data()));
+			Util::simd_check expected{ arg1, acosf };
+			EXPECT_EQ(result, expected);
+		}
+	}
+
+	TEST(SIMD, ATan2Correct)
+	{
+		static constexpr float tolerance = 1e-5f;
+		
+		// Axes + quadrant basics
+		{
+			Util::simd_ref ys{ 1.0f, -1.0f,  0.0f,  0.0f };
+			Util::simd_ref xs{ 0.0f,  0.0f,  1.0f, -1.0f };
+			simd r = atan2(simd(ys.data()), simd(xs.data()));
+			Util::simd_check expected{ ys, xs, atan2f };
+			expected.Tolerance = tolerance;
+			EXPECT_EQ(r, expected);
+		}
+
+		// Quadrants
+		{
+			Util::simd_ref ys{ 1.0f,  1.0f, -1.0f, -1.0f };
+			Util::simd_ref xs{ 1.0f, -1.0f, -1.0f,  1.0f };
+			simd r = atan2(simd(ys.data()), simd(xs.data()));
+			Util::simd_check expected{ ys, xs, atan2f };
+			expected.Tolerance = tolerance;
+			EXPECT_EQ(r, expected);
+		}
+
+		// Swap coverage + mixed signs
+		{
+			Util::simd_ref ys{ 0.2f,  0.8f, -0.8f,  0.8f };
+			Util::simd_ref xs{ 0.8f,  0.2f,  0.2f, -0.2f };
+			simd r = atan2(simd(ys.data()), simd(xs.data()));
+			Util::simd_check expected{ ys, xs, atan2f };
+			expected.Tolerance = tolerance;
+			EXPECT_EQ(r, expected);
+		}
+
+		// Typical values
+		{
+			Util::simd_ref ys{ 0.6f, -0.3f,  0.9f, -0.6f };
+			Util::simd_ref xs{ 0.7f,  0.9f, -0.4f, -0.8f };
+			simd r = atan2(simd(ys.data()), simd(xs.data()));
+			Util::simd_check expected{ ys, xs, atan2f };
+			expected.Tolerance = tolerance;
+			EXPECT_EQ(r, expected);
+		}
+	}
+
 	TEST(SIMD, InterleaveCorrect)
 	{
 		simd a(Util::cTest0123.data());
@@ -943,6 +1071,34 @@ namespace JPL
 		simd result = reverse(a);
 		Util::simd_check expected{ 3.0f, 2.0f, 1.0f, 0.0f };
 		EXPECT_EQ(result, expected);
+	}
+
+	TEST(SIMD, SplatCorrect)
+	{
+		{
+			simd a(Util::cTest0123.data());
+			simd result = a.splat<0>();
+			Util::simd_check expected{ 0.0f, 0.0f, 0.0f, 0.0f };
+			EXPECT_EQ(result, expected);
+		}
+		{
+			simd a(Util::cTest0123.data());
+			simd result = a.splat<1>();
+			Util::simd_check expected{ 1.0f, 1.0f, 1.0f, 1.0f };
+			EXPECT_EQ(result, expected);
+		}
+		{
+			simd a(Util::cTest0123.data());
+			simd result = a.splat<2>();
+			Util::simd_check expected{ 2.0f, 2.0f, 2.0f, 2.0f };
+			EXPECT_EQ(result, expected);
+		}
+		{
+			simd a(Util::cTest0123.data());
+			simd result = a.splat<3>();
+			Util::simd_check expected{ 3.0f, 3.0f, 3.0f, 3.0f };
+			EXPECT_EQ(result, expected);
+		}
 	}
 
 } // namespace JPL
