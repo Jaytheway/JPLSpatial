@@ -65,7 +65,7 @@ inline bool AssertFailedParamHelper(const char* inExpression, const std::source_
 
 #ifdef JPL_ENABLE_ASSERTS
 /// Main assert macro, usage: JPL_ASSERT(condition, message) or JPL_ASSERT(condition)
-#define JPL_ASSERT(inExpression, ...)	do { if (!(inExpression) && AssertFailedParamHelper(#inExpression, std::source_location::current(), ##__VA_ARGS__)) JPL_BREAKPOINT; } while (false)
+#define JPL_ASSERT(inExpression, ...)	do { if (!(inExpression) && ::JPL::AssertFailedParamHelper(#inExpression, std::source_location::current(), ##__VA_ARGS__)) JPL_BREAKPOINT; } while (false)
 
 #define JPL_IF_ENABLE_ASSERTS(...)		__VA_ARGS__
 #else
@@ -79,7 +79,7 @@ inline bool AssertFailedParamHelper(const char* inExpression, const std::source_
 #ifndef JPL_ENSURE
 #ifdef JPL_ENABLE_ENSURE
 
-#define JPL_ENSURE(inExpression, ...) [&]{ if(!(inExpression)  && AssertFailedParamHelper(#inExpression, std::source_location::current(), ##__VA_ARGS__)) { JPL_BREAKPOINT; } return (inExpression); }()
+#define JPL_ENSURE(inExpression, ...) [&]{ if(!(inExpression)  && ::JPL::AssertFailedParamHelper(#inExpression, std::source_location::current(), ##__VA_ARGS__)) { JPL_BREAKPOINT; } return (inExpression); }()
 #else
 #define JPL_ENSURE(inExpression, ...) (inExpression)
 #endif
