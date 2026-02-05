@@ -425,6 +425,22 @@ namespace JPL
 		EXPECT_EQ(result, expected);
 	}
 
+	TEST(SIMD, Mask_MinCorrect)
+	{
+		simd_mask s1(0, 1, 2, 3);
+		simd_mask result = min(s1, simd_mask(2, 1, 4, 2));
+		simd_mask expected(0, 1, 2, 2);
+		EXPECT_TRUE((result == expected).all_of());
+	}
+
+	TEST(SIMD, Mask_MaxCorrect)
+	{
+		simd_mask s1(0, 1, 2, 3);
+		simd_mask result = max(s1, simd_mask(2, 1, 4, 2));
+		simd_mask expected(2, 1, 4, 3);
+		EXPECT_TRUE((result == expected).all_of());
+	}
+
 	TEST(SIMD, MaxCorrect)
 	{
 		simd s1(Util::cTest0123.data());

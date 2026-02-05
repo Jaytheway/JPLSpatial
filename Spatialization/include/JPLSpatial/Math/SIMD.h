@@ -1946,8 +1946,18 @@ namespace JPL
 	//==========================================================================
 	JPL_INLINE simd_mask max(const simd_mask& a, const simd_mask& b) noexcept
 	{
-#if defined(JPL_USE_SSE)
+#if defined(JPL_USE_SSE4_1)
 		return _mm_max_epu32(a.mNative, b.mNative);
+#elif defined(JPL_USE_SSE)
+		// Shift range from unsigned[0, 2 ^ 32 - 1] to signed[-2 ^ 31, 2 ^ 31 - 1]
+		__m128i  offset = _mm_set1_epi32(0x80000000);
+		__m128i  a_signed = _mm_xor_si128(a, offset);
+		__m128i  b_signed = _mm_xor_si128(b, offset);
+		// Perform signed comparison: 0xFFFFFFFF where a > b
+		__m128i  mask = _mm_cmpgt_epi32(a_signed, b_signed);
+		// Select: (mask ? a : b) 
+		// Use bitwise logic to pick the maximum
+		return  _mm_or_si128(_mm_and_si128(mask, a), _mm_andnot_si128(mask, b));
 #elif defined(JPL_USE_NEON)
 		return vmaxq_u32(a.mNative, b.mNative);
 #else
@@ -1960,8 +1970,17 @@ namespace JPL
 
 	JPL_INLINE simd_mask min(const simd_mask& a, const simd_mask& b) noexcept
 	{
-#if defined(JPL_USE_SSE)
+#if defined(JPL_USE_SSE4_1)
 		return _mm_min_epu32(a.mNative, b.mNative);
+#elif defined(JPL_USE_SSE)
+		// Shift range from [0, 2^32-1] to [-2^31, 2^31-1] for signed comparison
+		__m128i  offset = _mm_set1_epi32(0x80000000);
+		__m128i  a_signed = _mm_xor_si128(a, offset);
+		__m128i  b_signed = _mm_xor_si128(b, offset);
+		// Perform signed comparison
+		__m128i  mask = _mm_cmpgt_epi32(a_signed, b_signed); // 0xFFFFFFFF if a > b
+		// Select results: (mask ? b : a)
+		return _mm_or_si128(_mm_and_si128(mask, b), _mm_andnot_si128(mask, a));
 #elif defined(JPL_USE_NEON)
 		return vminq_u32(a.mNative, b.mNative);
 #else
