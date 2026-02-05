@@ -25,6 +25,7 @@
 #include <JPLSpatial/Math/Vec3Math.h>
 #include <JPLSpatial/Math/Vec3Traits.h>
 #include <JPLSpatial/Math/MinimalVec2.h>
+#include <JPLSpatial/Math/SIMD.h>
 #include <JPLSpatial/Memory/Bits.h>
 
 #include <cmath>
@@ -139,6 +140,8 @@ namespace JPL
         template<CVec3 Vec3>
         static constexpr EncodedType Encode(const Vec3& direction);
 
+        static simd_mask Encode(const simd& dirX, const simd& dirY, const simd& dirZ) requires(sizeof(EncodedType) <= sizeof(uint32));
+
         /// Decodes octahedron encoded direction back to a vector.
         /// This reverses the operation performed by `Encode`.
         ///
@@ -146,6 +149,8 @@ namespace JPL
         /// @returns : direction vector represented by the input octahedron.
         template<CVec3 Vec3>
         static constexpr Vec3 Decode(EncodedType encodedDirection);
+
+        static void Decode(const simd_mask& encodedDirection, simd& outX, simd& outY, simd& outZ) requires(sizeof(EncodedType) <= sizeof(uint32));
 
         /// Check if 'code' falls within valid range of the encoder's precision,
         /// taking into acount padding rim.
@@ -189,29 +194,52 @@ namespace JPL
     // https://www.jeremyong.com/graphics/2023/01/09/tangent-spaces-and-diamond-encoding/
 
     /// Encode a 2D unit vector to scalar float [0, 1]
-    inline constexpr float ToDiamond(Vec2 dir) noexcept
+    [[nodiscard]] inline constexpr float ToDiamond(Vec2 dir) noexcept
     {
         // Project to the unit diamond, then to the x-axis.
         dir.X /= (Math::Abs(dir.X) + Math::Abs(dir.Y));
 
         // Contract the x coordinate by a factor of 4 to represent all 4 quadrants in
         // the unit range and remap
-        const float pySign = Math::Sign2(dir.Y);
-        return -pySign * 0.25f * dir.X + 0.5f + pySign * 0.25f;
+
+        //const float pySign = Math::Sign2(dir.Y);
+        //return -pySign * 0.25f * dir.X + 0.5f + pySign * 0.25f;
+        const float pySignQuarter = Math::Sign2(dir.Y) * 0.25f;
+        return Math::FMA(-pySignQuarter, dir.X, (0.5f + pySignQuarter));
     }
 
     /// Decode scalar [0, 1] to a 2D unit vector
-    inline constexpr Vec2 FromDiamond(float p) noexcept
+    [[nodiscard]] inline constexpr Vec2 FromDiamond(float p) noexcept
     {
         Vec2 v;
 
         // Remap p to the appropriate segment on the diamond
+        //const float pSign = Math::Sign2(p - 0.5f);
+        //v.X = -pSign * 4.0f * p + 1.0f + pSign * 2.0f;
+        //v.Y = pSign * (1.0f - Math::Abs(v.X));
         const float pSign = Math::Sign2(p - 0.5f);
-        v.X = -pSign * 4.0f * p + 1.0f + pSign * 2.0f;
-        v.Y= pSign * (1.0f - Math::Abs(v.X));
+        const float pSignN = -pSign;
+        v.X = Math::FMA(pSignN, 4.0f * p, Math::FMA(pSign, 2.0f, 1.0f));
+        v.Y = Math::FMA(pSignN, Math::Abs(v.X), pSign);
 
         // Normalization extends the point on the diamond back to the unit circle
         return v.Normalize();
+    }
+
+    /// Encode a 2D unit vector to scalar float [0, 1].
+    /// This overload encodes 4 directions at a time.
+    [[nodiscard]] JPL_INLINE simd ToDiamond(simd x, const simd& y) noexcept
+    {
+        // Project to the unit diamond, then to the x-axis.
+        x /= (abs(x) + abs(y));
+
+        // Contract the x coordinate by a factor of 4 to represent all 4 quadrants in
+        // the unit range and remap
+
+        //const float pySign = Math::Sign2(dir.Y);
+        //return -pySign * 0.25f * dir.X + 0.5f + pySign * 0.25f;
+        const simd pySignQuarter = Math::Sign2(y) * 0.25f;
+        return fma(-pySignQuarter, x, (simd::c_0p5 + pySignQuarter));
     }
 } // namespace JPL
 
@@ -315,6 +343,45 @@ namespace JPL
     }
 
     template<Octahedron::CPrecision Precision>
+    inline simd_mask OctahedronEncoding<Precision>::Encode(const simd& dirX, const simd& dirY, const simd& dirZ) requires(sizeof(EncodedType) <= sizeof(uint32))
+    {
+        const simd dirXAbs = abs(dirX);
+        const simd dirYAbs = abs(dirY);
+        const simd dirZAbs = abs(dirZ);
+        const simd L1Norm = dirXAbs + dirYAbs + dirZAbs;
+
+        // It should be up to the user to ensure valid direction vector
+        JPL_ASSERT(!Math::IsNearlyZero(L1Norm).any_of() && "direction must be normalised & non-zero");
+
+        const simd invL1Norm = simd::c_1 / L1Norm;
+        simd px = dirX * invL1Norm;
+        simd py = dirY * invL1Norm;
+
+        // Standard folding for Z < 0
+        {
+            const simd_mask zIsLessThanZero = dirZ < simd::c_0;
+            const simd tempPx = px; // Store original px for py calculation
+
+            px = simd::select(zIsLessThanZero, (simd::c_1 - abs(py)) * Math::Sign2(tempPx), px);
+            py = simd::select(zIsLessThanZero, (simd::c_1 - abs(tempPx)) * Math::Sign2(py), py);
+        }
+
+        static const simd cHalfTexel = simd::c_0p5 / simd(cAxisMask);
+        px = clamp(px, -simd::c_1 + cHalfTexel, simd::c_1 - cHalfTexel);
+        py = clamp(py, -simd::c_1 + cHalfTexel, simd::c_1 - cHalfTexel);
+
+        // Map to [0,1)
+        const simd v0 = px * simd::c_0p5 + simd::c_0p5;
+        const simd v1 = py * simd::c_0p5 + simd::c_0p5;
+
+        // Truncate to requested precision
+        const auto dx = (floor(v0 * simd(cAxisMask))).to_mask();
+        const auto dy = (floor(v1 * simd(cAxisMask))).to_mask();
+
+        return (dy << cBitsPerAxis) | dx;
+    }
+
+    template<Octahedron::CPrecision Precision>
     template<CVec3 Vec3>
     constexpr Vec3 JPL::OctahedronEncoding<Precision>::Decode(EncodedType encodedDirection)
     {
@@ -361,6 +428,47 @@ namespace JPL
                 Internal::FloatOf<Vec3>(direction[1]),
                 Internal::FloatOf<Vec3>(direction[2])
             });
+    }
+
+    template<Octahedron::CPrecision Precision>
+    void JPL::OctahedronEncoding<Precision>::Decode(const simd_mask& encodedDirection, simd& outX, simd& outY, simd& outZ) requires(sizeof(EncodedType) <= sizeof(uint32))
+    {
+        static const simd muInv = simd::c_1 / static_cast<simd>(cAxisMask);
+
+        simd_mask dx = encodedDirection & cAxisMask;                      // Low bits for dx
+        simd_mask dy = (encodedDirection >> cBitsPerAxis) & cAxisMask;    // High bits for dy
+
+        // alias the padding rim to the last real texel
+        static const simd_mask maxComponentValue(cMaxComponentValue);
+        dx = min(dx, maxComponentValue);
+        dy = min(dy, maxComponentValue);
+
+        // Map from [0, 1] to [-1, 1]
+        // (the added 0.5 shifts the sample from the lower-left vertex to the texel’s centre)
+        const simd pxDecoded = -simd::c_1 + simd(2.0) * (dx.to_simd() + simd::c_0p5) * muInv;
+        const simd pyDecoded = -simd::c_1 + simd(2.0) * (dy.to_simd() + simd::c_0p5) * muInv;
+
+        simd direction[3]{
+            pxDecoded,
+            pyDecoded,
+            simd::c_1 - abs(pxDecoded) - abs(pyDecoded)
+        };
+
+        // "Unfold" the negative Z hemisphere
+        const simd t = max(-direction[2], simd::c_0);
+        direction[0] += simd::select(direction[0] > simd::c_0, -t, t);
+        direction[1] += simd::select(direction[1] > simd::c_0, -t, t);
+
+        // Copy to the output and normalize
+        outX = direction[0];
+        outY = direction[1];
+        outZ = direction[2];
+
+        const simd lenSqr = fma(outX, outX, fma(outY, outY, outZ * outZ));
+        const simd invSqrt = Math::InvSqrt(lenSqr);
+        outX *= invSqrt;
+        outY *= invSqrt;
+        outZ *= invSqrt;
     }
 
     //==========================================================================

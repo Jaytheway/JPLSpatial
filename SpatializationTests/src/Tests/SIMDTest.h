@@ -871,7 +871,7 @@ namespace JPL
 	{
 		Util::simd_ref arg1{ -2.4f, 1.0f, 0.3f, 2.8f };
 		simd resultSin, resultCos;
-		SinCos(simd(arg1.data()), resultSin, resultCos);
+		Math::SinCos(simd(arg1.data()), resultSin, resultCos);
 		Util::simd_check expectedSin{ arg1, sinf };
 		Util::simd_check expectedCos{ arg1, cosf };
 		EXPECT_EQ(resultSin, expectedSin);

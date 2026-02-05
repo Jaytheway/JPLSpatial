@@ -21,14 +21,20 @@
 
 #include "JPLSpatial/Math/DirectionEncoding.h"
 #include "JPLSpatial/Math/MinimalVec3.h"
+#include "JPLSpatial/Math/SIMD.h"
+#include "JPLSpatial/Math/Vec3Pack.h"
 
 #include "JPLSpatial/Panning/VBAPLUT2D.h"
 
 #include "../Utility/TestUtils.h"
 
 #include <gtest/gtest.h>
+
+#include <array>
 #include <cmath>
 #include <format>
+#include <span>
+#include <limits>
 
 namespace JPL
 {
@@ -280,7 +286,7 @@ namespace JPL
         }
     }
 
-
+   
     TEST(DiamondEncoding, ComparableToAtan2)
     {
         static constexpr float step = JPL_PI / 360.0f; // 0.5 degree
@@ -362,6 +368,13 @@ namespace JPL
 
 	TEST(DiamondEncoding, CorrectionLUT_UniformityVsGroundTruth)
 	{
+        // This test is esstntially checking:
+        // "Can we treat diamond scalar `p` as a linear angle parameter (after phase alignment)?"
+        // The answer is `no`, without a correction LUT we get up to 4-6 degrees deviation.
+        //
+        // This is relevant if we're using Diamond encoding as a cheep atan2,
+        // however irrelevant for building a LUT from uniform angles.
+
         // ---- Budgets from resolutions ----
         struct CorrBudgets
         {
@@ -432,7 +445,7 @@ namespace JPL
             // Phase align "raw diamond" so that +Z maps to 0 degrees
             const float p_fwd = ToDiamond(Vec2{ 0.0f, 1.0f }); // p at +Z
 
-            // Accumulators with your OnlineVariance
+            // Accumulators with OnlineVariance
             OnlineVariance angRawDeg, angCorrDeg;   // angle error in degrees
             OnlineVariance binRaw, binCorr;         // |delta bin| as floats (int cast to float)
 
@@ -568,4 +581,234 @@ namespace JPL
             runTestCase(N_bins, M_corr);
 
 	}
+
+    TEST(DiamondEncoding, UniformityVsGroundTruth)
+    {
+        // Testing how relevant Diamond encoding is for builging LUT
+        // using uniform steps within Diamond encoding.
+
+        auto runTestCase = [&](uint32_t N_bins)
+        {
+            SCOPED_TRACE(std::format("N_bins: {}", N_bins));
+
+            static auto wrapPi = [](float a)
+            {
+                a = std::fmod(a + JPL_PI, JPL_TWO_PI);
+                if (a < 0.0f)
+                    a += JPL_TWO_PI;
+                return a - JPL_PI;
+            };
+
+            static auto angleDelta = [](float a, float b) { return wrapPi(a - b); };
+
+            const float stepLinear = 1.0f / N_bins;
+
+            std::vector<float> angles;
+            angles.reserve(1.0f / stepLinear);
+
+            // Sweep full circle
+            for (float diamond = 0.0f; diamond < 1.0; diamond += stepLinear)
+            {
+                const Vec2 dir = FromDiamond(diamond);
+
+                float theta = std::atan2(dir.Y, dir.X);
+                if (theta < 0.0f)
+                    theta += JPL_TWO_PI;
+
+                angles.push_back(theta);
+            }
+
+            std::ranges::sort(angles);
+
+            OnlineVariance degDiff;
+            float minStep = std::numeric_limits<float>::max();
+            float maxStep = 0.0f;
+
+            for (uint32 i = 1; i < angles.size(); ++i)
+            {
+                const float step = Math::Abs(angleDelta(angles[i], angles[i - 1]));
+                degDiff.Add(step);
+                minStep = std::min(step, minStep);
+                maxStep = std::max(step, maxStep);
+            }
+            {
+                const float step = Math::Abs(angleDelta(angles[0], angles.back()));
+                degDiff.Add(step);
+                minStep = std::min(step, minStep);
+                maxStep = std::max(step, maxStep);
+            }
+
+
+            // --- Expectations ---
+            const float expectedStepDeg = Math::ToDegrees(JPL_TWO_PI / N_bins);
+            const float expectedVarianceDeg = 0.5f; // 0.5 degree variance is perfectly fine
+
+            const float stepMeanDeg = Math::ToDegrees(degDiff.Mean);
+            const float stepVarDeg = Math::Sqrt(degDiff.GetVariance()) * JPL_TO_DEG;
+            const float stepMinDeg = Math::ToDegrees(minStep);
+            const float stepMaxDeg = Math::ToDegrees(maxStep);
+            const float stepMaxGapDeg = stepMaxDeg - stepMinDeg;
+
+            EXPECT_LE(stepMeanDeg - expectedVarianceDeg, expectedStepDeg) << "Variance: " << stepVarDeg;
+            EXPECT_LE(stepVarDeg - expectedVarianceDeg, expectedVarianceDeg);
+
+            //std::cout << "N bins: " << N_bins << '\n';
+            //std::cout << "Step mean degrees: " << stepMeanDeg << '\n';
+            //std::cout << "Step variance degrees: " << stepVarDeg << '\n';
+            //std::cout << "Step min / max | gap: " << stepMinDeg << " / " << stepMaxDeg << " | " << stepMaxGapDeg << '\n';
+        };
+
+		const uint32_t cases[] = {
+			256,
+			512,
+			1024,
+			2048
+		};
+
+        for (const auto N_bins : cases)
+            runTestCase(N_bins);
+    }
+
+    TEST(DirectionEncoding, SIMDEncoding)
+    {
+        // Testing 64-bit Vec3->codec->Vec3 to eliminate precision error factor
+        using Vec3 = MinimalVec3;
+        using LUTCodec = Octahedron16Bit;
+
+        static auto getDelta = [](const Vec3Pack& a, const Vec3Pack& b)
+        {
+            return Abs(a - b);
+        };
+
+        static constexpr float step = std::numbers::pi_v<float> / 90.0f; // 1 degree
+        // Estimated number of directions that will be generated
+        static constexpr size_t numDirs = FloorToSIMDSize(static_cast<size_t>(
+            (JPL_TWO_PI / step) *
+            (JPL_TWO_PI / step)
+            ));
+
+        static constexpr size_t numDirPacks = GetNumSIMDOps(numDirs);
+
+        // Generated directions
+        std::vector<Vec3> directions;
+        directions.reserve(numDirs);
+
+        for (float phi = 0.0f; phi < JPL_TWO_PI; phi += step)
+        {
+            if (directions.size() == numDirs)
+                break;
+
+            const auto [sinPhi, cosPhi] = Math::SinCos(phi);
+
+            for (float theta = 0.0f; theta < JPL_TWO_PI; theta += step)
+            {
+                if (directions.size() == numDirs)
+                    break;
+
+                const auto [sinTheta, cosTheta] = Math::SinCos(theta);
+
+                // Generate test direction
+                directions.push_back(Normalized(Vec3{
+                    sinPhi * cosTheta,
+                    sinPhi * sinTheta,
+                    cosPhi
+                }));
+            }
+        }
+
+        // Pack directions into simd packs
+        std::vector<Vec3Pack> directionPacks;
+        directionPacks.reserve(numDirPacks);
+        for (uint32 i = 0; i < numDirs; i += simd::size())
+            directionPacks.emplace_back().load(std::span<const Vec3>(&directions[i], simd::size()));
+
+        // Test encoding->decoding for the generated and packed directions
+        struct EncodingData
+        {
+            Vec3 Direction;
+            Vec3 EncodedDecoded;
+            Vec3 Delta;
+        };
+        std::vector<EncodingData> invalidEncodings;
+        invalidEncodings.reserve(numDirPacks);
+
+        // Max error detected
+        Vec3 deltaMax = Vec3::Zero();
+
+        size_t totalDirsTested = 0;
+
+        for (const Vec3Pack& dirPack : directionPacks)
+        {
+            // Encode -> decode test direction
+            const simd_mask encoded = LUTCodec::Encode(dirPack.X, dirPack.Y, dirPack.Z);
+
+            Vec3Pack decoded;
+            LUTCodec::Decode(encoded, decoded.X, decoded.Y, decoded.Z);
+
+            // Get delta error
+            const Vec3Pack delta = getDelta(dirPack, decoded);
+
+            std::array<Vec3, simd::size()> unpackedOriginal, unpackedDecoced,unpackedDelta;
+            dirPack.store(std::span<Vec3>(unpackedOriginal));
+            decoded.store(std::span<Vec3>(unpackedDecoced));
+            delta.store(std::span<Vec3>(unpackedDelta));
+
+            for (uint32 i = 0; i < simd::size(); ++i)
+            {
+                static constexpr auto errorTolerance = LUTCodec::cMaxComponentError;
+                const bool bAproxEqual =
+                    unpackedDelta[i].X <= errorTolerance &&
+                    unpackedDelta[i].Y <= errorTolerance &&
+                    unpackedDelta[i].Y <= errorTolerance;
+
+                // Take a record of the error
+                if (!bAproxEqual)
+                {
+                    invalidEncodings.emplace_back(unpackedOriginal[i], unpackedDecoced[i], unpackedDelta[i]);
+                    deltaMax.X = std::max(deltaMax.X, unpackedDelta[i].X);
+                    deltaMax.Y = std::max(deltaMax.Y, unpackedDelta[i].Y);
+                    deltaMax.Z = std::max(deltaMax.Z, unpackedDelta[i].Z);
+                }
+            }
+
+            totalDirsTested += 4;
+        }
+
+        // Compute delta error variance for each axis
+        OnlineVariance deltaVarianceX;
+        OnlineVariance deltaVarianceY;
+        OnlineVariance deltaVarianceZ;
+        for (const auto& [dir, encode, delta] : invalidEncodings)
+        {
+            deltaVarianceX.Add(delta.X);
+            deltaVarianceY.Add(delta.Y);
+            deltaVarianceZ.Add(delta.Z);
+        }
+
+        // Print error if any invalid directions found
+        EXPECT_TRUE(invalidEncodings.empty())
+            << std::format("Codec produced {}/{} ({:.5}%) invalid encodings",
+                            invalidEncodings.size(), totalDirsTested, double(invalidEncodings.size()) / totalDirsTested * 100.0)
+            << std::format("\nDelta mean: {{ {}, {}, {} }} \nDelta variance: {{ {}, {}, {} }}",
+                            deltaVarianceX.Mean, deltaVarianceY.Mean, deltaVarianceZ.Mean,
+                            deltaVarianceX.GetVariance(), deltaVarianceY.GetVariance(), deltaVarianceZ.GetVariance())
+            << std::format("\nDelta max: {{ {}, {}, {} }}",
+                            deltaMax.X, deltaMax.Y, deltaMax.Z);
+
+
+        auto vecToStrRow = [](const Vec3& v) { return std::format("\"{}, {}, {}\"", v.X, v.Y, v.Z); };
+
+        // Save error data to file
+        if (!invalidEncodings.empty())
+        {
+            SaveCSV(invalidEncodings, [vecToStrRow](std::ofstream& file, const EncodingData& e)
+            {
+                file
+                    << vecToStrRow(e.Direction) << ","
+                    << vecToStrRow(e.EncodedDecoded) << ","
+                    << vecToStrRow(e.Delta) << ","
+                    << e.Delta.Length();
+            }, "invalid_encoding.csv", "test_dir,encoded_decoded,delta,delta_length");
+        }
+    }
 } // namespace JPL
