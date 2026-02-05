@@ -42,7 +42,7 @@
 #include "JPLSpatial/Algo/Algorithm.h"
 
 #include "JPLSpatial/Panning/VBAPEx.h"
-#include "JPLSpatial/Utilities/TypeUtilities.h"
+//#include "JPLSpatial/Utilities/TypeUtilities.h"
 
 #include <array>
 #include <concepts>
