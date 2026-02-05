@@ -113,7 +113,7 @@ namespace JPL
 
 		/// Apply rotation local -> world.
 		/// Performs transform on 4 directions packed into simd vectors at the same time.
-		[[nodiscard]] JPL_INLINE void Transform(simd& inOutX, simd& inOutY, simd& inOutZ) const noexcept
+		JPL_INLINE void Transform(simd& inOutX, simd& inOutY, simd& inOutZ) const noexcept
 		{
 			// Take a copy of the original input values
 			// because we modify them as we compute next component

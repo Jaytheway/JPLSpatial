@@ -88,7 +88,7 @@ namespace JPL::VBAP
             - step max: 0.223812 
             - step max-min: 0.111687
         */
-        static constexpr struct LUTStats // These values were pre-computed in tests
+        struct LUTStats // These values were pre-computed in tests
         {
             static constexpr uint16 Resolution = 1024;
             static constexpr float StepWidth = 0.351562f;
@@ -96,7 +96,7 @@ namespace JPL::VBAP
             static constexpr float StepMin = 0.224686f;
             static constexpr float StepMax = 0.447623f;
             static constexpr float StepMinMaxGap = StepMax - StepMin;
-        } cLUTStats;
+        };
 
         template<class T>
         using Array = std::pmr::vector<T>;
@@ -328,7 +328,7 @@ namespace JPL::VBAP
         JPL_ASSERT(IsInitialized());
 
         return static_cast<int>(
-            ToDiamond({ std::sinf(angleNormalised), -std::cosf(angleNormalised) })
+            ToDiamond(Vec2{ sinf(angleNormalised), -cosf(angleNormalised) })
             * mLUTResolution + 0.5f
             ) & mLUTResolutionMask;
     }
@@ -402,7 +402,7 @@ namespace JPL::VBAP
     JPL_INLINE auto LUT2D::LUTPositionToAngle(int pos) const -> float
     {
         const Vec2 direction = FromDiamond((static_cast<float>(pos) * static_cast<float>(mInvLUTResolution)));
-        float angle = std::atan2f(direction.Y, direction.X);
+        float angle = atan2f(direction.Y, direction.X);
         if (angle < 0.0f)
             angle += JPL_TWO_PI;
         return angle;

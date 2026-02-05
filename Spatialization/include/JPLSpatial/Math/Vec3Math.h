@@ -203,7 +203,7 @@ namespace JPL::Math
 	}
 
 	/// Input vectors must be normalized
-	[[nodiscard]] inline void Slerp(
+	inline void Slerp(
 		Vec3Pack& inOutV0,
 		const Vec3Pack& V1,
 		const simd& t) noexcept

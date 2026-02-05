@@ -247,7 +247,7 @@ namespace JPL
 					lutGains[ch] = panner.GetLUT()->GetLUTValue(offset + ch);
 				}
 #else
-				const Vec2 direction(std::sinf(testAngleRad), -std::cosf(testAngleRad));
+				const Vec2 direction(sinf(testAngleRad), -cosf(testAngleRad));
 				panner.GetLUT()->GetSpeakerGains(direction, lutGains);
 #endif
 

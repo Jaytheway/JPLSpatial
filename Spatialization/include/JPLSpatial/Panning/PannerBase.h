@@ -70,7 +70,7 @@ namespace JPL
 	{
 		return distance <= 0.0f
 			? 1.0f
-			: std::atanf((sourceSize * 0.5f) / distance) * JPL_INV_HALF_PI;
+			: atanf((sourceSize * 0.5f) / distance) * JPL_INV_HALF_PI;
 	}
 
 	/// Forward declaration

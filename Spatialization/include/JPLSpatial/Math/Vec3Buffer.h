@@ -92,7 +92,7 @@ namespace JPL
 		T* Z;
 		std::size_t Count = 0;
 
-		JPL_INLINE [[nodiscard]] std::size_t size() const noexcept { return Count; }
+		[[nodiscard]] JPL_INLINE std::size_t size() const noexcept { return Count; }
 
 		template<CVec3 Vec3Type>
 		JPL_INLINE void Unpack(std::span<Vec3Type> outVec3s) const
