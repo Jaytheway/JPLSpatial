@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <concepts>
 #include <bit>
 #include <limits>

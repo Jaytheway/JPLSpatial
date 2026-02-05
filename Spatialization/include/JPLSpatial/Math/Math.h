@@ -39,6 +39,7 @@ namespace JPL
 
 	static constexpr float JPL_INV_PI = std::numbers::inv_pi_v<float>;
 	static constexpr float JPL_INV_TWO_PI = std::numbers::inv_pi_v<float> * 0.5f;
+	static constexpr float JPL_INV_HALF_PI = std::numbers::inv_pi_v<float> * 2.0f;
 
 	template<std::floating_point T> static constexpr T JPL_TO_RAD_V = std::numbers::pi_v<T> / T(180.0);
 	template<std::floating_point T> static constexpr T JPL_TO_DEG_V = T(180.0) / std::numbers::pi_v<T>;
@@ -153,6 +154,12 @@ namespace JPL::Math
 		return Abs(a - b) <= tolerance;
 	}
 
+	template<std::integral T>
+	[[nodiscard]] JPL_INLINE constexpr bool IsEven(T number) noexcept
+	{
+		return (number & T(1)) == 0;
+	}
+
 	template<std::floating_point T>
 	[[nodiscard]] JPL_INLINE std::pair<T, T> SinCos(T value) noexcept
 	{
@@ -165,6 +172,13 @@ namespace JPL::Math
 	[[nodiscard]] JPL_INLINE constexpr T Lerp(const T& v0, const T& v1, T t) noexcept
 	{
 		return t * (v1 - v0) + v0;
+	}
+
+	/// Inlined fuse multiply-add. Compiler in some circumstances is more eager to optimize this than std::fma
+	template<std::floating_point T>
+	[[nodiscard]] JPL_INLINE constexpr T FMA(T a, T b, T c) noexcept
+	{
+		return a * b + c;
 	}
 
 	//======================================================================
@@ -242,7 +256,7 @@ namespace JPL::Math
 	} // namespace Detail
 
 	/// Square root: constexpr at compile time, std::sqrt at runtime
-	/// Tempalte param 'NR' (used at for consteval): number of Newton–Raphson refinement steps on 1/sqrt(x).
+	/// Tempalte param 'NR' (used for consteval path): number of Newton–Raphson refinement steps on 1/sqrt(x).
 	/// NR=2 is a decent default for float.
 	template<std::floating_point T, int NR = 2>
 	[[nodiscard]] JPL_INLINE constexpr T Sqrt(T x) noexcept
@@ -256,7 +270,7 @@ namespace JPL::Math
 	}
 
 	/// Inverse square root: constexpr at compile time, 1 / std::sqrt at runtime
-	/// Tempalte param 'NR' (used at for consteval): number of Newton–Raphson refinement steps on 1/sqrt(x).
+	/// Tempalte param 'NR' (used for consteval path): number of Newton–Raphson refinement steps on 1/sqrt(x).
 	/// NR=2 is a decent default for float.
 	template<std::floating_point T, int NR = 2>
 	[[nodiscard]] JPL_INLINE constexpr T InvSqrt(T x) noexcept
