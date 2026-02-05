@@ -17,88 +17,89 @@ Functional WIP
 JPLSpatial library is used as a sound spatialization solution in [Hazel Engine](https://hazelengine.com/).
 If you have access to Hazel Engine code, you can check how JPLSpatial is integrated on `dev` or `audio` branch.
 ## Features
+
+#### Vector-Base Amplitude Panning (VBAP) / Multi-Direction Amplitude Panning (MDAP)
 ![VBAP 2D Animation: quad source -> 5.1 speaker layout](./assets/VBAP2D.gif)
 ![VBAP 3D Animation: stereo source -> 9.1.4 speaker layout](./assets/VBAP3D.gif)
 
-- Vector-Base Amplitude Panning (VBAP) / Multi-Direction Amplitude Panning (MDAP)
-	- Source elevation / Height channels
+- Source elevation / Height channels
 
-	- <details>
-		<summary>Supported source channel layouts</summary>
-		<ul>
-		<li>Mono</li>
-		<li>Stereo</li>
-		<li>LCR</li>
-		<li>Quad</li>
-		<li>Surround 4.1</li>
-		<li>Surround 5.0</li>
-		<li>Surround 5.1</li>
-		<li>Surround 6.0</li>
-		<li>Surround 6.1</li>
-		<li>Surround 7.0</li>
-		<li>Surround 7.1</li>
-		<li>Octagonal</li>
-		</ul>
-	</details>
+- <details>
+	<summary>Supported source channel layouts</summary>
+	<ul>
+	<li>Mono</li>
+	<li>Stereo</li>
+	<li>LCR</li>
+	<li>Quad</li>
+	<li>Surround 4.1</li>
+	<li>Surround 5.0</li>
+	<li>Surround 5.1</li>
+	<li>Surround 6.0</li>
+	<li>Surround 6.1</li>
+	<li>Surround 7.0</li>
+	<li>Surround 7.1</li>
+	<li>Octagonal</li>
+	</ul>
+</details>
 
-	- <details>
-		<summary>Supported target/output channel layouts</summary>
-		<ul>
-		<br>
-		<b>VBAPanner2D</b>
+- <details>
+	<summary>Supported target/output channel layouts</summary>
+	<ul>
+	<br>
+	<b>VBAPanner2D</b>
 
-		---
-		
-		<li>Stereo</li>
-		<li>LCR</li>
-		<li>Quad</li>
-		<li>Surround 4.1</li>
-		<li>Surround 5.0</li>
-		<li>Surround 6.0</li>
-		<li>Surround 5.1</li>
-		<li>Surround 6.1</li>
-		<li>Surround 7.0</li>
-		<li>Surround 7.1</li>
-		<li>Octagonal</li>
+	---
+	
+	<li>Stereo</li>
+	<li>LCR</li>
+	<li>Quad</li>
+	<li>Surround 4.1</li>
+	<li>Surround 5.0</li>
+	<li>Surround 6.0</li>
+	<li>Surround 5.1</li>
+	<li>Surround 6.1</li>
+	<li>Surround 7.0</li>
+	<li>Surround 7.1</li>
+	<li>Octagonal</li>
 
-		<br>
-		<b>VBAPanner3D</b> <i>(layouts with top channels)</i>
+	<br>
+	<b>VBAPanner3D</b> <i>(layouts with top channels)</i>
 
-		---
-		
-		<li>Surround 5.0.2</li>
-		<li>Surround 5.1.2</li>
-		<li>Surround 5.0.4</li>
-		<li>Surround 5.1.4</li>
-		<br>		
-		<i>(as per Dolby Atmos surround, but LFE is always 4th channel)</i>
+	---
+	
+	<li>Surround 5.0.2</li>
+	<li>Surround 5.1.2</li>
+	<li>Surround 5.0.4</li>
+	<li>Surround 5.1.4</li>
+	<br>		
+	<i>(as per Dolby Atmos surround, but LFE is always 4th channel)</i>
 
-		<li>Surround 7.0.2</li>
-		<li>Surround 7.1.2</li>
-		<li>Surround 7.0.4</li>
-		<li>Surround 7.1.4</li>
-		<li>Surround 7.0.6</li>
-		<li>Surround 7.1.6</li>
-		<li>Surround 9.0.4</li>
-		<li>Surround 9.1.4</li>
-		<li>Surround 9.0.6</li>
-		<li>Surround 9.1.6</li>
-		</ul>
-	</details>
+	<li>Surround 7.0.2</li>
+	<li>Surround 7.1.2</li>
+	<li>Surround 7.0.4</li>
+	<li>Surround 7.1.4</li>
+	<li>Surround 7.0.6</li>
+	<li>Surround 7.1.6</li>
+	<li>Surround 9.0.4</li>
+	<li>Surround 9.1.4</li>
+	<li>Surround 9.0.6</li>
+	<li>Surround 9.1.6</li>
+	</ul>
+</details>
 
-- Distance Attenuation
-	- Custom function
-	- Curves
-	- Predefined models:
-		- Inverse
-		- Linear
-		- Exponential
-- Angle Attenuation / Cone-based attenuation
-- **High level sound source API**:
+#### Distance Attenuation
+- Custom function
+- Curves
+- Predefined models:
+	- Inverse
+	- Linear
+	- Exponential
+#### Angle Attenuation / Cone-based attenuation
+#### **High level sound source API**:
 
-	- Spatial Manager (top level interface managing Sources and Services)
-	- Panning Service
-	- Direct Path Service (for now handles just distance and angle attenuation)
+- Spatial Manager (top level interface managing Sources and Services)
+- Panning Service
+- Direct Path Service (for now handles just distance and angle attenuation)
   
 ## Supported platforms
 
