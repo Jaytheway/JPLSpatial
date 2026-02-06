@@ -26,6 +26,8 @@
 #include "JPLSpatial/SpatialManager.h"
 #include "JPLSpatial/Math/MinimalVec3.h"
 #include "JPLSpatial/Math/Position.h"
+
+#include "JPLSpatial/SpatialManager.h"
 #include "JPLSpatial/Services/PanningService.h"
 
 #include "../Utility/TestMemoryLeakDetector.h"
@@ -38,8 +40,11 @@
 #include <vector>
 #include <memory>
 
+
 namespace JPL
 {
+	using namespace Spatial;
+
 	class MemoryTest : public testing::Test
 	{
 	protected:

@@ -23,33 +23,21 @@
 
 #include "Utility/TestMemoryLeakDetector.h"
 
-#include "Tests/SpatializerTest.h"
-
-#include "Tests/VBAP2DTest.h"
-#include "Tests/VBAP3DTest.h"
-#include "Tests/ComputeVBAPTest.h"
 #if 0
 #include "Tests/AttenuationCurveTest.h"
 #endif
-#include "Tests/PanningServiceTest.h"
 
-#include "Tests/DirectPathServiceTest.h"    
 #if JPL_HAS_BEAM_TRACING
 #include "Tests/RayAndPolyTest.h"
 //? No need to test quad tree for now, while it's still just a copy of Jolt's
 //#include "Tests/QuadTreeTest.h"
 #endif
 #if JPL_HAS_PATH_TRACING
+#include "Tests/SpecularRayTracingTest.h"
 //#include "Tests/BDPTTest.h"
-//#include "Tests/DelayLineTest.h"
+#include "Tests/DelayLineTest.h"
+#include "Tests/CrossoverFilterTest.h"
 #endif
-#include "Tests/MathTest.h"
-#include "Tests/SquareRootTest.h"
-#include "Tests/DirectionEncodingTest.h"
-#include "Tests/SIMDTest.h"
-
-#include "Tests/FlatMapTest.h"
-#include "Tests/MemoryTest.h"
 
 #undef max
 #undef min

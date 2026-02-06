@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "JPLSpatial/Core.h"
 #include "JPLSpatial/Containers/ZipIterator.h"
 
 #if __cplusplus >= 202302L

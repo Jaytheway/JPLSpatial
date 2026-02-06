@@ -19,11 +19,13 @@
 
 #pragma once
 
+#include "JPLSpatial/Core.h"
 #include "JPLSpatial/ChannelMap.h"
 
 #include "JPLSpatial/Math/MinimalVec2.h"
 #include "JPLSpatial/Math/MinimalVec3.h"
 
+#include "JPLSpatial/Panning/PannerBase.h"
 #include "JPLSpatial/Panning/VBAPEx.h"
 
 #include <gtest/gtest.h>
