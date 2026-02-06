@@ -6,7 +6,7 @@
 // ╚█████╔╝██║         ███████╗██║██████╔╝███████║
 //  ╚════╝ ╚═╝         ╚══════╝╚═╝╚═════╝ ╚══════╝
 //
-//   Copyright 2024 Jaroslav Pevno, JPLSpatial is offered under the terms of the ISC license:
+//   Copyright Jaroslav Pevno, JPLSpatial is offered under the terms of the ISC license:
 //
 //   Permission to use, copy, modify, and/or distribute this software for any purpose with or
 //   without fee is hereby granted, provided that the above copyright notice and this permission
@@ -16,8 +16,6 @@
 //   CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
 //   WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 //   CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-#pragma once
 
 #include "JPLSpatial/Containers/FlatMap.h"
 
