@@ -30,6 +30,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 
 namespace JPL
 {
@@ -95,7 +96,7 @@ namespace JPL
 			if (count == 0)
 				return MinMaxAvgSum{ 0.0f, 0.0f, 0.0f, 0.0f };
 
-			MinMaxAvgSum data{ FLT_MAX, -FLT_MAX, 0.0f, 0.0f };
+			MinMaxAvgSum data{ std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), 0.0f, 0.0f};
 			float sum = 0.0f;
 			for (const auto& it : dataContainer)
 			{
