@@ -218,7 +218,7 @@ namespace JPL::VBAP
             const simd offset(-spread * mOffsetTerm);
             const simd rampFirst = simd(0.5f, 1.5f, 2.5f, 3.5f); // start with an offset to make mirroring work
 
-            simd phi = FMA(phiTerm, rampFirst, offset);
+            simd phi = Math::FMA(phiTerm, rampFirst, offset);
             const simd delta(4.0f * phiTerm);
 
             for (uint32 i = 0; i < halfAndTail; ++i)

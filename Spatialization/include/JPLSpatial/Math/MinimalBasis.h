@@ -121,9 +121,9 @@ namespace JPL
 			const simd inY = inOutY;
 			const simd inZ = inOutZ;
 
-			inOutX = FMA(simd(GetX(X)), inX, Math::FMA(simd(GetX(Y)), inY, simd(GetX(Z)) * inZ));
-			inOutY = FMA(simd(GetY(X)), inX, Math::FMA(simd(GetY(Y)), inY, simd(GetY(Z)) * inZ));
-			inOutZ = FMA(simd(GetZ(X)), inX, Math::FMA(simd(GetZ(Y)), inY, simd(GetZ(Z)) * inZ));
+			inOutX = Math::FMA(simd(GetX(X)), inX, Math::FMA(simd(GetX(Y)), inY, simd(GetX(Z)) * inZ));
+			inOutY = Math::FMA(simd(GetY(X)), inX, Math::FMA(simd(GetY(Y)), inY, simd(GetY(Z)) * inZ));
+			inOutZ = Math::FMA(simd(GetZ(X)), inX, Math::FMA(simd(GetZ(Y)), inY, simd(GetZ(Z)) * inZ));
 		}
 
 		/// Compose orientations: apply 'this' basis mapping to the other's axes.
