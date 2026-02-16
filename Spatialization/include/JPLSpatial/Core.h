@@ -22,6 +22,9 @@
 // Thanks Jorrit Rouwe and his JoltPhysics library for most of the boilerplate below
 // https://github.com/jrouwe/JoltPhysics
 
+#ifndef JPL_CORE_DEFINED
+#define JPL_CORE_DEFINED
+
 //==============================================================================
 // Determine platform
 #if defined(JPL_PLATFORM_BLUE)
@@ -332,3 +335,5 @@ namespace JPL
 #define JPL_BIT(x) (1u << x)
 
 } // namespace JPL
+
+#endif // JPL_CORE_DEFINED
