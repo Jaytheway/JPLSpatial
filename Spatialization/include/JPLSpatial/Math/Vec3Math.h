@@ -245,7 +245,7 @@ namespace JPL::Math
 #if 0
 		// The rotation axis is perpendicular to v0.
 		axis = CrossProduct(inOutV0, axis);
-		const Vec3simd proj = CrossProduct(axis, inOutV0)
+		const Vec3Pack proj = CrossProduct(axis, inOutV0)
 #else
 		// proj = basis projected onto plane perpendicular to v0
 		const Vec3Pack proj = (axis - inOutV0 * DotProduct(inOutV0, axis)).Normalize();
@@ -291,15 +291,15 @@ namespace JPL::Math
 							 Vec3Pack::select(isOpposite, oppositeCaseTermB, V1 * w1)));
 #else
 		// Use linear interpolation for parallelCase
-		const Vec3simd parallelCase = FMA((V1 - inOutV0), t, inOutV0);// Lerp(inOutV0, V1, t);
+		const Vec3Pack parallelCase = FMA((V1 - inOutV0), t, inOutV0);// Lerp(inOutV0, V1, t);
 
 		inOutV0 = FMA(
 			inOutV0
 			, simd::select(isOpposite, oppositeCaseTermA, w0)
-			, Vec3simd::select(isOpposite, oppositeCaseTermB, V1 * w1)
+			, Vec3Pack::select(isOpposite, oppositeCaseTermB, V1 * w1)
 		);
 		
-		inOutV0 = Vec3simd::select(isParallel, parallelCase, inOutV0);
+		inOutV0 = Vec3Pack::select(isParallel, parallelCase, inOutV0);
 #endif
 
 		// Normalize once at the end

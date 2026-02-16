@@ -379,7 +379,7 @@ namespace JPL::VBAP
         const simd yN = y * invLen;
 
         const simd diamond = ToDiamond(xN, yN);
-        return FMA(diamond, simd(mLUTResolution), 0.5f).to_mask() & mLUTResolutionMask;
+        return Math::FMA(diamond, simd(mLUTResolution), 0.5f).to_mask() & mLUTResolutionMask;
     }
 
     inline void LUT2D::Resize(uint16 resolution, uint32 numTargetChannels)

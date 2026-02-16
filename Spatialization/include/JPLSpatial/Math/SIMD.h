@@ -384,8 +384,11 @@ namespace JPL
 	/// Element-wise fused multiply-add
 	JPL_INLINE simd fma(const simd& mul1, const simd& mul2, const simd& addV) noexcept;
 
-	/// An overload to match our scalar version in Math.h
-	JPL_INLINE simd FMA(const simd& mul1, const simd& mul2, const simd& addV) noexcept { return fma(mul1, mul2, addV); }
+	namespace Math
+	{
+		/// An overload to match our scalar version in Math.h
+		JPL_INLINE simd FMA(const simd& mul1, const simd& mul2, const simd& addV) noexcept { return fma(mul1, mul2, addV); }
+	}
 
 	/// Element-wise floor
 	JPL_INLINE simd floor(const simd& vec) noexcept;
