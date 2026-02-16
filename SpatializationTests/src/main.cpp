@@ -35,8 +35,6 @@
 #if JPL_HAS_PATH_TRACING
 #include "Tests/SpecularRayTracingTest.h"
 //#include "Tests/BDPTTest.h"
-#include "Tests/DelayLineTest.h"
-#include "Tests/CrossoverFilterTest.h"
 #endif
 
 #undef max
