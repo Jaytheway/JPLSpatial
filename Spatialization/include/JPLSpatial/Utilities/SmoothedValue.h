@@ -33,36 +33,36 @@ namespace JPL
         T Alpha = T(1.0);
 
     public:
-        inline static T GetExpAlpha(uint32_t numOfTicks)
+        [[nodiscard]] inline static T GetExpAlpha(uint32_t numOfTicks)
         {
             return numOfTicks == 0
                 ? T(1.0)
                 : T(1.0 - std::exp(-1.0 / static_cast<double>(numOfTicks)));
         }
 
-        inline static T GetInvAlpha(uint32_t numOfTicks)
+        [[nodiscard]] inline static T GetInvAlpha(uint32_t numOfTicks)
         {
             return numOfTicks == 0
                 ? T(1.0)
                 : T(1.0 / static_cast<double>(numOfTicks));
         }
 
-        inline static SmoothedValue CreateExpSmoothing(uint32_t numOfTicks)
+        [[nodiscard]] inline static SmoothedValue CreateExpSmoothing(uint32_t numOfTicks)
         {
             return SmoothedValue{ .Alpha = GetExpAlpha(numOfTicks) };
         }
 
-        inline static SmoothedValue CreateSimpleSmoothing(uint32_t numOfTicks)
+        [[nodiscard]] inline static SmoothedValue CreateSimpleSmoothing(uint32_t numOfTicks)
         {
             return SmoothedValue{ .Alpha = GetInvAlpha(numOfTicks) };
         }
 
-        inline static SmoothedValue CreateExpSmoothing(T current, T target, uint32_t numOfTicks)
+        [[nodiscard]] inline static SmoothedValue CreateExpSmoothing(T current, T target, uint32_t numOfTicks)
         {
             return SmoothedValue{ .Current = current, .Target = target, .Alpha = GetExpAlpha(numOfTicks) };
         }
 
-        inline static SmoothedValue CreateSimpleSmoothing(T current, T target, uint32_t numOfTicks)
+        [[nodiscard]] inline static SmoothedValue CreateSimpleSmoothing(T current, T target, uint32_t numOfTicks)
         {
             return SmoothedValue{ .Current = current, .Target = target, .Alpha = GetInvAlpha(numOfTicks) };
         }
@@ -77,6 +77,6 @@ namespace JPL
         }
 
         // Advance smoothing to the next value and return it
-        inline T GetNext() { Tick(); return Current; }
+        [[nodiscard]] inline T GetNext() { Tick(); return Current; }
     };
 }
