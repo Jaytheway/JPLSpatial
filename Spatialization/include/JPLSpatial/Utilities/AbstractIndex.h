@@ -99,9 +99,9 @@ namespace JPL
 		}
 
 		/// Get total size of the ring buffer including MaxWindow mirror length
-		inline uint32_t GetTotalSize() const { return Base::mRing + MaxWindow; }
-		inline uint32_t GetRingSize() const { return Base::mRing; }
-		inline Index GetCurrent() const { return mIndex; }
+		[[nodiscard]] inline uint32_t GetTotalSize() const { return Base::mRing + MaxWindow; }
+		[[nodiscard]] inline uint32_t GetRingSize() const { return Base::mRing; }
+		[[nodiscard]] inline Index GetCurrent() const { return mIndex; }
 		inline void Reset() { UpdateWriteIndex(0); }
 
 		inline Index operator ++() requires(WriteDirection == RingImpl::EWriteDirection::Forward)
@@ -135,7 +135,7 @@ namespace JPL
 		}
 
 		/// Get the index of the sample at an offset from the WriteIndex.
-		inline uint32_t GetOffset(uint32_t offset) const
+		[[nodiscard]] inline uint32_t GetOffset(uint32_t offset) const
 		{
 			// start of contiguous `MaxWindow` window at an offset from the WriteIndex
 			return Base::GetOffset(mIndex.WriteIndex, offset);
@@ -173,9 +173,9 @@ namespace JPL
 		}
 
 		/// Get total size of the ring buffer 
-		inline uint32_t GetTotalSize() const { return Base::mRing; }
-		inline uint32_t GetRingSize() const { return Base::mRing; }
-		inline Index GetCurrent() const { return mIndex; }
+		[[nodiscard]] inline uint32_t GetTotalSize() const { return Base::mRing; }
+		[[nodiscard]] inline uint32_t GetRingSize() const { return Base::mRing; }
+		[[nodiscard]] inline Index GetCurrent() const { return mIndex; }
 		inline void Reset() { mIndex = { 0 }; }
 
 		inline Index operator ++()
@@ -204,7 +204,7 @@ namespace JPL
 			return currentIndex;
 		}
 
-		inline uint32_t GetOffset(int32_t offset) const
+		[[nodiscard]] inline uint32_t GetOffset(int32_t offset) const
 		{
 			return Base::GetOffset(mIndex, offset);
 		}
