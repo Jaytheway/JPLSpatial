@@ -126,7 +126,7 @@ namespace JPL::Math
 
 	// Cosine-weighted scattered direction in the same hemisphere (Lambert)
 	template<class Vec3, class RandomFloatFunc>
-	static Vec3 SampleHemisphereCosine(const Vec3& normal, RandomFloatFunc getRandomFloat = Internal::RandFloat<Internal::FloatOf<Vec3>>)
+	static Vec3 SampleHemisphereCosine(const Vec3& normal, RandomFloatFunc getRandomFloat = InternalUtils::RandFloat<Internal::FloatOf<Vec3>>)
 	{
 		using FloatType = Internal::FloatOf<Vec3>;
 
@@ -134,7 +134,7 @@ namespace JPL::Math
 		const FloatType u1 = getRandomFloat();	// [0,1)
 		const FloatType u2 = getRandomFloat();	// [0,1)
 		const FloatType r = std::sqrt(u1);			// radius in the disk
-		const FloatType phi = InternalUtils::two_pi<FloatType> * u2;
+		const FloatType phi = InternalUtils::two_pi<FloatType> *u2;
 
 		const FloatType x = r * std::cos(phi);
 		const FloatType z = r * std::sin(phi);
@@ -156,7 +156,7 @@ namespace JPL::Math
 	// Produces a continuous distribution between specular and diffused vectors.
 	// @param diffusion must be in range [0, 1]
 	template<class Vec3, class RandomFloatFunc>
-	static Vec3 VectorBasedScatter2(const Vec3& specular, const Vec3& normal, float diffusion, RandomFloatFunc getRandomFloat = Internal::RandFloat<Internal::FloatOf<Vec3>>)
+	static Vec3 VectorBasedScatter2(const Vec3& specular, const Vec3& normal, float diffusion, RandomFloatFunc getRandomFloat = InternalUtils::RandFloat<Internal::FloatOf<Vec3>>)
 	{
 		using FloatType = Internal::FloatOf<Vec3>;
 		const Vec3 randomDirection = SampleHemisphereCosine(normal, getRandomFloat);
@@ -167,7 +167,7 @@ namespace JPL::Math
 	// Produces a continuous distribution between specular and diffused vectors.
 	// @param diffusion must be in range [0, 1]
 	template<class Vec3, class RandomFloatFunc>
-	static Vec3 VectorBasedScatter(const Vec3& incident, const Vec3& normal, float diffusion, RandomFloatFunc getRandomFloat = Internal::RandFloat<Internal::FloatOf<Vec3>>)
+	static Vec3 VectorBasedScatter(const Vec3& incident, const Vec3& normal, float diffusion, RandomFloatFunc getRandomFloat = InternalUtils::RandFloat<Internal::FloatOf<Vec3>>)
 	{
 		const Vec3 specular = SpecularReflection(incident, normal);
 		return VectorBasedScatter2(specular, normal, diffusion, getRandomFloat);
@@ -195,7 +195,7 @@ namespace JPL::Math
 	static VBSSample<Vec3> VectorBasedScatterAndPDF2(const Vec3& specular,
 													 const Vec3& normal,
 													 float diffusion,
-													 RandomFloatFunc getRandomFloat = Internal::RandFloat<Internal::FloatOf<Vec3>>)
+													 RandomFloatFunc getRandomFloat = InternalUtils::RandFloat<Internal::FloatOf<Vec3>>)
 	{
 		using FloatType = Internal::FloatOf<Vec3>;
 
@@ -234,7 +234,7 @@ namespace JPL::Math
 	static VBSSample<Vec3> VectorBasedScatterAndPDF(const Vec3& incident,
 													const Vec3& normal,
 													float diffusion,
-													RandomFloatFunc getRandomFloat = Internal::RandFloat<Internal::FloatOf<Vec3>>)
+													RandomFloatFunc getRandomFloat = InternalUtils::RandFloat<Internal::FloatOf<Vec3>>)
 	{
 		const Vec3 specular = SpecularReflection(incident, normal);
 		return VectorBasedScatterAndPDF2(specular, normal, diffusion, getRandomFloat);
