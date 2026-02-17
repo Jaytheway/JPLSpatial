@@ -87,13 +87,13 @@ namespace JPL
 	/// Declare some SIMD constants
 
 #define JPL_FL_CONSTANT(Name, Val)\
-	JPL_INLINE const simd& c_##Name() noexcept { static const simd v(Val); return v; } 
+	JPL_INLINE simd c_##Name() noexcept { return simd(Val);; } 
 
 #define JPL_INT_CONSTANT(Name, Val)\
-	JPL_INLINE const simd_mask& c_i##Name() noexcept { static const simd_mask v(static_cast<uint32>(Val)); return v; }
+	JPL_INLINE simd_mask c_i##Name() noexcept { return simd_mask(static_cast<uint32>(Val)); }
 
 #define JPL_MASK_CONSTANT(Name, Val)\
-	JPL_INLINE const simd_mask& c_##Name() noexcept { static const simd_mask v(static_cast<uint32>(Val)); return v; }
+	JPL_INLINE simd_mask c_##Name() noexcept { return simd_mask(static_cast<uint32>(Val)); }
 
 	namespace constant
 	{
