@@ -129,10 +129,15 @@ namespace JPL
             mSize = newSize;
         }
 
+        constexpr JPL_INLINE void clear() noexcept
+        {
+            mSize = 0;
+        }
+
         constexpr JPL_INLINE void push_back(const T& value)
         {
             JPL_ASSERT(mSize < Capacity);
-            mStorage[mSize] = value;
+            mStorage[mSize++] = value;
         }
 
         template <class... Args>
@@ -140,15 +145,14 @@ namespace JPL
         {
             JPL_ASSERT(mSize < Capacity);
             mStorage[mSize] = T{ std::forward<Args>(args)... };
-            return mStorage[mSize];
+            return mStorage[mSize++];
         }
 
         constexpr JPL_INLINE bool pop_back(T& outValue) noexcept
         {
             if (mSize > 0)
             {
-                mSize--;
-                outValue = mStorage[mSize];
+                outValue = mStorage[mSize--];
                 return true;
             }
             else
