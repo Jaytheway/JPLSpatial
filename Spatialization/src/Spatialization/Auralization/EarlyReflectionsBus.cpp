@@ -20,6 +20,7 @@
 #include "JPLSpatial/Auralization/EarlyReflectionsBus.h"
 
 #include "JPLSpatial/Auralization/ChannelMixing.h"
+#include "JPLSpatial/Containers/StaticArray.h"
 
 #include <algorithm>
 #include <cstring>
@@ -47,7 +48,7 @@ namespace JPL
 	{
 	}
 
-	ERBus::ERBus(float sampleRate, uint32_t numChannels)
+	ERBus::ERBus(float sampleRate, uint32 numChannels)
 		: mPool(
 			std::pmr::pool_options{
 				.max_blocks_per_chunk = 32,
@@ -65,12 +66,12 @@ namespace JPL
 		//! deallocate all the allcoated memory on its own
 	}
 
-	void ERBus::Prepare(float sampleRate, uint32_t numChannels)
+	void ERBus::Prepare(float sampleRate, uint32 numChannels)
 	{
 		mNumChannels = numChannels;
 
 		// for now initialize to 2 secodns (next pow2 is 128k samples per channel)
-		mDelayLine = make_pmr_unique<DelayLineType>(static_cast<uint32_t>(sampleRate * 2.0f)); //! ERs are downmixed to mono
+		mDelayLine = make_pmr_unique<DelayLineType>(static_cast<uint32>(sampleRate * 2.0f)); //! ERs are downmixed to mono
 
 		// We need to set the number of channels for the taps
 		//! if number of channels changes, we need to make sure
@@ -81,48 +82,53 @@ namespace JPL
 
 	void ERBus::ProcessInterleaved(std::span<const float> input,
 								   std::span<float> output,
-								   uint32_t numChannels,
-								   uint32_t numSamples)
+								   uint32 numInputChannels,
+								   uint32 numFrames)
 	{
 		// Downmix normalization factor
-		const float channelNorm = 1.0f / numChannels;
+		const float channelNorm = 1.0f / numInputChannels;
 
-		// Process samples in chunks of cScratchSize
-
-		uint32_t samplesProcessed = 0;
-		while (numSamples > 0)
+		// Process frames in chunks of cScratchSize
+		uint32 framesProcessed = 0;
+		while (numFrames > 0)
 		{
-			const uint32_t samplesToProcess = std::min(numSamples, cScratchSize);
-			const float invSamplesToProcess = 1.0f / static_cast<float>(samplesToProcess);
+			const uint32 framesToProcess = std::min(numFrames, cScratchSize);
 
-			std::span<const float> inputChunk = input.subspan(samplesProcessed * numChannels);
-			std::span<float> outputChunk = output.subspan(samplesProcessed * numChannels);
+			std::span<const float> inputChunk = input.subspan(framesProcessed * numInputChannels);
+			std::span<float> outputChunk = output.subspan(framesProcessed * mNumChannels);
 
-			samplesProcessed += samplesToProcess;
+			framesProcessed += framesToProcess;
 
-			for (uint32_t s = 0; s < samplesToProcess; ++s)
+			StaticArray<float, cScratchSize> buffer;
+
+			// Downmix frames to mono
+			const uint32 sampelsToProcess = framesToProcess * numInputChannels;
+			for (uint32 s = 0; s < sampelsToProcess; s += numInputChannels)
 			{
-				// Downmix to mono
 				float sample = 0.0f;
-				for (uint32_t ch = 0; ch < numChannels; ++ch)
-					sample += inputChunk[s * numChannels + ch];
-				sample *= channelNorm;
+				for (uint32 ch = 0; ch < numInputChannels; ++ch)
+					sample += inputChunk[s + ch];
+				
+				buffer.push_back(sample);
+			}
 
-				// Push new sample to delay line
+			// Normalize downmixed frames
+			ApplyGain(buffer.data(), framesToProcess, channelNorm);
+			
+			// Push samples to delay line
+			for (float sample : buffer)
+			{
 				mDelayLine->Push(sample);
 			}
 
 			// ..after the above, we have pushed 'scratchSize' sample into the delay line
 			// so we need to take this offset into account when reading taps.
 
-			float scratchBuffer[cScratchSize]{};
-			std::span<float> buffer(scratchBuffer, samplesToProcess);
-
 #if not JPL_ER_USE_DELAY
 			//? Temp testing just panning
-			for (uint32_t d = 0; d < samplesToProcess; ++d)
+			for (uint32 d = 0; d < framesToProcess; ++d)
 			{
-				buffer[d] = mDelayLine->GetReadWindow<1>(samplesToProcess - d);
+				buffer[d] = mDelayLine->GetReadWindow<1>(framesToProcess - d);
 			}
 #endif
 			// Grab the updated data
@@ -161,11 +167,11 @@ namespace JPL
 				// Process delay
 				{
 					// Add scratch size that we are "behind"
-					int delayOffset = static_cast<int>(samplesToProcess);
+					int delayOffset = static_cast<int>(framesToProcess);
 
 					realtimeData.DelayTime.Target = targetData.DelayTime;
 
-					for (uint32_t s = 0; s < samplesToProcess; ++s) // TODO: can/should we do this in batch?
+					for (uint32 s = 0; s < framesToProcess; ++s) // TODO: can/should we do this in batch?
 					{
 						realtimeData.Tap.SetDelay(static_cast<float>(delayOffset) + static_cast<float>(realtimeData.DelayTime.GetNext()));
 
@@ -187,7 +193,7 @@ namespace JPL
 #endif
 
 				// Mix/add to the ouptut
-				for (uint32_t outChannel = 0; outChannel < numChannels; ++outChannel)
+				for (uint32 outChannel = 0; outChannel < mNumChannels; ++outChannel)
 				{
 					// TODO: we could improve this if we apply gain ramp first to contiguous 'buffer',
 					//		then add it to the interleaved output. Or setup deinterleaved callback.
@@ -196,16 +202,16 @@ namespace JPL
 					AddAndApplyGainRamp(outputChunk.data(),
 										buffer.data(),
 										outChannel, 0,
-										numChannels, 1,
-										samplesToProcess,
+										mNumChannels, 1,
+										framesToProcess,
 										realtimeData.ChannelGains[outChannel],
 										targetData.ChannelGains[outChannel]);
 #else
 					Add(outputChunk.data(),
 						buffer.data(),
 						outChannel, 0,
-						numChannels, 1,
-						samplesToProcess);
+						mNumChannels, 1,
+						framesToProcess);
 #endif
 
 					realtimeData.ChannelGains[outChannel] = targetData.ChannelGains[outChannel];
@@ -216,13 +222,13 @@ namespace JPL
 				realtimeData.State.compare_exchange_strong(targetState, ERState::Stopped, std::memory_order_release);
 			}
 
-			numSamples -= samplesToProcess;
+			numFrames -= framesToProcess;
 		} // while (numSamples > 0)
 	}
 
 	// Simple utility for convenience
 	template<stdr::range Container>
-	static auto FindERByID(Container& container, uint32_t id)
+	static auto FindERByID(Container& container, uint32 id)
 	{
 		// This preserves the constness
 		using ReturnValue = std::remove_reference_t<decltype(*container.begin())>;
@@ -379,7 +385,7 @@ namespace JPL
 
 			// 7. Append-move the newly created ERs
 			const std::size_t newERCount = ersAcquire->InsertNewERs(std::move(newERs));
-			mNumTaps = static_cast<uint32_t>(newERCount);
+			mNumTaps = static_cast<uint32>(newERCount);
 
 		} // ER Data update is released for the realtime thread
 	}
@@ -427,7 +433,7 @@ namespace JPL
 	{
 	}
 
-	ERBus::ERStorage::ERStorage(std::pmr::memory_resource& resource, uint32_t numChannels)
+	ERBus::ERStorage::ERStorage(std::pmr::memory_resource& resource, uint32 numChannels)
 		: mAllocator(&resource)
 		, NumChannels(numChannels)
 		, ERs(&resource)
@@ -515,7 +521,7 @@ namespace JPL
 			mAllocator.deallocate(gains, NumChannels);
 	}
 
-	auto ERBus::ERStorage::FindERByID(uint32_t id) -> ER*
+	auto ERBus::ERStorage::FindERByID(uint32 id) -> ER*
 	{
 		return JPL::FindERByID(ERs, id);
 	}
@@ -570,7 +576,7 @@ namespace JPL
 		if (NumChannels == 0)
 			return;
 
-		for (uint32_t i = 0; i < ERs.size(); ++i)
+		for (uint32 i = 0; i < ERs.size(); ++i)
 		{
 			ERs[i].TargetData.ChannelGains = AllocateChannelGains();
 			std::memcpy(

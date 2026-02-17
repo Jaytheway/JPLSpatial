@@ -44,7 +44,7 @@ namespace JPL
 	/// The memory is managed by internal memory pool and default global JPL PMR allocator.
 	class ERBus
 	{
-		static constexpr uint32_t cScratchSize = 480;
+		static constexpr uint32 cScratchSize = 480;
 	public:
 		//==============================================================================
 		// Parameters to create/update early reflection taps
@@ -53,7 +53,7 @@ namespace JPL
 			JPL::simd FilterGains;
 			std::vector<float> Gains;
 			float Delay;
-			uint32_t Id;
+			uint32 Id;
 		};
 
 	private:
@@ -107,7 +107,7 @@ namespace JPL
 		{
 			TargetERData TargetData;		// Non-realtime mutable
 			RealtimeData* RealtimeState;	// Realtime mutable
-			uint32_t Id;					// Immutable
+			uint32 Id;					// Immutable
 
 			inline bool operator==(const typename ERBus::ER& other)
 			{
@@ -135,7 +135,7 @@ namespace JPL
 			ERStorage() = delete;
 
 			explicit ERStorage(std::pmr::memory_resource& resource);
-			ERStorage(std::pmr::memory_resource& resource, uint32_t numChannels);
+			ERStorage(std::pmr::memory_resource& resource, uint32 numChannels);
 
 			ERStorage(const ERStorage& other);
 			ERStorage& operator=(const ERStorage& other);
@@ -155,7 +155,7 @@ namespace JPL
 			const std::pmr::vector<ER>& GetERs() const { return ERs; }
 			std::pmr::vector<ER>& GetERs() { return ERs; }
 
-			ER* FindERByID(uint32_t id);
+			ER* FindERByID(uint32 id);
 
 			template<std::ranges::range UpdateData>
 			void PartitionERs(const UpdateData& updateERs, std::span<ER>& outFoundERs, std::span<ER>& outNotFoundERs);
@@ -191,7 +191,7 @@ namespace JPL
 		private:
 			std::pmr::polymorphic_allocator<float> mAllocator;
 			std::pmr::vector<ER> ERs;
-			uint32_t NumChannels = 0;
+			uint32 NumChannels = 0;
 		};
 
 		using SafeERs = JPL::RealtimeObject<ERStorage>;
@@ -200,17 +200,21 @@ namespace JPL
 
 	public:
 		ERBus();
-		ERBus(float sampleRate, uint32_t numChannels);
+		ERBus(float sampleRate, uint32 numChannels);
 		~ERBus();
 
 		/// Must be called from single non-audio thread
-		void Prepare(float sampleRate, uint32_t numChannels);
+		void Prepare(float sampleRate, uint32 numChannels);
 
 		/// Must be called from audio thread
-		/// input and output must have the same nubmer of channels and samples
-		void ProcessInterleaved(std::span<const float> input, std::span<float> output, uint32_t numChannels, uint32_t numSamples);
+		/// @param numInputChannels :	number of input channels,
+		///							number of output channels in the `outpu` buffer
+		///							must be equal to what ERBus was initialized to.
+		/// 
+		/// @input and @output must have the same nubmer of channels frames
+		void ProcessInterleaved(std::span<const float> input, std::span<float> output, uint32 numInputChannels, uint32 numFrames);
 
-		uint32_t GetNumChannels() const { return mNumChannels; }
+		uint32 GetNumChannels() const { return mNumChannels; }
 
 		// Add/remove/update early reflection taps
 		/// Must be called from the same non-audio thread
@@ -218,7 +222,7 @@ namespace JPL
 
 		//std::atomic<float> RMS{ 0.0f };
 
-		inline uint32_t GetNumTaps() const { return mNumTaps; }
+		inline uint32 GetNumTaps() const { return mNumTaps; }
 
 	private:
 		RealtimeData* AllocateRTData();
@@ -233,9 +237,9 @@ namespace JPL
 		pmr_unique_ptr<DelayLineType> mDelayLine;
 
 		SafeERs mERs;
-		uint32_t mNumTaps = 0;
+		uint32 mNumTaps = 0;
 
-		uint32_t mNumChannels = 0;
+		uint32 mNumChannels = 0;
 		float mSampleRate = 48'000.0f;
 	};
 } // namespace JPL
