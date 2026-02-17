@@ -61,11 +61,6 @@ namespace JPL::Math
 				RandFloat<Internal::FloatOf<Vec3>>() * 2.0f - 1.0f
 			});
 		}
-
-		template<class Vec3>
-		using RandDirFuncDefault = decltype([] { return RandDirection<Vec3>(); });
-		template<std::floating_point FloatType>
-		using RandFloatFuncDefault = decltype([] { return RandFloat<FloatType>(); });
 	}
 
 	template<class Vec3>
@@ -130,8 +125,8 @@ namespace JPL::Math
 	}
 
 	// Cosine-weighted scattered direction in the same hemisphere (Lambert)
-	template<class Vec3, class RandomFloatFunc = InternalUtils::RandFloatFuncDefault<Internal::FloatOf<Vec3>>>
-	static Vec3 SampleHemisphereCosine(const Vec3& normal, RandomFloatFunc getRandomFloat = {})
+	template<class Vec3, class RandomFloatFunc>
+	static Vec3 SampleHemisphereCosine(const Vec3& normal, RandomFloatFunc getRandomFloat = RandFloat<Internal::FloatOf<Vec3>>)
 	{
 		using FloatType = Internal::FloatOf<Vec3>;
 
@@ -160,8 +155,8 @@ namespace JPL::Math
 	// Vector Based Scattering (Christensen 2005)
 	// Produces a continuous distribution between specular and diffused vectors.
 	// @param diffusion must be in range [0, 1]
-	template<class Vec3, class RandomFloatFunc = InternalUtils::RandFloatFuncDefault<Internal::FloatOf<Vec3>>>
-	static Vec3 VectorBasedScatter2(const Vec3& specular, const Vec3& normal, float diffusion, RandomFloatFunc getRandomFloat = {})
+	template<class Vec3, class RandomFloatFunc>
+	static Vec3 VectorBasedScatter2(const Vec3& specular, const Vec3& normal, float diffusion, RandomFloatFunc getRandomFloat = RandFloat<Internal::FloatOf<Vec3>>)
 	{
 		using FloatType = Internal::FloatOf<Vec3>;
 		const Vec3 randomDirection = SampleHemisphereCosine(normal, getRandomFloat);
@@ -171,8 +166,8 @@ namespace JPL::Math
 	// Vector Based Scattering (Christensen 2005)
 	// Produces a continuous distribution between specular and diffused vectors.
 	// @param diffusion must be in range [0, 1]
-	template<class Vec3, class RandomFloatFunc = InternalUtils::RandFloatFuncDefault<Internal::FloatOf<Vec3>>>
-	static Vec3 VectorBasedScatter(const Vec3& incident, const Vec3& normal, float diffusion, RandomFloatFunc getRandomFloat = {})
+	template<class Vec3, class RandomFloatFunc>
+	static Vec3 VectorBasedScatter(const Vec3& incident, const Vec3& normal, float diffusion, RandomFloatFunc getRandomFloat = RandFloat<Internal::FloatOf<Vec3>>)
 	{
 		const Vec3 specular = SpecularReflection(incident, normal);
 		return VectorBasedScatter2(specular, normal, diffusion, getRandomFloat);
@@ -196,12 +191,11 @@ namespace JPL::Math
 	// @returns with probability (1-d): deterministic specular direction;
 	// 
 	// with probability d: a cosine-weighted sample
-	template<class Vec3, class RandomFloatFunc = InternalUtils::RandFloatFuncDefault<Internal::FloatOf<Vec3>>>
-	static VBSSample<Vec3> VectorBasedScatterAndPDF2(
-		const Vec3& specular,
-		const Vec3& normal,
-		float diffusion,
-		RandomFloatFunc getRandomFloat = {})
+	template<class Vec3, class RandomFloatFunc>
+	static VBSSample<Vec3> VectorBasedScatterAndPDF2(const Vec3& specular,
+													 const Vec3& normal,
+													 float diffusion,
+													 RandomFloatFunc getRandomFloat = RandFloat<Internal::FloatOf<Vec3>>)
 	{
 		using FloatType = Internal::FloatOf<Vec3>;
 
@@ -236,12 +230,11 @@ namespace JPL::Math
 	// @returns with probability (1-d): deterministic specular direction;
 	// 
 	// with probability d: a cosine-weighted sample
-	template<class Vec3, class RandomFloatFunc = InternalUtils::RandFloatFuncDefault<Internal::FloatOf<Vec3>>>
-	static VBSSample<Vec3> VectorBasedScatterAndPDF(
-		const Vec3& incident,
-		const Vec3& normal,
-		float diffusion,
-		RandomFloatFunc getRandomFloat = {})
+	template<class Vec3, class RandomFloatFunc>
+	static VBSSample<Vec3> VectorBasedScatterAndPDF(const Vec3& incident,
+													const Vec3& normal,
+													float diffusion,
+													RandomFloatFunc getRandomFloat = RandFloat<Internal::FloatOf<Vec3>>)
 	{
 		const Vec3 specular = SpecularReflection(incident, normal);
 		return VectorBasedScatterAndPDF2(specular, normal, diffusion, getRandomFloat);
