@@ -46,6 +46,21 @@ namespace JPL
 			dest[di] += source[si];
 	}
 
+	inline void ApplyGain(float* dest, uint32 numFrames, float gain)
+	{
+		const simd gainVe(gain);
+		uint32 numSimd = GetNumSIMDOps(numFrames);
+		while (numSimd--)
+		{
+			(simd(dest) *= gainVe).store(dest);
+			dest += simd::size();
+		}
+		for (uint32 t = 0; t < GetSIMDTail(numFrames); ++t)
+		{
+			dest[t] *= gain;
+		}
+	}
+
 	inline void ApplyGainRamp(float* dest, uint32 numFrames, float gainStart, float gainEnd)
 	{
 		const float delta = (gainEnd - gainStart) / static_cast<float>(numFrames);
