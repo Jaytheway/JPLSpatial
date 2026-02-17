@@ -239,7 +239,7 @@ namespace JPL
         //const float pySign = Math::Sign2(dir.Y);
         //return -pySign * 0.25f * dir.X + 0.5f + pySign * 0.25f;
         const simd pySignQuarter = Math::Sign2(y) * 0.25f;
-        return fma(-pySignQuarter, x, (simd::c_0p5 + pySignQuarter));
+        return fma(-pySignQuarter, x, (simd::c_0p5() + pySignQuarter));
     }
 } // namespace JPL
 
@@ -353,26 +353,30 @@ namespace JPL
         // It should be up to the user to ensure valid direction vector
         JPL_ASSERT(!Math::IsNearlyZero(L1Norm).any_of() && "direction must be normalised & non-zero");
 
-        const simd invL1Norm = simd::c_1 / L1Norm;
+        static const simd zero = simd::zero();
+        static const simd one = simd::c_1();
+        static const simd zero_p5 = simd::c_0p5();
+
+        const simd invL1Norm = one / L1Norm;
         simd px = dirX * invL1Norm;
         simd py = dirY * invL1Norm;
 
         // Standard folding for Z < 0
         {
-            const simd_mask zIsLessThanZero = dirZ < simd::c_0;
+            const simd_mask zIsLessThanZero = dirZ < zero;
             const simd tempPx = px; // Store original px for py calculation
 
-            px = simd::select(zIsLessThanZero, (simd::c_1 - abs(py)) * Math::Sign2(tempPx), px);
-            py = simd::select(zIsLessThanZero, (simd::c_1 - abs(tempPx)) * Math::Sign2(py), py);
+            px = simd::select(zIsLessThanZero, (one - abs(py)) * Math::Sign2(tempPx), px);
+            py = simd::select(zIsLessThanZero, (one - abs(tempPx)) * Math::Sign2(py), py);
         }
 
-        static const simd cHalfTexel = simd::c_0p5 / simd(cAxisMask);
-        px = clamp(px, -simd::c_1 + cHalfTexel, simd::c_1 - cHalfTexel);
-        py = clamp(py, -simd::c_1 + cHalfTexel, simd::c_1 - cHalfTexel);
+        static const simd cHalfTexel = zero_p5 / simd(cAxisMask);
+        px = clamp(px, -one + cHalfTexel, one - cHalfTexel);
+        py = clamp(py, -one + cHalfTexel, one - cHalfTexel);
 
         // Map to [0,1)
-        const simd v0 = px * simd::c_0p5 + simd::c_0p5;
-        const simd v1 = py * simd::c_0p5 + simd::c_0p5;
+        const simd v0 = px * zero_p5 + zero_p5;
+        const simd v1 = py * zero_p5 + zero_p5;
 
         // Truncate to requested precision
         const auto dx = (floor(v0 * simd(cAxisMask))).to_mask();
@@ -433,7 +437,7 @@ namespace JPL
     template<Octahedron::CPrecision Precision>
     void JPL::OctahedronEncoding<Precision>::Decode(const simd_mask& encodedDirection, simd& outX, simd& outY, simd& outZ) requires(sizeof(EncodedType) <= sizeof(uint32))
     {
-        static const simd muInv = simd::c_1 / static_cast<simd>(cAxisMask);
+        static const simd muInv = simd::c_1() / static_cast<simd>(cAxisMask);
 
         simd_mask dx = encodedDirection & cAxisMask;                      // Low bits for dx
         simd_mask dy = (encodedDirection >> cBitsPerAxis) & cAxisMask;    // High bits for dy
@@ -443,21 +447,26 @@ namespace JPL
         dx = min(dx, maxComponentValue);
         dy = min(dy, maxComponentValue);
 
+        static const simd zero = simd::zero();
+        static const simd one = simd::c_1();
+        static const simd two = simd(2.0f);
+        static const simd zero_p5 = simd::c_0p5();
+
         // Map from [0, 1] to [-1, 1]
         // (the added 0.5 shifts the sample from the lower-left vertex to the texel’s centre)
-        const simd pxDecoded = -simd::c_1 + simd(2.0) * (dx.to_simd() + simd::c_0p5) * muInv;
-        const simd pyDecoded = -simd::c_1 + simd(2.0) * (dy.to_simd() + simd::c_0p5) * muInv;
+        const simd pxDecoded = -one + two * (dx.to_simd() + zero_p5) * muInv;
+        const simd pyDecoded = -one + two * (dy.to_simd() + zero_p5) * muInv;
 
         simd direction[3]{
             pxDecoded,
             pyDecoded,
-            simd::c_1 - abs(pxDecoded) - abs(pyDecoded)
+            one - abs(pxDecoded) - abs(pyDecoded)
         };
 
         // "Unfold" the negative Z hemisphere
-        const simd t = max(-direction[2], simd::c_0);
-        direction[0] += simd::select(direction[0] > simd::c_0, -t, t);
-        direction[1] += simd::select(direction[1] > simd::c_0, -t, t);
+        const simd t = max(-direction[2], zero);
+        direction[0] += simd::select(direction[0] > zero, -t, t);
+        direction[1] += simd::select(direction[1] > zero, -t, t);
 
         // Copy to the output and normalize
         outX = direction[0];

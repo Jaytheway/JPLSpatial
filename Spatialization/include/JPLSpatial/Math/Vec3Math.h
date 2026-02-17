@@ -237,9 +237,9 @@ namespace JPL::Math
 		// If v0 is too close to X-axis, try Y-axis
 		const simd_mask isClose = abs(DotProduct(inOutV0, axis)) > oneMinusEps;
 		axis = {
-				simd::select(isClose, simd::c_0, simd::c_1),	// X
-				simd::select(isClose, simd::c_1, simd::c_0),	// Y
-				simd::c_0										// Z
+				simd::select(isClose, simd::c_0(), simd::c_1()),	// X
+				simd::select(isClose, simd::c_1(), simd::c_0()),	// Y
+				simd::c_0()											// Z
 		};
 
 #if 0
@@ -252,7 +252,7 @@ namespace JPL::Math
 
 		// Rotate v0 by t * 180 degrees around the chosen axis.
 		// This is equivalent to a half-rotation of a quaternion.
-		const FloatType angle = t * simd::c_pi;
+		const FloatType angle = t * simd::c_pi();
 		
 		FloatType sinAngle;
 		FloatType oppositeCaseTermA; // cosAngle

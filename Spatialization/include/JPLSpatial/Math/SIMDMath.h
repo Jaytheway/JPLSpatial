@@ -87,13 +87,13 @@ namespace JPL
 	/// Declare some SIMD constants
 
 #define JPL_FL_CONSTANT(Name, Val)\
-	static const simd c_##Name = { Val }
+	JPL_INLINE const simd& c_##Name() noexcept { static const simd v(Val); return v; } 
 
 #define JPL_INT_CONSTANT(Name, Val)\
-	static const simd_mask c_i##Name = { static_cast<uint32>(Val) }
+	JPL_INLINE const simd_mask& c_i##Name() noexcept { static const simd_mask v(static_cast<uint32>(Val)); return v; }
 
 #define JPL_MASK_CONSTANT(Name, Val)\
-	static const simd_mask c_##Name = { static_cast<uint32>(Val) }
+	JPL_INLINE const simd_mask& c_##Name() noexcept { static const simd_mask v(static_cast<uint32>(Val)); return v; }
 
 	namespace constant
 	{
@@ -119,7 +119,7 @@ namespace JPL
 	/// Equivalent to std::signbit but for 4-wide 32-bit float vector
 	JPL_INLINE simd_mask signbit(const simd& vec) noexcept
 	{
-		return vec.as_mask() & constant::c_sign_mask;
+		return vec.as_mask() & constant::c_sign_mask();
 	}
 
 	/// Determines if the given floating-point number num is a positive or negative infinity
@@ -171,15 +171,15 @@ namespace JPL
 		// Evaluat log polynomial
 		JPL_INLINE simd polynomial(const simd& x) noexcept
 		{
-			simd y = cephes::c_log_p0;
-			y = fma(y, x, cephes::c_log_p1);
-			y = fma(y, x, cephes::c_log_p2);
-			y = fma(y, x, cephes::c_log_p3);
-			y = fma(y, x, cephes::c_log_p4);
-			y = fma(y, x, cephes::c_log_p5);
-			y = fma(y, x, cephes::c_log_p6);
-			y = fma(y, x, cephes::c_log_p7);
-			y = fma(y, x, cephes::c_log_p8);
+			simd y = cephes::c_log_p0();
+			y = fma(y, x, cephes::c_log_p1());
+			y = fma(y, x, cephes::c_log_p2());
+			y = fma(y, x, cephes::c_log_p3());
+			y = fma(y, x, cephes::c_log_p4());
+			y = fma(y, x, cephes::c_log_p5());
+			y = fma(y, x, cephes::c_log_p6());
+			y = fma(y, x, cephes::c_log_p7());
+			y = fma(y, x, cephes::c_log_p8());
 			y *= x;
 			return y;
 		}
@@ -192,17 +192,17 @@ namespace JPL
 	{
 		simd invalid_mask = (x <= simd::zero()).as_simd();
 
-		x = max(x, constant::c_min_norm_pos.as_simd()); // cut off denormalized stuff
+		x = max(x, constant::c_min_norm_pos().as_simd()); // cut off denormalized stuff
 
 		// part 1: x = frexpf(x, &e);
-		const simd_mask emm0 = (x.as_mask() >> 23) - constant::c_i0x7f;
+		const simd_mask emm0 = (x.as_mask() >> 23) - constant::c_i0x7f();
 		
 		// now e contains the really base-2 exponent
-		simd e = emm0.to_simd() + simd::c_1;
+		simd e = emm0.to_simd() + simd::c_1();
 
 		// keep only the fractional part
-		x &= constant::c_inv_mant_mask.as_simd();
-		x |= simd::c_0p5;
+		x &= constant::c_inv_mant_mask().as_simd();
+		x |= simd::c_0p5();
 
 		/* part2:
 		   if( x < SQRTHF ) {
@@ -210,16 +210,16 @@ namespace JPL
 			 x = x + x - 1.0;
 		   } else { x = x - 1.0; }
 		*/
-		const simd mask = (x < cephes::c_SQRTHF).as_simd();
-		e -= (simd::c_1 & mask);
-		x += (x & mask) - simd::c_1;
+		const simd mask = (x < cephes::c_SQRTHF()).as_simd();
+		e -= (simd::c_1() & mask);
+		x += (x & mask) - simd::c_1();
 
 		// Evaluate polynomial
 		simd y = logarithm::polynomial(x);
 
 		const simd x2 = x * x;
-		y = fma(e, cephes::c_log_q1, y * x2) - x2 * simd::c_0p5;
-		x = fma(e, cephes::c_log_q2, x + y);
+		y = fma(e, cephes::c_log_q1(), y * x2) - x2 * simd::c_0p5();
+		x = fma(e, cephes::c_log_q2(), x + y);
 		return x | invalid_mask; // negative arg will be NAN
 	}
 
@@ -240,13 +240,13 @@ namespace JPL
 	/// log10 for 4-wide 32-bit float vector
 	JPL_INLINE simd log10(const simd& vec) noexcept
 	{
-		return log(vec) * constant::c_inv_ln10;
+		return log(vec) * constant::c_inv_ln10();
 	}
 
 	/// log2 for 4-wide 32-bit float vector
 	JPL_INLINE simd log2(const simd& vec) noexcept
 	{
-		return log(vec) * constant::c_inv_ln2;
+		return log(vec) * constant::c_inv_ln2();
 	}
 
 	//==========================================================================
@@ -276,20 +276,20 @@ namespace JPL
 		JPL_INLINE simd polynomial(const simd& x) noexcept
 		{
 			simd x2 = x * x;
-			simd y = cephes::c_exp_p0;
-			y = fma(y, x, cephes::c_exp_p1);
-			y = fma(y, x, cephes::c_exp_p2);
-			y = fma(y, x, cephes::c_exp_p3);
-			y = fma(y, x, cephes::c_exp_p4);
-			y = fma(y, x, cephes::c_exp_p5);
-			y = fma(y, x2, x + simd::c_1);
+			simd y = cephes::c_exp_p0();
+			y = fma(y, x, cephes::c_exp_p1());
+			y = fma(y, x, cephes::c_exp_p2());
+			y = fma(y, x, cephes::c_exp_p3());
+			y = fma(y, x, cephes::c_exp_p4());
+			y = fma(y, x, cephes::c_exp_p5());
+			y = fma(y, x2, x + simd::c_1());
 			return y;
 		}
 
 		// Build 2^n via exponent bits
 		JPL_INLINE simd build2pown(const simd& n)
 		{
-			return ((n.to_mask() + constant::c_i0x7f) << 23).as_simd();
+			return ((n.to_mask() + constant::c_i0x7f()) << 23).as_simd();
 		}
 	}
 
@@ -297,15 +297,15 @@ namespace JPL
 	/// Exponent for 4-wide 32-bit float vector
 	inline simd exp(simd x) noexcept
 	{
-		x = clamp(x, constant::c_exp_lo, constant::c_exp_hi);
+		x = clamp(x, constant::c_exp_lo(), constant::c_exp_hi());
 
 		// Express exp(x) as exp(g + n*log(2))
 
 		// n = floor(x * LOG2E + 0.5)  (round to nearest integer)
-		simd n = floor(fma(x, cephes::c_LOG2EF, simd::c_0p5));
+		simd n = floor(fma(x, cephes::c_LOG2EF(), simd::c_0p5()));
 
 		// Remainder in natural-log space using split ln2 = C1 + C2 (better precision)
-		x -= fma(n, cephes::c_exp_C1, n * cephes::c_exp_C2);
+		x -= fma(n, cephes::c_exp_C1(), n * cephes::c_exp_C2());
 
 		// Evaluate polynomial
 		simd y = exponent::polynomial(x);
@@ -319,12 +319,12 @@ namespace JPL
 	JPL_INLINE simd exp2(simd x) noexcept
 	{
 		// Range reduction: x = n + r, where r ~= [-0.5, 0.5]
-		simd n = floor(x + simd::c_0p5);
+		simd n = floor(x + simd::c_0p5());
 		simd r = x - n;
 
 		// Convert the small base-2 remainder to natural-log space:
 		// (x): r_ln2 ~= r * ln(2) using split constants for precision
-		x = fma(r, cephes::c_exp_C1, r * cephes::c_exp_C2);
+		x = fma(r, cephes::c_exp_C1(), r * cephes::c_exp_C2());
 
 		// Reuse exp polynomial exactly as in exp():
 		simd y = exponent::polynomial(x);
@@ -359,7 +359,7 @@ namespace JPL
 		// Flip x's sign bit where y is negative
 		JPL_INLINE simd mulsign(const simd& x, const simd& y) noexcept
 		{
-			return (x.as_mask() ^ (y.as_mask() & constant::c_sign_mask)).to_simd();
+			return (x.as_mask() ^ (y.as_mask() & constant::c_sign_mask())).to_simd();
 		}
 
 		// Return 1.0f with the sign of `x`
@@ -398,7 +398,7 @@ namespace JPL
 		simd_mask x_is_inf = isinf(x);
 		simd_mask x_is_nan = isnan(x);
 		simd_mask x_is_gte_zero = x >= 0.0f;
-		simd_mask x_is_zero = x == simd::c_0;
+		simd_mask x_is_zero = x == simd::c_0();
 
 		// Sleef: turn internal NaN-overflow to +inf
 		//result = simd::select(isnan(result), simd::inf(), result);
@@ -412,12 +412,12 @@ namespace JPL
 										   result_signed));
 
 		// efx path for y = +-inf
-		simd efx = power::mulsign(x_abs - simd::c_1, y);
+		simd efx = power::mulsign(x_abs - simd::c_1(), y);
 		result = simd::select(y_is_inf,
-							  simd::select(efx < simd::c_0,
-										   simd::c_0,
-										   simd::select(efx == simd::c_0,
-														simd::c_1,
+							  simd::select(efx < simd::c_0(),
+										   simd::c_0(),
+										   simd::select(efx == simd::c_0(),
+														simd::c_1(),
 														simd::inf())),
 							  result);
 
@@ -425,10 +425,10 @@ namespace JPL
 		{
 			simd factor = simd::select(y_is_odd,
 									   power::sign(x),
-									   simd::c_1);
+									   simd::c_1());
 
-			simd pos0_or_inf = simd::select(simd::select(x_is_zero, -y, y) < simd::c_0,
-											simd::c_0,
+			simd pos0_or_inf = simd::select(simd::select(x_is_zero, -y, y) < simd::c_0(),
+											simd::c_0(),
 											simd::inf());
 
 			result = simd::select(x_is_inf | x_is_zero, factor * pos0_or_inf, result);
@@ -438,8 +438,8 @@ namespace JPL
 		result = simd::select(x_is_nan | y_is_nan, simd::nan(), result);
 
 		// y==0 or x==1
-		simd_mask x_factor = (x == simd::c_1) | ((x == -simd::c_1) & y_is_inf);
-		result = simd::select((y == simd::c_0) | x_factor, simd::c_1, result);
+		simd_mask x_factor = (x == simd::c_1()) | ((x == -simd::c_1()) & y_is_inf);
+		result = simd::select((y == simd::c_0()) | x_factor, simd::c_1(), result);
 
 		return result;
 	}
@@ -470,14 +470,14 @@ namespace JPL
 
 			// Evaluate the first polynom  (0 <= x <= Pi/4)
 			// Cos(x) = 1 - x^2/2! + x^4/4! - x^6/6! + x^8/8! + ... = (((x2/8!- 1/6!) * x2 + 1/4!) * x2 - 1/2!) * x2 + 1
-			outTaylorCos = fma(cephes::c_coscof_p0, x2, cephes::c_coscof_p1);
-			outTaylorCos = fma(outTaylorCos, x2, cephes::c_coscof_p2);
-			outTaylorCos = fma(outTaylorCos, x2 * x2, -(simd::c_0p5 * x2) + simd::c_1);
+			outTaylorCos = fma(cephes::c_coscof_p0(), x2, cephes::c_coscof_p1());
+			outTaylorCos = fma(outTaylorCos, x2, cephes::c_coscof_p2());
+			outTaylorCos = fma(outTaylorCos, x2 * x2, -(simd::c_0p5() * x2) + simd::c_1());
 
 			// Evaluate the second polynom  (Pi/4 <= x <= 0)
 			// Sin(x) = x - x^3/3! + x^5/5! - x^7/7! + ... = ((-x2/7! + 1/5!) * x2 - 1/3!) * x2 * x + x
-			outTaylorSin = fma(cephes::c_sincof_p0, x2, cephes::c_sincof_p1);
-			outTaylorSin = fma(outTaylorSin, x2, cephes::c_sincof_p2);
+			outTaylorSin = fma(cephes::c_sincof_p0(), x2, cephes::c_sincof_p1());
+			outTaylorSin = fma(outTaylorSin, x2, cephes::c_sincof_p2());
 			outTaylorSin = fma(outTaylorSin, x2 * x, x);
 		}
 	}
@@ -500,22 +500,22 @@ namespace JPL
 			x = abs(x); // take the absolute value
 
 			// Store the integer part of y in quadrant
-			// x * cephes::c_FOPI: scale by 4/Pi
-			simd_mask quadrant = fma(cephes::c_FOPI, x, constant::c_i1.to_simd()).to_mask() & constant::c_iinv1;
+			// x * cephes::c_FOPI(): scale by 4/Pi
+			simd_mask quadrant = fma(cephes::c_FOPI(), x, constant::c_i1().to_simd()).to_mask() & constant::c_iinv1();
 			simd float_quadrant = quadrant.to_simd();
 
 			// The magic pass: "Extended precision modular arithmetic"
 			// x = ((x - y * DP1) - y * DP2) - y * DP3;
-			x = fma(float_quadrant, cephes::c_minus_DP1, x);
-			x = fma(float_quadrant, cephes::c_minus_DP2, x);
-			x = fma(float_quadrant, cephes::c_minus_DP3, x);
+			x = fma(float_quadrant, cephes::c_minus_DP1(), x);
+			x = fma(float_quadrant, cephes::c_minus_DP2(), x);
+			x = fma(float_quadrant, cephes::c_minus_DP3(), x);
 
 			// Evaluate polynomials
 			simd taylor_cos, taylor_sin;
 			sincos::polynomials(x, taylor_cos, taylor_sin);
 
 			// Get the polynom selection mask for the sine
-			simd_mask mask = (quadrant & constant::c_i2) == simd_mask::zero();
+			simd_mask mask = (quadrant & constant::c_i2()) == simd_mask::zero();
 
 			// Select which one of the results is sin and which one is cos
 			simd s = simd::select(mask, taylor_sin, taylor_cos);
@@ -523,7 +523,7 @@ namespace JPL
 
 			// Update the signs
 			simd_mask bit1 = quadrant << 30;
-			simd_mask bit2 = ((quadrant << 29) & constant::c_sign_mask);
+			simd_mask bit2 = ((quadrant << 29) & constant::c_sign_mask());
 
 			sin_sign_bit = (sin_sign_bit ^ bit2);
 			simd_mask sign_bit_cos = bit1 ^ bit2;
@@ -545,28 +545,28 @@ namespace JPL
 		x = abs(x); // take the absolute value
 
 		// Store the integer part of y in quadrant
-		// x * cephes::c_FOPI: scale by 4/Pi
-		simd_mask quadrant = fma(cephes::c_FOPI, x, constant::c_i1.to_simd()).to_mask() & constant::c_iinv1;
+		// x * cephes::c_FOPI(): scale by 4/Pi
+		simd_mask quadrant = fma(cephes::c_FOPI(), x, constant::c_i1().to_simd()).to_mask() & constant::c_iinv1();
 		simd float_quadrant = quadrant.to_simd();
 
 		// The magic pass: "Extended precision modular arithmetic"
 		// x = ((x - y * DP1) - y * DP2) - y * DP3;
-		x = fma(float_quadrant, cephes::c_minus_DP1, x);
-		x = fma(float_quadrant, cephes::c_minus_DP2, x);
-		x = fma(float_quadrant, cephes::c_minus_DP3, x);
+		x = fma(float_quadrant, cephes::c_minus_DP1(), x);
+		x = fma(float_quadrant, cephes::c_minus_DP2(), x);
+		x = fma(float_quadrant, cephes::c_minus_DP3(), x);
 
 		// Evaluate polynomials
 		simd taylor_cos, taylor_sin;
 		sincos::polynomials(x, taylor_cos, taylor_sin);
 
 		// Get the polynom selection mask for the sine
-		simd_mask mask = (quadrant & constant::c_i2) == simd_mask::zero();
+		simd_mask mask = (quadrant & constant::c_i2()) == simd_mask::zero();
 
 		// Select which one of the results is sin and which one is cos
 		simd s = simd::select(mask, taylor_sin, taylor_cos);
 
 		// Update the sign
-		simd_mask bit2 = ((quadrant << 29) & constant::c_sign_mask);
+		simd_mask bit2 = ((quadrant << 29) & constant::c_sign_mask());
 		sin_sign_bit = (sin_sign_bit ^ bit2);
 
 		// Correct the sign
@@ -584,29 +584,29 @@ namespace JPL
 		x = abs(x); // take the absolute value
 
 		// Store the integer part of y in quadrant
-		// x * cephes::c_FOPI: scale by 4/Pi
-		simd_mask quadrant = fma(cephes::c_FOPI, x, constant::c_i1.to_simd()).to_mask() & constant::c_iinv1;
+		// x * cephes::c_FOPI(): scale by 4/Pi
+		simd_mask quadrant = fma(cephes::c_FOPI(), x, constant::c_i1().to_simd()).to_mask() & constant::c_iinv1();
 		simd float_quadrant = quadrant.to_simd();
 
 		// The magic pass: "Extended precision modular arithmetic"
 		// x = ((x - y * DP1) - y * DP2) - y * DP3;
-		x = fma(float_quadrant, cephes::c_minus_DP1, x);
-		x = fma(float_quadrant, cephes::c_minus_DP2, x);
-		x = fma(float_quadrant, cephes::c_minus_DP3, x);
+		x = fma(float_quadrant, cephes::c_minus_DP1(), x);
+		x = fma(float_quadrant, cephes::c_minus_DP2(), x);
+		x = fma(float_quadrant, cephes::c_minus_DP3(), x);
 
 		// Evaluate polynomials
 		simd taylor_cos, taylor_sin;
 		sincos::polynomials(x, taylor_cos, taylor_sin);
 
 		// Get the polynom selection mask for the sine
-		simd_mask mask = (quadrant & constant::c_i2) == simd_mask::zero();
+		simd_mask mask = (quadrant & constant::c_i2()) == simd_mask::zero();
 
 		// Select which one of the results is sin and which one is cos
 		simd c = simd::select(mask, taylor_cos, taylor_sin);
 
 		// Update the sign
 		simd_mask bit1 = quadrant << 30;
-		simd_mask bit2 = ((quadrant << 29) & constant::c_sign_mask);
+		simd_mask bit2 = ((quadrant << 29) & constant::c_sign_mask());
 
 		simd_mask sign_bit_cos = bit1 ^ bit2;
 
@@ -644,13 +644,13 @@ namespace JPL
 	{
 		// n = round(x * 2/pi)
 		// REQUIRE: round() is round-to-nearest (banker's or away-from-zero both OK here)
-		const simd n_f = round(x * constant::c_invPIO2);
+		const simd n_f = round(x * constant::c_invPIO2());
 
 		// Reduce to r to [-pi/4, pi/4] with high-precision split
 		// r = ((x - y * DP1) - y * DP2) - y * DP3;
-		simd r = fma(n_f, tangent::c_minus_DP1, x);
-		r = fma(n_f, tangent::c_minus_DP2, r);
-		r = fma(n_f, tangent::c_minus_DP3, r);
+		simd r = fma(n_f, tangent::c_minus_DP1(), x);
+		r = fma(n_f, tangent::c_minus_DP2(), r);
+		r = fma(n_f, tangent::c_minus_DP3(), r);
 
 		// Polynomial on r
 		simd tan = tangent::polynomial(r);
@@ -686,20 +686,20 @@ namespace JPL
 		simd a = abs(in);
 		
 		// asin is not defined outside the range [-1, 1] but it often happens that a value is slightly above 1 so we just clamp here
-		a = min(a, simd::c_1);
+		a = min(a, simd::c_1());
 
 		// When |x| < 0.5 we use the asin approximation
 		// When |x| >= 0.5 we use the identity asin(x) = PI / 2 - 2 * asin(sqrt((1 - x) / 2))
-		const simd_mask o = a < simd::c_0p5;
+		const simd_mask o = a < simd::c_0p5();
 
-		const simd x2 = simd::select(o, (a * a), ((simd::c_1 - a) * 0.5f));
+		const simd x2 = simd::select(o, (a * a), ((simd::c_1() - a) * 0.5f));
 		const simd x = simd::select(o, a, Math::Sqrt(x2));
 
 		// Polynomial approximation of asin
 		const simd u = asinacos::polynomial(x, x2);
 		
 		// If |x| >= 0.5 we need to apply the remainder of the identity above
-		const simd r = simd::select(o, u, (constant::c_half_pi - (u + u)));
+		const simd r = simd::select(o, u, (constant::c_half_pi ()- (u + u)));
 
 		// Put the sign back
 		return r ^ asin_sign.as_simd();
@@ -711,25 +711,25 @@ namespace JPL
 	{
 #if 1
 		// Not super accurate, but good enough
-		return constant::c_half_pi - asin(in);
+		return constant::c_half_pi ()- asin(in);
 #else
 		// See comments in `asin()`...
 
 		const simd_mask asin_sign = signbit(in);
 		simd a = abs(in);
-		a = min(a, simd::c_1);
+		a = min(a, simd::c_1());
 		const simd_mask o = a < simd::c_0p5;
 
-		const simd x2 = simd::select(o, (a * a), ((simd::c_1 - a) * 0.5f));
-		const simd x = simd::select(a == simd::c_1,
+		const simd x2 = simd::select(o, (a * a), ((simd::c_1() - a) * 0.5f));
+		const simd x = simd::select(a == simd::c_1(),
 									simd::c_0,
 									simd::select(o, a, Math::Sqrt(x2)));
 
 		const simd u = asinacos::polynomial(x, x2);
-		const simd y = constant::c_half_pi - (u ^ asin_sign.as_simd());
+		const simd y = constant::c_half_pi ()- (u ^ asin_sign.as_simd());
 		
 		simd r = simd::select(o, y, (u + u));
-		r = simd::select((~o) & (in < simd::c_0), constant::c_pi - r, r);
+		r = simd::select((~o) & (in < simd::c_0), constant::c_pi ()- r, r);
 
 		return r;
 #endif
@@ -788,7 +788,7 @@ namespace JPL
 		// to `pi_2` by using the `sign_mask`. This avoids a more expensive comparison,
 		// and also handles edge cases such as -0 better.
 		result = simd::select(swap_mask,
-							  (constant::c_half_pi | signbit(atan_input).as_simd()) - result,
+							  (constant::c_half_pi ()| signbit(atan_input).as_simd()) - result,
 							  result);
 
 		// Adjust the result depending on the input quadrant.
@@ -802,7 +802,7 @@ namespace JPL
 		// Then use the mask to perform the adjustment only when the sign
 		// is positive, and use the sign bit of `y` to know whether to add
 		// `pi` or `-pi`.
-		result += ((constant::c_pi ^ signbit(y).as_simd()) & x_sign_mask);
+		result += ((constant::c_pi ()^ signbit(y).as_simd()) & x_sign_mask);
 
 		return result;
 	}

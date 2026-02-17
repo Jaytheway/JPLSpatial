@@ -142,7 +142,7 @@ namespace JPL
             // d = 1.0f / (1.0f + R * g + g * g);
             return Params{
                 .g = g,
-                .d = simd::c_1 / Math::FMA(g, R + g, 1.0f),
+                .d = simd::c_1() / Math::FMA(g, R + g, 1.0f),
                 .MinusRg = -(R + g)
             };
         }

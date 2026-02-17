@@ -88,10 +88,10 @@ namespace JPL
 		static JPL_INLINE simd inf() noexcept;
 
 		/// Frequently used constants
-		static const simd c_0;
-		static const simd c_1;
-		static const simd c_0p5;
-		static const simd c_pi;
+		static JPL_INLINE simd c_0() noexcept;
+		static JPL_INLINE simd c_1() noexcept;
+		static JPL_INLINE simd c_0p5() noexcept;
+		static JPL_INLINE simd c_pi() noexcept;
 
 		/// Get number of element of the vector
 		static constexpr std::size_t size() noexcept { return 4; }
@@ -439,10 +439,25 @@ namespace JPL
 namespace JPL
 {
 	//==========================================================================
-	inline const simd simd::c_0 = simd::zero();
-	inline const simd simd::c_1 = 1.0f;
-	inline const simd simd::c_0p5 = 0.5f;
-	inline const simd simd::c_pi = simd(JPL_PI);
+	JPL_INLINE simd simd::c_0() noexcept
+	{
+		return simd::zero();
+	}
+
+	JPL_INLINE simd simd::c_1() noexcept
+	{
+		return simd(1.0f);
+	}
+
+	JPL_INLINE simd simd::c_0p5() noexcept
+	{
+		return simd(0.5f);
+	}
+
+	JPL_INLINE simd simd::c_pi() noexcept
+	{
+		return simd(JPL_PI);
+	}
 
 	//==========================================================================
 	JPL_INLINE simd::simd(float value) noexcept
@@ -1754,7 +1769,7 @@ namespace JPL
 
 		JPL_INLINE simd Sign2(const simd& vec) noexcept
 		{
-			return simd::select(vec < simd::c_0, -simd::c_1, simd::c_1);
+			return simd::select(vec < simd::c_0(), -simd::c_1(), simd::c_1());
 		}
 
 		JPL_INLINE simd_mask IsNearlyZero(const simd& vec, float tolerance) noexcept
