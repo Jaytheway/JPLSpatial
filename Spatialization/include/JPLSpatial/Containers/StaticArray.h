@@ -141,7 +141,7 @@ namespace JPL
         }
 
         template <class... Args>
-        [[nodiscard]] constexpr JPL_INLINE reference emplace_back(Args&&... args)
+        constexpr JPL_INLINE reference emplace_back(Args&&... args)
         {
             JPL_ASSERT(mSize < Capacity);
             mStorage[mSize] = T{ std::forward<Args>(args)... };
