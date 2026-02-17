@@ -32,8 +32,8 @@
 //? No need to test quad tree for now, while it's still just a copy of Jolt's
 //#include "Tests/QuadTreeTest.h"
 #endif
+
 #if JPL_HAS_PATH_TRACING
-#include "Tests/SpecularRayTracingTest.h"
 //#include "Tests/BDPTTest.h"
 #endif
 
