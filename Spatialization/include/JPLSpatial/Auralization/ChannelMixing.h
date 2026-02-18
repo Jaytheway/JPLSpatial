@@ -21,6 +21,7 @@
 
 #include <JPLSpatial/Core.h>
 #include <JPLSpatial/Math/SIMD.h>
+#include <JPLSpatial/Math/SIMDMath.h>
 
 namespace JPL
 {
