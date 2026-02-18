@@ -56,6 +56,32 @@ namespace JPL
 			uint32 Id;
 		};
 
+	public:
+		ERBus();
+		ERBus(float sampleRate, uint32 numChannels);
+		~ERBus();
+
+		/// Must be called from single non-audio thread
+		void Prepare(float sampleRate, uint32 numChannels);
+
+		/// Must be called from audio thread
+		/// @param numInputChannels :	number of input channels,
+		///							number of output channels in the `output` buffer
+		///							must be equal to what ERBus was initialized to.
+		/// 
+		/// @input and @output must have the same nubmer of frames
+		void ProcessInterleaved(std::span<const float> input, std::span<float> output, uint32 numInputChannels, uint32 numFrames);
+
+		uint32 GetNumChannels() const { return mNumChannels; }
+
+		// Add/remove/update early reflection taps
+		/// Must be called from the same non-audio thread
+		void SetTaps(std::span<const ERUpdateData> newERs);
+
+		//std::atomic<float> RMS{ 0.0f };
+
+		inline uint32 GetNumTaps() const { return mNumTaps; }
+
 	private:
 		//==============================================================================
 		using TapType = JPL::DelayTap<JPL::Thiran1stInterpolator>;
@@ -197,32 +223,6 @@ namespace JPL
 		using SafeERs = JPL::RealtimeObject<ERStorage>;
 		using SafeERsWrite = typename SafeERs::ScopedAccess<JPL::ThreadType::nonRealtime>;
 		using SafeERsRead = typename SafeERs::ScopedAccess<JPL::ThreadType::realtime>;
-
-	public:
-		ERBus();
-		ERBus(float sampleRate, uint32 numChannels);
-		~ERBus();
-
-		/// Must be called from single non-audio thread
-		void Prepare(float sampleRate, uint32 numChannels);
-
-		/// Must be called from audio thread
-		/// @param numInputChannels :	number of input channels,
-		///							number of output channels in the `outpu` buffer
-		///							must be equal to what ERBus was initialized to.
-		/// 
-		/// @input and @output must have the same nubmer of channels frames
-		void ProcessInterleaved(std::span<const float> input, std::span<float> output, uint32 numInputChannels, uint32 numFrames);
-
-		uint32 GetNumChannels() const { return mNumChannels; }
-
-		// Add/remove/update early reflection taps
-		/// Must be called from the same non-audio thread
-		void SetTaps(std::span<const ERUpdateData> newERs);
-
-		//std::atomic<float> RMS{ 0.0f };
-
-		inline uint32 GetNumTaps() const { return mNumTaps; }
 
 	private:
 		RealtimeData* AllocateRTData();
