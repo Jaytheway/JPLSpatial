@@ -981,6 +981,42 @@ namespace JPL
 				EXPECT_NEAR(gains[i], testCase.ExpectedGains[i], tolerance) << "at index " << i;
 			}
 		}
+
+		{
+			PannerType pannerB;
+			pannerB.InitializeLUT(ChannelMap::FromChannelMask(ChannelMask::Surround_9_0_4));
+
+			SCOPED_TRACE("Mono source in front, 9.0.4 target, equal gains LR");
+			static constexpr uint32 numSourceChannels = 1;
+
+			typename PannerType::SourceLayoutType data;
+			// 1 channel group with 2 virtual sources at positions { -90, 90 } in radians
+			ASSERT_TRUE(pannerB.InitializeSourceLayout(ChannelMap::FromNumChannels(numSourceChannels), data));
+
+			typename PannerType::PanUpdateData positionData
+			{
+				.SourceDirection = Vec3{ 0.0, 0.0, -1.0 },
+				.Focus = 0.0f,
+				.Spread = 0.5f
+			};
+
+			StaticArray<float, VBAPStandartTraits::MAX_CHANNEL_MIX_MAP_SIZE> gains(numSourceChannels * pannerB.GetNumChannels(), 0.0f);
+
+			const uint32 numOutputChannels = pannerB.GetNumChannels();
+
+			pannerB.ProcessVBAPData(data, positionData, gains);
+
+			static constexpr float gainToleranse = 1e-4f;
+
+			// Expect left and right channel to have equal gains
+			EXPECT_NEAR(gains[0], gains[1], gainToleranse);
+
+			// Expect side left and side right to have equal gains
+			EXPECT_NEAR(gains[3], gains[4], gainToleranse);
+
+			// Expect rear left and rear right to have equal gains
+			EXPECT_NEAR(gains[5], gains[6], gainToleranse);
+		}
 	}
 
 	TEST_F(VBAP3DTest, WorksWithDifferentVec3Types)

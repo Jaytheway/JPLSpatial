@@ -812,7 +812,7 @@ namespace JPL
 				std::array<uint8, simd::size() * 3> speakers;
 				std::array<float, simd::size() * 3> gains;
 
-				LUTInterface::Query(*mLUT).GainsFor(*vsDirections.X, *vsDirections.Y, *vsDirections.Z, speakers, gains);
+				LUTInterface::Query(*mLUT).GainsFor(vsDirections.X[i], vsDirections.Y[i], vsDirections.Z[i], speakers, gains);
 
 				const simd& vsWeight = vsWeights[i];
 
@@ -845,7 +845,7 @@ namespace JPL
 
 			for (uint32 i = 0; i < vsDirections.size(); ++i)
 			{
-				GetSpeakerGains(*vsDirections.X, *vsDirections.Y, *vsDirections.Z, vsSpeakerGains);
+				GetSpeakerGains(vsDirections.X[i], vsDirections.Y[i], vsDirections.Z[i], vsSpeakerGains);
 
 				const simd& vsWeight = vsWeights[i];
 

@@ -25,6 +25,7 @@
 #include "JPLSpatial/Panning/VBAPanning3D.h"
 #include "JPLSpatial/Panning/VBAPEx.h"
 #include "JPLSpatial/ChannelMap.h"
+#include "JPLSpatial/Containers/StaticArray.h"
 #include "JPLSpatial/Algo/Algorithm.h"
 
 
@@ -630,6 +631,34 @@ namespace JPL
 			EXPECT_NEAR(gainsData[numOutputChannels + 1], gainsData[numOutputChannels + 3], gainToleranse);
 			EXPECT_NEAR(gainsData[numOutputChannels + 0], 0.0f, 1e-4f);
 			EXPECT_NEAR(gainsData[numOutputChannels + 2], 0.0f, 1e-4f);
+		}
+
+		{
+			PannerType stereoPanner;
+			stereoPanner.InitializeLUT(ChannelMap::FromNumChannels(2));
+
+			SCOPED_TRACE("Mono source in front, Stereo target, equal gains");
+			static constexpr uint32 numSourceChannels = 1;
+
+			typename PannerType::SourceLayoutType data;
+			// 1 channel group with 2 virtual sources at positions { -90, 90 } in radians
+			ASSERT_TRUE(stereoPanner.InitializeSourceLayout(ChannelMap::FromNumChannels(numSourceChannels), data));
+
+			typename PannerType::PanUpdateData positionData
+			{
+				.SourceDirection = Vec3D{ 0.0, 0.0, -1.0 },
+				.Focus = 0.0f,
+				.Spread = 0.5f
+			};
+
+			StaticArray<float, TraitsOverride::MAX_CHANNEL_MIX_MAP_SIZE> gains(numSourceChannels * stereoPanner.GetNumChannels(), 0.0f);
+
+			const uint32 numOutputChannels = stereoPanner.GetNumChannels();
+
+			stereoPanner.ProcessVBAPData(data, positionData, gains);
+
+			// Expect left and right channel to have equal gains
+			EXPECT_NEAR(gains[0], gains[1], gainToleranse);
 		}
 
 		//! We don't really care where the LUT puts the direction straight UP,
