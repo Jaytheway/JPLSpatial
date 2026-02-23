@@ -16,6 +16,9 @@ Functional WIP
 ## Where it's used
 **JPL Spatial** library is used as a sound spatialization solution in [Hazel Engine](https://hazelengine.com/).
 If you have access to Hazel Engine code, you can check how **JPL Spatial** is integrated on `dev` or `audio` branch.
+
+There is aslo [JPL Spatial Application](https://github.com/Jaytheway/JPLSpatialApplication/), showcasing and visualizing features of **JPL Spatial**.
+
 ## Features
 
 #### Vector-Base Amplitude Panning (VBAP) / Multi-Direction Amplitude Panning (MDAP)
