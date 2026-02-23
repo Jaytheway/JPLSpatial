@@ -220,7 +220,7 @@ namespace JPL
 			uint32 NumChannels = 0;
 		};
 
-		using SafeERs = JPL::RealtimeObject<ERStorage>;
+		using SafeERs = JPL::RealtimeObject<ERStorage, RealtimeObjectOptions::nonRealtimeMutatable>;
 		using SafeERsWrite = typename SafeERs::ScopedAccess<JPL::ThreadType::nonRealtime>;
 		using SafeERsRead = typename SafeERs::ScopedAccess<JPL::ThreadType::realtime>;
 

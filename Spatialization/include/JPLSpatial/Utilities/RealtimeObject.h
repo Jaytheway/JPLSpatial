@@ -22,6 +22,7 @@
 #include <atomic>
 #include <cassert>
 #include <memory_resource>
+#include <type_traits>
 
 namespace JPL
 {
@@ -32,12 +33,27 @@ enum class ThreadType
     nonRealtime
 };
 
+enum class RealtimeObjectOptions
+{
+    nonRealtimeMutatable,
+    realtimeMutatable
+};
+
 namespace detail
 {
     // Forward declaration
     template<typename T>
     class NonRealtimeMutatable;
+    
+    template<typename T>
+    class RealtimeMutatable;
 }
+
+// By default we remove lock in non-realtime access.
+// The object assumed to be only used by a single non-realtime thread.
+#ifndef JPL_RT_OBJECT_NON_REALTIME_ACCESS_LOCK
+#define JPL_RT_OBJECT_NON_REALTIME_ACCESS_LOCK 0
+#endif
 
 //==============================================================================
 /// Useful class to synchronise access to an object from multiple threads with
@@ -47,8 +63,8 @@ namespace detail
 /// Essentially Faiban Renn's RealtimeObject (https://github.com/hogliux/farbot),
 /// with some modifications:
 /// - memory is managed by polymorphic allocator instead of std::unique_ptr
-/// - for now supporting only non-realtime mutable version
-template <typename T>
+/// - asumed only one non-realtime thread will access the object
+template <typename T, RealtimeObjectOptions Options>
 class RealtimeObject
 {
 public:
@@ -67,8 +83,8 @@ public:
     ~RealtimeObject() = default;
 
     //==============================================================================
-    using RealtimeAcquireReturnType = const T;
-    using NonRealtimeAcquireReturnType = T;
+    using RealtimeAcquireReturnType = std::conditional_t<Options == RealtimeObjectOptions::nonRealtimeMutatable, const T, T>;
+    using NonRealtimeAcquireReturnType = std::conditional_t<Options == RealtimeObjectOptions::realtimeMutatable, const T, T>;
 
     //==============================================================================
     /** Returns a reference to T. Use this method on the real-time thread.
@@ -86,6 +102,15 @@ public:
      *  This method is wait- and lock-free.
      */
     void realtimeRelease() noexcept { mImpl.realtimeRelease(); }
+
+	/** Replace the underlying value with a new instance of T by forwarding
+	*  the method's arguments to T's constructor
+	*/
+    template <typename... Args>
+    void realtimeReplace(Args&& ... args) noexcept requires (Options == RealtimeObjectOptions::realtimeMutatable)
+    {
+        mImpl.realtimeReplace(std::forward<Args>(args)...);
+    }
 
     //==============================================================================
     /** Returns a reference to T. Use this method on the non real-time thread.
@@ -109,7 +134,10 @@ public:
      *  the method's arguments to T's constructor
      */
     template <typename... Args>
-    void nonRealtimeReplace(Args&& ... args) { mImpl.nonRealtimeReplace(std::forward<Args>(args)...); }
+    void nonRealtimeReplace(Args&& ... args) requires(Options == RealtimeObjectOptions::nonRealtimeMutatable)
+    {
+        mImpl.nonRealtimeReplace(std::forward<Args>(args)...);
+    }
 
     //==============================================================================
     /** Instead of calling acquire and release manually, you can also use this RAII
@@ -117,7 +145,10 @@ public:
      *  destructed.
      */
     template <ThreadType threadType>
-    class ScopedAccess : public detail::NonRealtimeMutatable<T>::template ScopedAccess<threadType == ThreadType::realtime>
+    class ScopedAccess : public std::conditional_t<Options == RealtimeObjectOptions::realtimeMutatable,
+                                                    detail::RealtimeMutatable<T>,
+                                                    detail::NonRealtimeMutatable<T>>
+                                    ::template ScopedAccess<threadType == ThreadType::realtime>
     {
     public:
         explicit ScopedAccess(RealtimeObject& parent)
@@ -143,7 +174,9 @@ public:
         ScopedAccess& operator=(ScopedAccess&&) = delete;
     };
 private:
-    using Impl = detail::NonRealtimeMutatable<T>;
+    using Impl = std::conditional_t<Options == RealtimeObjectOptions::realtimeMutatable,
+                    detail::RealtimeMutatable<T>,
+                    detail::NonRealtimeMutatable<T>>;
     Impl mImpl;
 };
 
@@ -159,7 +192,7 @@ namespace JPL
 {
     namespace detail
     {
-        //==============================================================================
+        //======================================================================
         // Forward declaration
         template <typename, bool>
         class NRMScopedAccessImpl;
@@ -203,10 +236,19 @@ namespace JPL
                     mAllocator.delete_object(storage);
                 if (copy)
                     mAllocator.delete_object(copy);
+
+#if JPL_RT_OBJECT_NON_REALTIME_ACCESS_LOCK
+                auto accquired = nonRealtimeLock.try_lock();
+
+                ((void)(accquired));
+                assert(accquired);  // <- you didn't call release on one of the non-realtime threads before deleting this object
+
+                nonRealtimeLock.unlock();
+#endif
             }
 
             template <typename... Args>
-            static RealtimeObject<T> create(Args&& ... args)
+            static RealtimeObject<T, RealtimeObjectOptions::nonRealtimeMutatable> create(Args&& ... args)
             {
                 return RealtimeObject<T>(T(std::forward<Args>(args)...));
             }
@@ -229,6 +271,9 @@ namespace JPL
 
             T& nonRealtimeAcquire()
             {
+#if JPL_RT_OBJECT_NON_REALTIME_ACCESS_LOCK
+                nonRealtimeLock.lock();
+#endif
                 if (copy)
                     mAllocator.delete_object(copy);
                 // TODO: should we just destruct -> in-place construct?
@@ -251,11 +296,18 @@ namespace JPL
                 mAllocator.delete_object(storage);
                 storage = copy;
                 copy = nullptr;
+
+#if JPL_RT_OBJECT_NON_REALTIME_ACCESS_LOCK
+                nonRealtimeLock.unlock();
+#endif
             }
 
             template <typename... Args>
             void nonRealtimeReplace(Args && ... args)
             {
+#if JPL_RT_OBJECT_NON_REALTIME_ACCESS_LOCK
+                nonRealtimeLock.lock();
+#endif
                 if (copy)
                     mAllocator.delete_object(copy);
                 copy = mAllocator.new_object<T>(std::forward<Args>(args)...);
@@ -284,6 +336,9 @@ namespace JPL
             T* storage = nullptr;
             std::atomic<T*> pointer;
 
+#if JPL_RT_OBJECT_NON_REALTIME_ACCESS_LOCK
+            std::mutex nonRealtimeLock;
+#endif
             T* copy = nullptr;
 
             // only accessed by realtime thread
@@ -326,6 +381,187 @@ namespace JPL
             const T* operator->() const noexcept { return currentValue; }
         private:
             NonRealtimeMutatable<T>& p;
+            const T* currentValue;
+        };
+
+        //======================================================================
+        template <typename, bool> class RMScopedAccessImpl;
+        template <typename T> class RealtimeMutatable
+        {
+        public:
+            RealtimeMutatable() = default;
+
+            explicit RealtimeMutatable(const T& obj) : data({ obj, obj }), realtimeCopy(obj) {}
+
+            ~RealtimeMutatable()
+            {
+                assert((control.load() & BUSY_BIT) == 0); // <- never delete this object while the realtime thread is still using it
+
+                // Spin!
+                while ((control.load() & BUSY_BIT) == 1);
+
+#if JPL_RT_OBJECT_NON_REALTIME_ACCESS_LOCK
+                auto accquired = nonRealtimeLock.try_lock();
+
+                ((void)(accquired));
+                assert(accquired);  // <- you didn't call release on one of the non-realtime threads before deleting this object
+
+                nonRealtimeLock.unlock();
+#endif
+            }
+
+            template <typename... Args>
+            static RealtimeMutatable create(Args && ... args)
+            {
+                return RealtimeObject(false, std::forward<Args>(args)...);
+            }
+
+            T& realtimeAcquire() noexcept
+            {
+                return realtimeCopy;
+            }
+
+            void realtimeRelease() noexcept
+            {
+                auto idx = acquireIndex();
+                data[idx] = realtimeCopy;
+                releaseIndex(idx);
+            }
+
+            template <typename... Args>
+            void realtimeReplace(Args && ... args)
+            {
+                T obj(std::forward<Args>(args)...);
+
+                auto idx = acquireIndex();
+                data[idx] = std::move(obj);
+                releaseIndex(idx);
+            }
+
+            const T& nonRealtimeAcquire()
+            {
+#if JPL_RT_OBJECT_NON_REALTIME_ACCESS_LOCK
+                nonRealtimeLock.lock();
+#endif
+                auto current = control.load(std::memory_order_acquire);
+
+                // there is new data so flip the indices around atomically ensuring we are not inside realtimeAssign
+                if ((current & NEWDATA_BIT) != 0)
+                {
+                    int newValue;
+
+                    do
+                    {
+                        // expect the realtime thread not to be inside the realtime-assign
+                        current &= ~BUSY_BIT;
+
+                        // realtime thread should flip index value and clear the newdata bit
+                        newValue = (current ^ INDEX_BIT) & INDEX_BIT;
+                    } while (!control.compare_exchange_weak(current, newValue, std::memory_order_acq_rel));
+
+                    current = newValue;
+                }
+
+                // flip the index bit as we always use the index that the realtime thread is currently NOT using
+                auto nonRealtimeIndex = (current & INDEX_BIT) ^ 1;
+
+                return data[nonRealtimeIndex];
+            }
+
+            void nonRealtimeRelease()
+            {
+#if JPL_RT_OBJECT_NON_REALTIME_ACCESS_LOCK
+                nonRealtimeLock.unlock();
+#endif
+            }
+
+            template <bool isRealtimeThread>
+            class ScopedAccess : public RMScopedAccessImpl<T, isRealtimeThread>
+            {
+            public:
+                explicit ScopedAccess(RealtimeMutatable& parent) : RMScopedAccessImpl<T, isRealtimeThread>(parent) {}
+                ScopedAccess(const ScopedAccess&) = delete;
+                ScopedAccess(ScopedAccess&&) = delete;
+                ScopedAccess& operator=(const ScopedAccess&) = delete;
+                ScopedAccess& operator=(ScopedAccess&&) = delete;
+            };
+        private:
+            friend class RMScopedAccessImpl<T, false>;
+            friend class RMScopedAccessImpl<T, true>;
+
+            template <typename... Args>
+            explicit RealtimeMutatable(bool, Args &&... args)
+                : data({ T(std::forward(args)...), T(std::forward(args)...) }), realtimeCopy(std::forward(args)...)
+            {
+            }
+
+            enum
+            {
+                INDEX_BIT = (1 << 0),
+                BUSY_BIT = (1 << 1),
+                NEWDATA_BIT = (1 << 2)
+            };
+
+            int acquireIndex() noexcept
+            {
+                return control.fetch_or(BUSY_BIT, std::memory_order_acquire) & INDEX_BIT;
+            }
+
+            void releaseIndex(int idx) noexcept
+            {
+                control.store((idx & INDEX_BIT) | NEWDATA_BIT, std::memory_order_release);
+            }
+
+            std::atomic<int> control = { 0 };
+
+            std::array<T, 2> data;
+            T realtimeCopy;
+#if JPL_RT_OBJECT_NON_REALTIME_ACCESS_LOCK
+            std::mutex nonRealtimeLock;
+#endif
+        };
+
+        template <typename T, bool>
+        class RMScopedAccessImpl
+        {
+        protected:
+            RMScopedAccessImpl(RealtimeMutatable<T>& parent)
+                : p(parent),
+                currentValue(&p.realtimeAcquire())
+            {
+            }
+
+            ~RMScopedAccessImpl()
+            {
+                p.realtimeRelease();
+            }
+        public:
+            T* get() noexcept { return currentValue; }
+            const T* get() const noexcept { return currentValue; }
+            T& operator *() noexcept { return *currentValue; }
+            const T& operator *() const noexcept { return *currentValue; }
+            T* operator->() noexcept { return currentValue; }
+            const T* operator->() const noexcept { return currentValue; }
+        private:
+            RealtimeMutatable<T>& p;
+            T* currentValue;
+        };
+
+        template <typename T>
+        class RMScopedAccessImpl<T, false>
+        {
+        protected:
+            RMScopedAccessImpl(RealtimeMutatable<T>& parent) noexcept
+                : p(parent), currentValue(&p.nonRealtimeAcquire())
+            {
+            }
+            ~RMScopedAccessImpl() noexcept { p.nonRealtimeRelease(); }
+        public:
+            const T* get() const noexcept { return currentValue; }
+            const T& operator *() const noexcept { return *currentValue; }
+            const T* operator->() const noexcept { return currentValue; }
+        private:
+            RealtimeMutatable<T>& p;
             const T* currentValue;
         };
     } // namespace detail
