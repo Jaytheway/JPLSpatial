@@ -4,7 +4,7 @@
 
 </div>
 
-# JPLSpatial
+# JPL Spatial
 
 Sound spatialization and propagation library.
 
@@ -14,8 +14,8 @@ Sound spatialization and propagation library.
 Functional WIP
 
 ## Where it's used
-JPLSpatial library is used as a sound spatialization solution in [Hazel Engine](https://hazelengine.com/).
-If you have access to Hazel Engine code, you can check how JPLSpatial is integrated on `dev` or `audio` branch.
+**JPL Spatial** library is used as a sound spatialization solution in [Hazel Engine](https://hazelengine.com/).
+If you have access to Hazel Engine code, you can check how **JPL Spatial** is integrated on `dev` or `audio` branch.
 ## Features
 
 #### Vector-Base Amplitude Panning (VBAP) / Multi-Direction Amplitude Panning (MDAP)
@@ -110,7 +110,7 @@ If you have access to Hazel Engine code, you can check how JPLSpatial is integra
 ## Examples & Usage
 Initializing `VBAPPanner`, `SourceLayout` and querying target channel gains for a source direction:
 ```cpp
-#include "JPLSpatial/ChannelMap.h"
+#include "/ChannelMap.h"
 #include "JPLSpatial/Panning/VBAPanning2D.h"
 
 #include <span>
@@ -162,9 +162,9 @@ A typical `SpatialManager` workflow wires together high-level constructs such as
 `Position` for spatial placement, and an `AttenuationCurve` for distance rolloff.
 
 ```cpp
-#include "JPLSpatial/ChannelMap.h"
-#include "JPLSpatial/Math/MinimalVec3.h"
-#include "JPLSpatial/SpatialManager.h"
+#include "/ChannelMap.h"
+#include "/Math/MinimalVec3.h"
+#include "/SpatialManager.h"
 
 using Vec3 = JPL::MinimalVec3;
 using Spatializer = JPL::Spatial::SpatialManager<Vec3>;
@@ -207,7 +207,7 @@ current frame.
 
 - <details>
 	<p>
-	When working directly with the panning layer you start by creating the source and target <code>ChannelMap</code> objects that describe each layout you want to support. Those maps are passed to <code>InitializePanningEffect</code>, which returns a <code>PanEffectHandle</code> representing the source's cached panning state. Hold on to that handle for subsequent updates, and query the cached gains after evaluation through <code>GetChannelGainsFor</code>. See <a href="Spatialization/include/JPLSpatial/Services/PanningService.h">PanningService.h</a> and the sequence in <a href="SpatializationTests/src/Tests/PanningServiceTest.h">PanningServiceTest</a> for a full example.
+	When working directly with the panning layer you start by creating the source and target <code>ChannelMap</code> objects that describe each layout you want to support. Those maps are passed to <code>InitializePanningEffect</code>, which returns a <code>PanEffectHandle</code> representing the source's cached panning state. Hold on to that handle for subsequent updates, and query the cached gains after evaluation through <code>GetChannelGainsFor</code>. See <a href="Spatialization/include//Services/PanningService.h">PanningService.h</a> and the sequence in <a href="SpatializationTests/src/Tests/PanningServiceTest.h">PanningServiceTest</a> for a full example.
 	</p>
 
 	<p>
@@ -215,7 +215,7 @@ current frame.
 	</p>
 
 	<p>
-	Remember to release handles that are no longer needed by calling <code>ReleasePanningEffect</code>; consult <a href="Spatialization/include/JPLSpatial/Services/PanningService.h">Services/PanningService.h</a> for the full API surface, including helpers for advanced caching scenarios.
+	Remember to release handles that are no longer needed by calling <code>ReleasePanningEffect</code>; consult <a href="Spatialization/include//Services/PanningService.h">Services/PanningService.h</a> for the full API surface, including helpers for advanced caching scenarios.
 	</p>
 </details>
 
@@ -224,10 +224,10 @@ current frame.
 `DirectPathService` owns the distance and cone attenuation caches that the high-level `SpatialManager` queries every update frame. A typical low-level setup is:
 
 ```cpp
-#include "JPLSpatial/DistanceAttenuation.h"
-#include "JPLSpatial/Math/Math.h"
-#include "JPLSpatial/Math/MinimalVec3.h"
-#include "JPLSpatial/Services/DirectPathService.h"
+#include "/DistanceAttenuation.h"
+#include "/Math/Math.h"
+#include "/Math/MinimalVec3.h"
+#include "/Services/DirectPathService.h"
 
 using DirectPath = JPL::DirectPathService<>;
 using Vec3 = JPL::MinimalVec3;
@@ -261,19 +261,19 @@ const float cachedDistanceFactor = directPath.GetDistanceAttenuation(handle, cur
 const float cachedConeFactor = directPath.GetDirectionAttenuation(handle);
 ```
 
-`ProcessDirectPath` returns both `DirectionDot` (listener-forward alignment) and `InvDirectionDot` (source-forward alignment) so you can decide whether to reuse the listener-facing or source-facing cosine in subsequent frames—the [DirectPathService API](Spatialization/include/JPLSpatial/Services/DirectPathService.h) documents these fields, and [`DirectPathServiceTest`](SpatializationTests/src/Tests/DirectPathServiceTest.h) exercises scenarios such as a listener standing behind a source and validates the expected values. Once the per-frame `EvaluateDistance`/`EvaluateDirection` calls run, the cached values retrieved via `GetDistanceAttenuation`/`GetDirectionAttenuation` stay valid until the next evaluation, letting you keep the mixing hot-path free of curve traversals.
+`ProcessDirectPath` returns both `DirectionDot` (listener-forward alignment) and `InvDirectionDot` (source-forward alignment) so you can decide whether to reuse the listener-facing or source-facing cosine in subsequent frames—the [DirectPathService API](Spatialization/include//Services/DirectPathService.h) documents these fields, and [`DirectPathServiceTest`](SpatializationTests/src/Tests/DirectPathServiceTest.h) exercises scenarios such as a listener standing behind a source and validates the expected values. Once the per-frame `EvaluateDistance`/`EvaluateDirection` calls run, the cached values retrieved via `GetDistanceAttenuation`/`GetDirectionAttenuation` stay valid until the next evaluation, letting you keep the mixing hot-path free of curve traversals.
 
 ### Tuning angle-based roll-off
 
-`AttenuationCone` contains the inner and outer angles in radians. The dot product fed into `EvaluateDirection` is compared against the cosines of half-angles: values above the inner threshold return a factor of `0.0f`, values below the outer threshold return `1.0f`, and everything in between linearly interpolates so you can remap that factor to any outer parameter you want (e.g., `std::lerp(1.0f, coneOuterFactor, filterCutoff)`). See the [DirectPathService header](Spatialization/include/JPLSpatial/Services/DirectPathService.h) for implementation details and [`DirectPathServiceTest`](SpatializationTests/src/Tests/DirectPathServiceTest.h) for usage examples. To tighten a spotlight-style emitter, reduce `OuterAngle` toward `InnerAngle`; to create a broad ambience, expand both toward `2π` so every direction yields the full gain of `1.0f` without angular attenuation. When paired with the cached cone gain above, this lets you reason in “forward energy” terms: the listener inside the inner cone hears the unattenuated signal, the outer region gradually blends toward your chosen tail gain, and anything behind the source sits at the outer gain floor.
+`AttenuationCone` contains the inner and outer angles in radians. The dot product fed into `EvaluateDirection` is compared against the cosines of half-angles: values above the inner threshold return a factor of `0.0f`, values below the outer threshold return `1.0f`, and everything in between linearly interpolates so you can remap that factor to any outer parameter you want (e.g., `std::lerp(1.0f, coneOuterFactor, filterCutoff)`). See the [DirectPathService header](Spatialization/include//Services/DirectPathService.h) for implementation details and [`DirectPathServiceTest`](SpatializationTests/src/Tests/DirectPathServiceTest.h) for usage examples. To tighten a spotlight-style emitter, reduce `OuterAngle` toward `InnerAngle`; to create a broad ambience, expand both toward `2π` so every direction yields the full gain of `1.0f` without angular attenuation. When paired with the cached cone gain above, this lets you reason in “forward energy” terms: the listener inside the inner cone hears the unattenuated signal, the outer region gradually blends toward your chosen tail gain, and anything behind the source sits at the outer gain floor.
 
 ## Coordinate System
-In **JPLSpatial** the coordinate system is **right-handed** and uses a **Y-up axis**.
+In **JPL Spatial** the coordinate system is **right-handed** and uses a **Y-up axis**.
 - Positive X-axis: to the **right**
 - Positive vlaues of Y-axis: **upwards**
 - Negative vlaues of Z-axis: **forwwrd**
 
-Values passed to **JPLSpatial** have to be converted accordingly if the coordinate system they came from doesn't match the above.
+Values passed to **JPL Spatial** have to be converted accordingly if the coordinate system they came from doesn't match the above.
 
 ## Folder structure
 - **Spatialization** - source code for the library
@@ -284,7 +284,7 @@ Values passed to **JPLSpatial** have to be converted accordingly if the coordina
 ## Library structure
 As much of the library as possible is header-only.
 
-**JPLSpatial library is structured in a few hierarchical layers**:
+**JPL Spatial library is structured in a few hierarchical layers**:
 - SpatialManager
 	- Services
 		- Low level features
@@ -314,7 +314,7 @@ As much of the library as possible is header-only.
 - Compiles with Visual Studio 2022 and Visual Studio 2026, other compiles haven't been tested.
 - Uses C++20
 ## Updates
-JPLSpatial is going to be updated as the need for more features matches my time availability to work on them.
+**JPL Spatial** is going to be updated as the need for more features matches my time availability to work on them.
 
 > [!WARNING]
 > - API may change
