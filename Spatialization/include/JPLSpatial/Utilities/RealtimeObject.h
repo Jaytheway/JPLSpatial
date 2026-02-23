@@ -248,9 +248,9 @@ namespace JPL
             }
 
             template <typename... Args>
-            static RealtimeObject<T, RealtimeObjectOptions::nonRealtimeMutatable> create(Args&& ... args)
+            static NonRealtimeMutatable create(Args&& ... args)
             {
-                return RealtimeObject<T>(T(std::forward<Args>(args)...));
+                return RealtimeObject(T(std::forward<Args>(args)...));
             }
 
             const T& realtimeAcquire() noexcept
