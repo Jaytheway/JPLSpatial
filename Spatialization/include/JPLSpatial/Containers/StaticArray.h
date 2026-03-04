@@ -129,6 +129,14 @@ namespace JPL
             mSize = newSize;
         }
 
+        // Replaces the contents of the container with `count` copies of value `value`
+        constexpr JPL_INLINE void assign(std::size_t count, const T& value) noexcept
+        {
+            JPL_ASSERT(count <= Capacity);
+            mSize = count;
+            std::fill_n(mStorage, count, value);
+        }
+
         constexpr JPL_INLINE void clear() noexcept
         {
             mSize = 0;

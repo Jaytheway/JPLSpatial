@@ -103,7 +103,7 @@ namespace JPL
 		//==============================================================================
 		static constexpr uint32 cScratchSize = ChannelRTData::cScratchSize;
 
-		using SafeDirectEffectTD = JPL::RealtimeObject<DirectEffectTargetData>;
+		using SafeDirectEffectTD = JPL::RealtimeObject<DirectEffectTargetData, RealtimeObjectOptions::nonRealtimeMutatable>;
 		using SafeDirectEffectTDWrite = typename SafeDirectEffectTD::ScopedAccess<JPL::ThreadType::nonRealtime>;
 		using SafeDirectEffectTDRead = typename SafeDirectEffectTD::ScopedAccess<JPL::ThreadType::realtime>;
 
