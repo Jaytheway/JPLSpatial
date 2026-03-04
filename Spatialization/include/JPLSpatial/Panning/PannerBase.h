@@ -833,9 +833,9 @@ namespace JPL
 					}
 				}
 
-				for (uint32 i = 0; i < gains.size(); ++i)
+				for (uint32 s = 0; s < gains.size(); ++s)
 				{
-					outGains[speakers[i]] += gains[i];
+					outGains[speakers[s]] += gains[s];
 				}
 			}
 		}
