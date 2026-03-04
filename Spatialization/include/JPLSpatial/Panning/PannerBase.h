@@ -816,9 +816,9 @@ namespace JPL
 
 				const simd& vsWeight = vsWeights[i];
 
-				for (uint32 i = 0; i < gains.size(); i += simd::size())
+				for (uint32 s = 0; s < gains.size(); s += simd::size())
 				{
-					float* gp = &gains[i];
+					float* gp = &gains[s];
 					simd gs(gp);
 
 					if constexpr (bAccumulatePow)
