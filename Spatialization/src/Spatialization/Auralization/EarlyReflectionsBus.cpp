@@ -249,17 +249,18 @@ namespace JPL
 			SafeERsWrite ersAcquire(mERs);
 			auto& ers = ersAcquire->GetERs();
 
-			// Reserve max size we could possibly need
-			// for all ERs potentially to be deleted
-			eraseList.reserve(ers.size());
-			
+			// If it was previously flagged as Stopped, and/or the actual render state is Stopped,
+			// flag the TargetData as Stopped, to ensure render thread doesn't touch the RealtimeState
 			for (ER& er : ers)
 			{
 				if (er.RealtimeState->State.load(std::memory_order_acquire) == ERState::Stopped &&
-					er.TargetData.State != ERState::Rendering) // add to erase list both, FadingOut and Stopped
+					er.TargetData.State != ERState::Rendering) // check for both, FadingOut and Stopped
 				{
 					er.TargetData.State = ERState::Stopped;
-					eraseList.push_back(er.RealtimeState);
+					
+					// We need to defer adding to erase list to after
+					// we've flagged the ER as stopped via TargetData.State = ERState::Stopped
+					//eraseList.push_back(er.RealtimeState);
 				}
 			}
 		} // ...after this scope reatlime thread won't touch RealtimeState if TargetData.State is Stopped...
@@ -268,6 +269,25 @@ namespace JPL
 			SafeERsWrite ersAcquire(mERs);
 			auto& ers = ersAcquire->GetERs();
 
+			// Reserve max size we could possibly need
+			// for all ERs potentially to be deleted
+			eraseList.reserve(ers.size());
+
+			// Now render thread won't touch RealtimeState,
+			// but we still need to wait for the ERs to fade out.
+			for (ER& er : ers)
+			{
+				if (er.TargetData.State == ERState::Stopped)
+				{
+					// This is a very rare, but possible case
+					while(er.RealtimeState->State.load(std::memory_order_acquire) != ERState::Stopped)
+					{}
+
+					// Now it's safe to add RealtimeState to erase list
+					eraseList.push_back(er.RealtimeState);
+				}
+			}
+
 			// 2. Remove from the list of ERs and deallocate RealtimeState
 			// for ERs marked to stop on the previous update and which have faded out
 			ersAcquire->EraseIf([&eraseList](const ER& er)
@@ -275,7 +295,7 @@ namespace JPL
 #if defined(JPL_ENABLE_ASSERTS)
 				if (er.TargetData.State == ERState::Stopped)
 				{
-					// The realtime thread should had finished before this point,
+					// The realtime thread should've had finished before this point,
 					// if this assert fails, eitehr we didn't wait for it before setting TargetData.State,
 					// or something strange has happend.
 					JPL_ASSERT(er.RealtimeState->State.load(std::memory_order_acquire) == ERState::Stopped);
