@@ -709,10 +709,10 @@ namespace JPL
 
 			for (uint32 i = 0; i < receiverData.size(); ++i)
 			{
-				traceInfos[i] = PreprocessTraces(sceneInterface, receiverData[i].Position, receiverTraces[i]);
+				traceInfos[i] = PreprocessTraces(receiverTraces[i]);
 			}
 
-			traceInfos.back() = PreprocessTraces(sceneInterface, sourceData.Position, sourceTraces);
+			traceInfos.back() = PreprocessTraces(sourceTraces);
 		}
 
 		const auto [potentialTotalNumConnectedPaths, maxSubpathCount, maxPathOrder] = [&]()
