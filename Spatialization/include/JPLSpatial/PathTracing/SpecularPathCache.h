@@ -154,7 +154,7 @@ namespace JPL
 	}
 
 	template<class Vec3>
-	inline JPL_INLINE bool SpecularPathCache<Vec3>::Contains(SpecularPathId pathId) const
+	JPL_INLINE bool SpecularPathCache<Vec3>::Contains(SpecularPathId pathId) const
 	{
 		auto hasId = [pathId](const SPEntry& entry) { return entry.first == pathId; };
 		return std::ranges::find_if(mValidPaths, hasId) != std::ranges::end(mValidPaths)
