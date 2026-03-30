@@ -145,9 +145,6 @@ namespace JPL
 		});
 
 		return bPathValid;
-		}
-
-		return true;
 	}
 
 	template<class SceneType>
