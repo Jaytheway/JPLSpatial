@@ -36,6 +36,7 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <span>
 #include <vector>
 
 namespace JPL
@@ -48,14 +49,14 @@ namespace JPL
 		using Ray = typename Scene::Ray;
 		using Intersection = typename Scene::Intersection;
 		using Source = typename Scene::Source;
-		using Listener = typename Scene::Listener;
+		using Receiver = typename Scene::Receiver;
 	protected:
 		SpecularRayTracingTest() = default;
 
 		static Scene GetBoxScene()
 		{
 			const auto room = Box{ Vec3::Zero(), Vec3{ 50.0f, 50.0f, 50.0f } };
-			return Scene {
+			return Scene{
 				.RayIntersect = TestUtil::IntersectStub{
 					//! To make the multi-trace test fair for the algorithm, we need to simulate the same geometry, e.g. a box room
 					.CastRay = TestUtil::CastRayFuncs::Box(room)
@@ -92,22 +93,33 @@ namespace JPL
 		SpecularRayTracing tracer;
 
 		const Source source{ .Position = Vec3(0, 0, -10), .Id = 1 };
-		const std::vector<Listener> listeners
+		const std::vector<Receiver> listeners
 		{
-			Listener{ .Position = Vec3(0, 0, 0), .Id = 2}
+			Receiver{.Position = Vec3(0, 0, 0), .Id = 2}
 		};
 
 		for (const uint32 reflectionOrder : { 1, 2 })
 		{
+			TraceResults<Scene::Intersection> traceResult;
 			SpecularPathCache<Vec3> spc;
+			SpecularPathCache<Vec3>* spcPtr = &spc;
+			std::span cacheContainer(&spcPtr, 1);
+
+			TraceParameters parameters
+			{
+				.NumPrimaryRays = numPrimaryRays,
+				.MaxTraceOrder = reflectionOrder,
+				.MaxRayLength = 10'000.0f
+			};
+			
 			tracer.Trace(
 				scene,
-				numPrimaryRays,
-				source,
-				listeners,
-				reflectionOrder,
-				spc
+				source.Position,
+				parameters,
+				traceResult
 			);
+
+			tracer.ProcessTraces(scene, source, traceResult, listeners, cacheContainer);
 
 			EXPECT_EQ(spc.GetNumPaths(), std::pow(6, reflectionOrder))
 				<< "Reflection order: " << reflectionOrder;

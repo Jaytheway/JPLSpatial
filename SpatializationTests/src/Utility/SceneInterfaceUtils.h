@@ -86,17 +86,22 @@ namespace JPL::TestUtil
 			int SurfaceID;
 		};
 
+		using PathNode = JPL::TraceNode<Intersection>;
+
 		struct Source
 		{
 			Vec3 Position; //? temp for testing
 			uint32 Id;
 		};
+		using SourceData = Source;
 
-		struct Listener
+		struct Receiver
 		{
 			Vec3 Position; //? temp for testing
 			uint32 Id;
 		};
+		using ReceiverData = Receiver;
+
 
 		std::function<bool(const Ray&, Intersection&)> RayIntersect =
 			[](const Ray&, Intersection&)
@@ -115,6 +120,11 @@ namespace JPL::TestUtil
 			return RayIntersect(ray, outIntersection);
 		}
 
+		inline bool Intersect(const Ray& ray, float maxRayLength, Intersection& outIntersection) const
+		{
+			return RayIntersect(ray, outIntersection);
+		}
+
 		inline bool Intersect(const Vec3& posA, const Vec3& posB, Intersection& outIntersection) const
 		{
 			return LineIntersect(posA, posB, outIntersection);
@@ -123,6 +133,21 @@ namespace JPL::TestUtil
 		inline bool IsOccluded(const Vec3&, const Vec3&) const
 		{
 			return false;
+		}
+
+		inline uint32 GetHash(const Intersection& intersection) const
+		{
+			return intersection.SurfaceID;
+		}
+
+		inline Vec3 GetPosition(const Intersection& intersection) const
+		{
+			return intersection.Position;
+		}
+
+		inline Vec3 GetNormal(const Intersection& intersection) const
+		{
+			return intersection.Normal;
 		}
 
 		inline float GetMaterialFactor(int) const
@@ -136,6 +161,30 @@ namespace JPL::TestUtil
 			static const auto material = AcousticMaterial::Get("ConcreteBlockRough");
 			outAbsorption = material->Coeffs;
 			return true;
+		}
+
+		inline bool GetMaterialAbsorption(const PathNode& intersection, EnergyBands& outAbsorption) const
+		{
+			//! for now just tesing something reasonably absorptive
+			static const auto material = AcousticMaterial::Get("ConcreteBlockRough");
+			outAbsorption = material->Coeffs;
+			return true;
+		}
+
+		static inline bool IsSameSurface(const Intersection& a, const Intersection b)
+		{
+			return a.SurfaceID == b.SurfaceID
+				&& a.Material == b.Material;
+		}
+
+		void CacheSubpath(std::span<const PathNode> Subpath, std::span<int32> NodeCache)
+		{
+			JPL_ASSERT(Subpath.size() == NodeCache.size());
+
+			for (uint32 n = 0; n < Subpath.size(); ++n)
+			{
+				NodeCache[n] = Subpath[n].Hash;
+			}
 		}
 
 		std::function<Vec3(const Vec3&, const Intersection&)> SampleTraceDirection =
