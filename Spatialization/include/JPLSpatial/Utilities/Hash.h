@@ -32,6 +32,7 @@ namespace JPL
 
         JPL_INLINE constexpr uint32_t Combine(uint32_t value);
         [[nodiscard]] JPL_INLINE constexpr uint32_t Finalize() const;
+        [[nodiscard]] JPL_INLINE constexpr uint32_t GetCurrent() const { return mSeed; }
 
     protected:
         uint32_t mSeed = cStartSeed;
