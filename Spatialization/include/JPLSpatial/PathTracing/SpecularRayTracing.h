@@ -582,7 +582,7 @@ namespace JPL
 	inline auto SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::PreprocessTraces(TraceResults<Intersection>& traces) -> TraceInfo
 	{
 		// Remove empty paths
-		Algo::ErasePartitionUnordered(traces.Paths, [](const auto& path) { return path.Nodes.empty(); });
+		std::erase_if(traces.Paths, [](const auto& path) { return path.Nodes.empty(); });
 
 #if 0	//! not worth extra allocations to remove 1 in a million duplicate (we cull subpath duplicates later anyway)
 		// Second, remove duplicate surface paths
@@ -597,7 +597,7 @@ namespace JPL
 
 				//! Note: this only removes the full paths, not the subpaths
 				//! (subpath is a path up to Nth node/order within a full path)
-				Algo::ErasePartitionUnordered(paths, [&uniqueKeys](const auto& path)
+				std::erase_if(paths, [&uniqueKeys](const auto& path)
 				{
 					return not uniqueKeys.Insert(path.Nodes.back().Hash);
 				});

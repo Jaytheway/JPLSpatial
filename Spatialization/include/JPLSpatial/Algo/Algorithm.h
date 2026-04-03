@@ -115,15 +115,4 @@ namespace JPL::Algo
 		const ElementType sum2 = Accumulate(data, ElementType(0), AccPow2<ElementType>{});
 		return Math::IsNearlyEqual(static_cast<float>(sum2), 1.0f, tolerance);
 	}
-
-	template <std::ranges::random_access_range Range, class Predicate>
-	JPL_INLINE void ErasePartitionUnordered(Range& container, Predicate predicate)
-	{
-		auto rangeToErase = std::ranges::partition(container, [&](auto& v)
-		{
-			return not predicate(v);
-		});
-		container.erase(rangeToErase.begin(), container.end());
-	}
-
 } // namespace JPL::Algo
