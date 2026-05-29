@@ -98,6 +98,9 @@ namespace JPL
 		{
 		}
 
+		AbstractRingIndex(const AbstractRingIndex&) = default;
+		AbstractRingIndex& operator=(const AbstractRingIndex&) = default;
+
 		/// Get total size of the ring buffer including MaxWindow mirror length
 		[[nodiscard]] inline uint32_t GetTotalSize() const { return Base::mRing + MaxWindow; }
 		[[nodiscard]] inline uint32_t GetRingSize() const { return Base::mRing; }
@@ -172,6 +175,9 @@ namespace JPL
 		{
 		}
 
+		AbstractRingIndex(const AbstractRingIndex&) = default;
+		AbstractRingIndex& operator=(const AbstractRingIndex&) = default;
+
 		/// Get total size of the ring buffer 
 		[[nodiscard]] inline uint32_t GetTotalSize() const { return Base::mRing; }
 		[[nodiscard]] inline uint32_t GetRingSize() const { return Base::mRing; }
@@ -227,21 +233,29 @@ namespace JPL
 		{
 		protected:
 			explicit AbstractRingWrap(uint32_t minSize) : mRing(std::bit_ceil(minSize)), mSizeMask(mRing - 1) {}
+			
+			AbstractRingWrap(const AbstractRingWrap&) = default;
+			AbstractRingWrap& operator=(const AbstractRingWrap&) = default;
+
 			inline uint32_t Wrap(uint32_t index) const { return (index & mSizeMask); }
 
 		protected:
-			const uint32_t mRing;
-			const uint32_t mSizeMask;
+			uint32_t mRing;
+			uint32_t mSizeMask;
 		};
 
 		template<> class AbstractRingWrap<EOperationMode::Modulo>
 		{
 		protected:
 			explicit AbstractRingWrap(uint32_t minSize) : mRing(minSize) {}
+			
+			AbstractRingWrap(const AbstractRingWrap&) = default;
+			AbstractRingWrap& operator=(const AbstractRingWrap&) = default;
+
 			inline uint32_t Wrap(uint32_t index) const { return (index % mRing); }
 
 		protected:
-			const uint32_t mRing;
+			uint32_t mRing;
 		};
 
 		template<CWriteDirection auto WriteDirection, COperationMode auto OperationMode>
@@ -252,6 +266,9 @@ namespace JPL
 
 		protected:
 			explicit AbstarctRingBase(uint32_t minSize) : WrapBase(minSize) {}
+
+			AbstarctRingBase(const AbstarctRingBase&) = default;
+			AbstarctRingBase& operator=(const AbstarctRingBase&) = default;
 
 			inline uint32_t IncrementIndex(uint32_t index) const requires(WriteDirection == EWriteDirection::Forward)
 			{
