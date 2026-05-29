@@ -20,6 +20,7 @@
 #pragma once
 
 #include "JPLSpatial/Core.h"
+#include "JPLSpatial/FrequencyBands.h"
 #include "JPLSpatial/Math/SIMD.h"
 #include "JPLSpatial/Math/DecibelsAndGain.h"
 
@@ -53,14 +54,12 @@ namespace JPL
 	{
 		using List = std::unordered_map<uint32, AcousticMaterial>;
 		
-		using AbsorptionCoeffs = simd;
-		using FreqBandCenters = simd;
+		using AbsorptionCoeffs = JPL::AbsorptionCoeffs;
+		using FreqBandCenters = JPL::FreqBandCenters;
 
 		// The bands are 0-176 Hz, 176-775 Hz, 775-3408 Hz, and 3408-22050 Hz
-		inline static const FreqBandCenters cBandCenters
-		{
-			59.0f, 369.0f, 1625.0f, 8669.0f
-		};
+		inline static const FreqBandCenters cBandCenters = JPL::cBandCenters;
+		// TODO: user-provided frequency bands
 
 		std::string_view Name;
 		uint32 ID = 0;
@@ -89,6 +88,13 @@ namespace JPL
 		{
 			inOutCoefMultiplier *= simd(1.0f) - Coeffs;
 		}
+
+		/// If material by the `name` exists, set material coefficients,
+		/// add new material otherwise.
+		static void SetMaterial(std::string_view name, const AbsorptionCoeffs& coeffs);
+		
+		/// Make material without adding it to global static list.
+		static std::pair<uint32, AcousticMaterial> MakeMaterial(std::string_view name, const AbsorptionCoeffs& coeffs);
 
 	private:
 		// Make sure the List is initialized anyone tries to use it

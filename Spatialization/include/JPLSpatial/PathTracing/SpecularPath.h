@@ -20,6 +20,7 @@
 #pragma once
 
 #include "JPLSpatial/Core.h"
+#include "JPLSpatial/FrequencyBands.h"
 #include "JPLSpatial/Utilities/Hash.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
 #include "JPLSpatial/Math/SIMD.h"
@@ -48,32 +49,6 @@ namespace JPL
 
 		// TODO: we may want to call FinalizeHash when comparing, or when converting to std::hash
 		[[nodiscard]] constexpr bool operator==(const SpecularPathId&) const = default;
-	};
-
-	//======================================================================
-	// We simulate propagation in 4 frequency bands:
-	//	0-176 Hz, 176-775 Hz, 775-3408 Hz, and 3408-22050 Hz
-	//	..or as center frequencies: 59 Hz, 369 Hz, 1625 Hz, 8669 Hz
-	using EnergyBands = simd;
-
-	//======================================================================
-	class AirAbsorption
-	{
-	public:
-		// Default air attenuation coefficients per meter at temperature 21C, humidity 45%, standard air pressure
-		inline static const EnergyBands cDefaultCoeffs_dB{
-			0.000115f,	// 0.00011533632007753075
-			0.002130f,	// 0.002130442215493568
-			0.007863f,	// 0.007863092294756541
-			0.129334f	// 0.12933369065280596
-		};
-		// effective gain factors per meter { 0.999987, 0.999755, 0.999095, 0.98522 }
-
-		static void ComputeForDistance(float distance, EnergyBands& outAttenuation)
-		{
-			JPL_ASSERT(distance >= 0.0f);
-			outAttenuation = cDefaultCoeffs_dB * distance;
-		}
 	};
 
 	//======================================================================

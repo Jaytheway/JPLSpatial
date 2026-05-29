@@ -112,15 +112,14 @@ typename AcousticMaterial::List AcousticMaterial::sList
 #undef AC_MATERIAL
 #else
 
-static std::pair<uint32, AcousticMaterial> MakeMaterial(std::string_view name, typename AcousticMaterial::AbsorptionCoeffs&& coeffs)
+std::pair<uint32, AcousticMaterial> AcousticMaterial::MakeMaterial(std::string_view name, const AbsorptionCoeffs& coeffs)
 {
-	const float sum = coeffs.reduce();
-	const float avg = sum * 0.25f; JPL_ASSERT(coeffs.size() == 4);
+	const float avg = coeffs.reduce_mean();
 
 	const simd oneMinusAlpha = simd(1.0f) - coeffs;
 	
 	// ReflectionLoss_dB for simd LevelDrop data member
-	const simd levelDrop = -10.0f * log10(max(1e-6f, oneMinusAlpha));
+	const simd levelDrop = IntencityTodB(max(1e-6f, oneMinusAlpha));
 	
 	const uint32 hash = GenerateFNVHash(name);
 
@@ -185,4 +184,12 @@ typename AcousticMaterial::List AcousticMaterial::sList
 #undef AC_MATERIAL
 
 #endif
+
+
+void AcousticMaterial::SetMaterial(std::string_view name, const AbsorptionCoeffs& coeffs)
+{
+	const auto [id, material] = MakeMaterial(name, coeffs);
+	sList[id] = material;
+}
+
 } // namespace JPL
