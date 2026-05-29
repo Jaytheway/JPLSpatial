@@ -31,7 +31,10 @@
 namespace JPL
 {
 	template<class T>
-	concept CFloatOrSIMD = std::same_as<float, std::remove_cvref_t<T>> || std::same_as<simd, std::remove_cvref_t<T>>;
+	concept CFloatOrSIMD =
+		std::same_as<float, std::remove_cvref_t<T>> ||
+		std::same_as<double, std::remove_cvref_t<T>> ||
+		std::same_as<simd, std::remove_cvref_t<T>>;
 
 	template<CFloatOrSIMD T>
 	JPL_INLINE T dBToGain(const T& dB) noexcept
@@ -40,22 +43,32 @@ namespace JPL
 		// so we don't need half the error handlign checks of `pow`.
 
 		// This is effectively a cheaper version of pow(10.0f, dB / 20.0f)
-		static const T ln10div20 = std::numbers::ln10_v<float> * 0.05f;
 		if constexpr (std::same_as<T, simd>)
+		{
+			static const T ln10div20(std::numbers::ln10_v<float> * 0.05f);
 			return exp(ln10div20 * dB);
+		}
 		else
+		{
+			static constexpr T ln10div20 = std::numbers::ln10_v<T> * T(0.05);
 			return std::exp(ln10div20 * dB);
+		}
 	}
 
 	template<CFloatOrSIMD T>
 	JPL_INLINE T dBToIntencity(const T& dB) noexcept
 	{
 		// A cheaper version of pow(10.0f, dB / 10.0f)
-		static const T ln10div10 = std::numbers::ln10_v<float> * 0.1f;
 		if constexpr (std::same_as<T, simd>)
+		{
+			static const T ln10div10 = std::numbers::ln10_v<float> * 0.1f;
 			return exp(ln10div10 * dB);
+		}
 		else
+		{
+			static const T ln10div10 = std::numbers::ln10_v<T> * T(0.1);
 			return std::exp(ln10div10 * dB);
+		}
 	}
 
 	template<CFloatOrSIMD T>
@@ -64,15 +77,15 @@ namespace JPL
 		if constexpr (std::same_as<T, simd>)
 			return -20.0f * log10(gainFactor);
 		else
-			return -20.0f * std::log10(gainFactor);
+			return static_cast<T>(-20.0) * std::log10(gainFactor);
 	}
 
 	template<CFloatOrSIMD T>
-	JPL_INLINE T IntencityTodB(const T& intencityFactor) noexcept
+	JPL_INLINE constexpr T IntencityTodB(const T& intencityFactor) noexcept
 	{
 		if constexpr (std::same_as<T, simd>)
 			return -10.0f * log10(intencityFactor);
 		else
-			return -10.0f * std::log10(intencityFactor);
+			return static_cast<T>(-10.0) * std::log10(intencityFactor);
 	}
 } // namespace JPL
