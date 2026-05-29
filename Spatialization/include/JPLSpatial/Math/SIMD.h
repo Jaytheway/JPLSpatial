@@ -173,6 +173,9 @@ namespace JPL
 		/// Returns min component
 		JPL_INLINE float reduce_min() const noexcept;
 
+		/// Returns mean of the components
+		JPL_INLINE float reduce_mean() const noexcept { return reduce() * 0.25f; };
+
 		JPL_INLINE /*explicit*/ operator Type() const noexcept { return mNative; }
 
 		/// Convert each component from a float to an int
@@ -430,6 +433,13 @@ namespace JPL
 	JPL_INLINE simd_mask clamps(const simd_mask& value, const simd_mask& minV, const simd_mask& maxV) noexcept;
 
 } // namespace JPL
+
+// Specializing std::equals_to to be able use with standart containers and algorithms
+template<>
+struct std::equal_to<JPL::simd>
+{
+	[[nodiscard]] JPL_INLINE bool operator()(const JPL::simd& a, const JPL::simd& b) const { return (a == b).all_of(); }
+};
 
 //==============================================================================
 //
