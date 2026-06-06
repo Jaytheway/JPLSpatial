@@ -144,6 +144,14 @@ namespace JPL
 			, mBuffer(mIndex.GetTotalSize(), 0.0f)
 		{
 		}
+		
+		DelayLine() : mIndex(0) {}
+
+		inline void Resize(uint32_t newSize)
+		{
+			mIndex = RingIndexBackwardFast<WindowSize>(newSize);
+			mBuffer.resize(mIndex.GetTotalSize(), 0.0f);
+		}
 
 		template<class TapType> requires (TapType::InterpolatorType::InputLength <= WindowSize)
 		static TapType CreateTap(float initialDelay = 0.0f)
