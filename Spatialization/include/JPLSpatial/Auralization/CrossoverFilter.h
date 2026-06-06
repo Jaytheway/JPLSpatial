@@ -436,6 +436,28 @@ namespace JPL
             X13.Reset();
         }
 
+        inline void SplitSample(float sample, simd& outBands) noexcept
+        {
+            // Process the first split into `low` and `high` parts
+            float low, high;
+            X2.Process(sample, low, high);
+
+            // Process the secod layer splits from `low` and `high`
+            // to produce the bands { b1, b2, b3, b4 }
+            X13.Process(low, high, outBands);
+        }
+
+        JPL_INLINE simd SplitSample(float sample) noexcept
+        {
+            simd bands; SplitSample(sample, bands);
+            return bands;
+        }
+
+        JPL_INLINE float ProcessSample(float sample, simd gains) noexcept
+        {
+            return (SplitSample(sample) * gains).reduce();
+        }
+
         // Process block of float samples and return 4 bands per sample packed into simd lanes
         inline void ProcessBlock(std::span<const float> in, std::span<simd> outBands) noexcept
         {
@@ -443,13 +465,7 @@ namespace JPL
 
             for (size_t i = 0; i < in.size(); ++i)
             {
-                // Process the first split into `low` and `high` parts
-                float low, high;
-                X2.Process(in[i], low, high);
-
-                // Process the secod layer splits from `low` and `high`
-                // to produce the bands { b1, b2, b3, b4 }
-                X13.Process(low, high, outBands[i]);
+                SplitSample(in[i], outBands[i]);
             }
         }
 
