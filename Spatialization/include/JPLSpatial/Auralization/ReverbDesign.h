@@ -299,7 +299,7 @@ namespace JPL
 		class Householder
 		{
 		public:
-			template<class Sample, uint32 Size> requires(Detail::cValidFDNOrder<Size>)
+			template<class Sample, std::size_t Size> requires(Detail::cValidFDNOrder<Size>)
 			static void MixInPlace(std::array<Sample, Size>& arr)
 			{
 				static constexpr Sample cMultiplier{ -2.0 / Size };
@@ -388,7 +388,7 @@ namespace JPL
 		class Hadamard
 		{
 		private:
-			template<class Sample, uint32 Size>
+			template<class Sample, std::size_t Size>
 			static void RecursiveUnscaled(std::span<Sample, Size> data)
 			{
 				if (Size <= 1)
