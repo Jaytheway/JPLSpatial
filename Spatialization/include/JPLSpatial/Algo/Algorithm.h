@@ -22,6 +22,7 @@
 #include "JPLSpatial/Core.h"
 #include "JPLSpatial/Math/Math.h"
 
+#include <iterator>
 #include <type_traits>
 #include <utility>
 #include <functional>
