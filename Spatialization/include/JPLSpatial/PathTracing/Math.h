@@ -18,6 +18,7 @@
 //   CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 #pragma once
+#include "JPLSpatial/Algo/Random.h"
 #include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/Vec3Math.h"
 #include "JPLSpatial/Math/Vec3Traits.h"
@@ -28,6 +29,11 @@
 #include <cmath>
 #include <utility>
 #include <concepts>
+
+#define JPL_USE_WR 1
+
+//#define JPL_RAND_SEED 0x6546584802711ull // deterministic for testing
+#define JPL_RAND_SEED std::random_device{}()
 
 namespace JPL
 {
@@ -47,8 +53,8 @@ namespace JPL::Math
 		template<std::floating_point FloatType>
 		static inline FloatType RandFloat()
 		{
-			static constexpr auto bits = std::same_as<FloatType, double> ? 64u : 32u;
-			static std::mt19937 mt;
+			static constexpr auto bits = std::same_as<FloatType, double> ? 53u : 24u;
+			static Rand mt(JPL_RAND_SEED);
 			return std::generate_canonical<FloatType, bits>(mt);
 		}
 
@@ -85,7 +91,7 @@ namespace JPL::Math
 		using FloatType = Internal::FloatOf<Vec3>;
 
 		Vec3 dir = y - x;
-		const FloatType dist2 = dir.LengthSquared();
+		const FloatType dist2 = LengthSquared(dir);
 		if (dist2 < FloatType(1e-6))
 			return FloatType(0.0);
 
@@ -104,12 +110,18 @@ namespace JPL::Math
 	{
 		using FloatType = Internal::FloatOf<Vec3>;
 
-		const FloatType dist2 = (y - x).LengthSquared();
+		const FloatType dist2 = LengthSquared(y - x);
 		if (dist2 < FloatType(1e-6))
 			return FloatType(0.0);
 
 		// (optionally) here we can multiply by air absorption factor between x and y
 		return 1.0f / dist2; // * airAbsorption;
+	}
+
+	template<class Vec3>
+	static auto DistanceAttenuation(const Vec3& x, const Vec3& y) -> Internal::FloatOf<Vec3>
+	{
+		return GeometryTerm(x, y);
 	}
 
 	// Calculates the specular reflection of an incident vector relative to a surface normal.
@@ -125,14 +137,14 @@ namespace JPL::Math
 	}
 
 	// Cosine-weighted scattered direction in the same hemisphere (Lambert)
-	template<class Vec3, class RandomFloatFunc>
-	static Vec3 SampleHemisphereCosine(const Vec3& normal, RandomFloatFunc getRandomFloat = InternalUtils::RandFloat<Internal::FloatOf<Vec3>>)
+	template<class Vec3>
+	static Vec3 SampleHemisphereCosine(const Vec3& normal)
 	{
 		using FloatType = Internal::FloatOf<Vec3>;
 
 		// 1. Sample in tangent space
-		const FloatType u1 = getRandomFloat();	// [0,1)
-		const FloatType u2 = getRandomFloat();	// [0,1)
+		const FloatType u1 = InternalUtils::RandFloat<FloatType>();	// [0,1)
+		const FloatType u2 = InternalUtils::RandFloat<FloatType>();	// [0,1)
 		const FloatType r = std::sqrt(u1);			// radius in the disk
 		const FloatType phi = InternalUtils::two_pi<FloatType> *u2;
 
@@ -155,22 +167,22 @@ namespace JPL::Math
 	// Vector Based Scattering (Christensen 2005)
 	// Produces a continuous distribution between specular and diffused vectors.
 	// @param diffusion must be in range [0, 1]
-	template<class Vec3, class RandomFloatFunc>
-	static Vec3 VectorBasedScatter2(const Vec3& specular, const Vec3& normal, float diffusion, RandomFloatFunc getRandomFloat = InternalUtils::RandFloat<Internal::FloatOf<Vec3>>)
+	template<class Vec3>
+	static Vec3 VectorBasedScatter2(const Vec3& specular, const Vec3& normal, float diffusion)
 	{
 		using FloatType = Internal::FloatOf<Vec3>;
-		const Vec3 randomDirection = SampleHemisphereCosine(normal, getRandomFloat);
-		return diffusion * randomDirection + (FloatType(1.0) - diffusion) * specular;
+		const Vec3 randomDirection = SampleHemisphereCosine(normal);
+		return Normalized(diffusion * randomDirection + (FloatType(1.0) - diffusion) * specular);
 	}
 
 	// Vector Based Scattering (Christensen 2005)
 	// Produces a continuous distribution between specular and diffused vectors.
 	// @param diffusion must be in range [0, 1]
-	template<class Vec3, class RandomFloatFunc>
-	static Vec3 VectorBasedScatter(const Vec3& incident, const Vec3& normal, float diffusion, RandomFloatFunc getRandomFloat = InternalUtils::RandFloat<Internal::FloatOf<Vec3>>)
+	template<class Vec3>
+	static Vec3 VectorBasedScatter(const Vec3& incident, const Vec3& normal, float diffusion)
 	{
 		const Vec3 specular = SpecularReflection(incident, normal);
-		return VectorBasedScatter2(specular, normal, diffusion, getRandomFloat);
+		return VectorBasedScatter2(specular, normal, diffusion);
 	}
 
 	template<class Vec3>
@@ -191,24 +203,16 @@ namespace JPL::Math
 	// @returns with probability (1-d): deterministic specular direction;
 	// 
 	// with probability d: a cosine-weighted sample
-	template<class Vec3, class RandomFloatFunc>
-	static VBSSample<Vec3> VectorBasedScatterAndPDF2(const Vec3& specular,
-													 const Vec3& normal,
-													 float diffusion,
-													 RandomFloatFunc getRandomFloat = InternalUtils::RandFloat<Internal::FloatOf<Vec3>>)
+	template<class Vec3>
+	static VBSSample<Vec3> VectorBasedScatterAndPDF(const Vec3& incident,
+													const Vec3& normal,
+													float diffusion)
 	{
 		using FloatType = Internal::FloatOf<Vec3>;
 
-		if (getRandomFloat() < FloatType(1.0) - diffusion) // --- specular branch
+		if (InternalUtils::RandFloat<FloatType>() < diffusion)
 		{
-			return {
-				.OutDirection = specular,
-				.PDF = FloatType(1.0) - diffusion, // dirac weight
-				.bIsSpecular = true
-			};
-		}
-		else // --- diffuse branch
-		{
+			// --- diffuse branch
 			const Vec3 outDirection = SampleHemisphereCosine(normal);
 			return {
 				.OutDirection = outDirection,
@@ -218,45 +222,38 @@ namespace JPL::Math
 				.bIsSpecular = false
 			};
 		}
+		else
+		{
+			// --- specular branch
+			return {
+				.OutDirection = SpecularReflection(incident, normal),
+				.PDF = FloatType(1.0) - diffusion, // dirac weight
+				.bIsSpecular = true
+			};
+		}
 	}
 
-	// Vector Based Scattering (Christensen 2005)
-	// Produces a discrete distribution between specular and diffused vectors,
-	// which allows to also extract PDF (Probability Density Function)
-	// suitable for BDTP.
-	// 
-	// @param diffusion (d) must be in range [0, 1]
-	// 
-	// @returns with probability (1-d): deterministic specular direction;
-	// 
-	// with probability d: a cosine-weighted sample
-	template<class Vec3, class RandomFloatFunc>
-	static VBSSample<Vec3> VectorBasedScatterAndPDF(const Vec3& incident,
-													const Vec3& normal,
-													float diffusion,
-													RandomFloatFunc getRandomFloat = InternalUtils::RandFloat<Internal::FloatOf<Vec3>>)
+	template<class Vec3>
+	JPL_INLINE float ComputePDF(const Vec3& normal, const Vec3& outDirection, float diffusion, bool bIsSpecular)
 	{
-		const Vec3 specular = SpecularReflection(incident, normal);
-		return VectorBasedScatterAndPDF2(specular, normal, diffusion, getRandomFloat);
+		return bIsSpecular
+			? 1.0f - diffusion
+			: diffusion * std::max(0.0f, static_cast<float>(DotProduct(normal, outDirection))) * JPL_INV_PI;
 	}
-
 
 	// Acoustic Biderectional Reflectance Distribution Function (Durany et. al, 2015)
-	// @param specular	specular direction vector, must be normalized
-	// @param outgoing	outgoing angle, must be normalized
+	// @param cosineAngle	cosine of the angle between outgoing and specular vectors
 	// @param diffusion	diffusion or scattering coefficient must be in range [0, 1]
 	// 
 	// @returns probability of reflection in the outgoing direction
-	template<class Vec3>
-	static auto ABRDF(const Vec3& specular, const Vec3& outgoing, float diffusion) -> Internal::FloatOf<Vec3>
+	template<std::floating_point FloatType>
+	static auto ABRDF(FloatType cosineAngle, float diffusion) -> FloatType
 	{
-		using FloatType = Internal::FloatOf<Vec3>;
-
 		// Compute gamma (cosine between specular and outgoing)
-		const FloatType gamma = DotProduct(specular, outgoing);
+		const FloatType gamma = cosineAngle;
 		
 		static constexpr auto epsilon =
-			std::numeric_limits<FloatType>::epsilon() * FloatType(2.0);
+			std::numeric_limits<FloatType>::epsilon() * FloatType(8.0);
 
 		if (diffusion <= epsilon)
 		{
@@ -281,6 +278,15 @@ namespace JPL::Math
 		if (rootArg <= epsilon)
 			return 0.0f;
 
+		// Extra admissibility restriction for d < 1/2:
+		// only the forward/specular-side branch is valid.
+		if (d < FloatType(0.5))
+		{
+			const FloatType gammaMin = std::sqrt((FloatType(1.0) - FloatType(2.0) * d) / a2);
+			if (gamma < gammaMin)
+				return FloatType(0.0);
+		}
+
 		const FloatType sqrtTerm = std::sqrt(rootArg);
 		const FloatType numer = FloatType(2.0) * rootArg;
 
@@ -301,6 +307,22 @@ namespace JPL::Math
 	}
 
 	// Acoustic Biderectional Reflectance Distribution Function (Durany et. al, 2015)
+	// @param specular	specular direction vector, must be normalized
+	// @param outgoing	outgoing angle, must be normalized
+	// @param diffusion	diffusion or scattering coefficient must be in range [0, 1]
+	// 
+	// @returns probability of reflection in the outgoing direction
+	template<class Vec3>
+	static JPL_INLINE auto ABRDF(const Vec3& specular, const Vec3& outgoing, float diffusion) -> Internal::FloatOf<Vec3>
+	{
+		using FloatType = Internal::FloatOf<Vec3>;
+
+		// Compute gamma (cosine between specular and outgoing)
+		const FloatType gamma = DotProduct(specular, outgoing);
+		return ABRDF(gamma, diffusion);
+	}
+
+	// Acoustic Biderectional Reflectance Distribution Function (Durany et. al, 2015)
 	// @param incident	incident vector, must be normalized
 	// @param normal		surface normal vector, must be normalized
 	// @param outgoing	outgoing angle, must be normalized
@@ -308,7 +330,7 @@ namespace JPL::Math
 	// 
 	// @returns probability of reflection in the outgoing direction
 	template<class Vec3>
-	static auto ABRDF(const Vec3& incident, const Vec3& normal, const Vec3& outgoing, float diffusion) -> Internal::FloatOf<Vec3>
+	static JPL_INLINE auto ABRDF(const Vec3& incident, const Vec3& normal, const Vec3& outgoing, float diffusion) -> Internal::FloatOf<Vec3>
 	{
 		// Compute specular direction (assume incident, normal, outgoing are normalized)
 		const Vec3 specular = SpecularReflection(incident, normal);
