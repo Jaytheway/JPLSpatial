@@ -124,4 +124,14 @@ namespace JPL
 			}
 		}
 	}
+
+	// Does not initialize `dest` to 0, does not apply normalization
+	inline void DownmixToMono(float* dest, const float* source, uint32 numChannels, uint32 numSamples)
+	{
+		for (uint32 si = 0, di = 0; si < numSamples; si += numChannels, ++di)
+		{
+			for (uint32 ch = 0; ch < numChannels; ++ch)
+				dest[di] += source[si + ch];
+		}
+	}
 } // namespace JPL
