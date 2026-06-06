@@ -174,6 +174,13 @@ namespace JPL::Math
 		return t * (v1 - v0) + v0;
 	}
 
+	/// Linearly interpolate v0 towards v1.
+	template<std::integral T, std::floating_point Tt>
+	[[nodiscard]] JPL_INLINE constexpr T Lerp(const T& v0, const T& v1, Tt t) noexcept
+	{
+		return t * (v1 - v0) + v0;
+	}
+
 	/// Inlined fuse multiply-add. Compiler in some circumstances is more eager to optimize this than std::fma
 	template<std::floating_point T>
 	[[nodiscard]] JPL_INLINE constexpr T FMA(T a, T b, T c) noexcept
