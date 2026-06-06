@@ -397,8 +397,8 @@ namespace JPL
 				static constexpr uint32 hSize = Size / 2;
 
 				// Two (unscaled) Hadamards of half the size
-				Hadamard::RecursiveUnscaled(data.subspan<0, hSize>());
-				Hadamard::RecursiveUnscaled(data.subspan<hSize, hSize>());
+				Hadamard::RecursiveUnscaled(data.template subspan<0, hSize>());
+				Hadamard::RecursiveUnscaled(data.template subspan<hSize, hSize>());
 
 				if constexpr (std::same_as<Sample, float> and hSize >= simd::size())
 				{
@@ -438,7 +438,7 @@ namespace JPL
 			}
 
 		public:
-			template<class Sample, uint32 Size> requires(Detail::cValidFDNOrder<Size> and std::has_single_bit(Size))
+			template<class Sample, std::size_t Size> requires(Detail::cValidFDNOrder<Size> and std::has_single_bit(Size))
 			static JPL_INLINE void MixInPlace(std::array<Sample, Size>& data)
 			{
 				RecursiveUnscaled(std::span<Sample, Size>(data));
@@ -451,7 +451,7 @@ namespace JPL
 		struct FDNInput
 		{
 		public:
-			template<class Sample, uint32 NumFDNChannels> requires(Detail::cValidFDNOrder<NumFDNChannels>)
+			template<class Sample, std::size_t NumFDNChannels> requires(Detail::cValidFDNOrder<NumFDNChannels>)
 			static JPL_INLINE void InjectNormalized(Sample monoInput, std::array<Sample, NumFDNChannels>& outFDNInput)
 			{
 				static constexpr Sample norm = Math::Sqrt(Sample(1) / Sample(NumFDNChannels));
@@ -468,7 +468,7 @@ namespace JPL
 		// Hadamard output mixer needs power-of-two FDN size.
 		struct FDNOutputMixer
 		{
-			template<class Sample, uint32 NumFDNChannels>
+			template<class Sample, std::size_t NumFDNChannels>
 				requires(Detail::cValidFDNOrder<NumFDNChannels> and std::has_single_bit(NumFDNChannels))
 			static void Mix(std::array<Sample, NumFDNChannels> fdn, std::span<Sample> out)
 			{
@@ -634,7 +634,7 @@ namespace JPL
 			Channels delayed;
 			for (uint32 c = 0; c < NumChannels; ++c)
 			{
-				delayed[c] = Base::mDelays[c].GetReadWindow<1>(Base::mDelaySamples[c]);
+				delayed[c] = Base::mDelays[c].template GetReadWindow<1>(Base::mDelaySamples[c]);
 			}
 
 			for (uint32 c = 0; c < NumChannels; ++c)
@@ -662,7 +662,7 @@ namespace JPL
 			Channels delayed;
 			for (uint32 c = 0; c < NumChannels; ++c)
 			{
-				delayed[c] = Base::mDelays[c].GetReadWindow<1>(Base::mDelaySamples[c]);
+				delayed[c] = Base::mDelays[c].template GetReadWindow<1>(Base::mDelaySamples[c]);
 			}
 
 			// Mix using a Householder matrix
@@ -715,7 +715,7 @@ namespace JPL
 			for (uint32 c = 0; c < NumChannels; ++c)
 			{
 				mDelays[c].Push(input[c]);
-				delayed[c] = mDelays[c].GetReadWindow<1>(mDelaySamples[c]);
+				delayed[c] = mDelays[c].template GetReadWindow<1>(mDelaySamples[c]);
 			}
 
 			// Mix with a Hadamard matrix

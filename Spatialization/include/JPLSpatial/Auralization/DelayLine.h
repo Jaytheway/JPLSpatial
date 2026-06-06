@@ -109,8 +109,8 @@ namespace JPL
 		template<class DelayLine> requires(DelayLine::WindowSize >= InputLength)
 		inline float Process(const DelayLine& delayLine)
 		{
-			const float tapA = delayLine.GetReadWindow<InputLength>(mLastDelay);
-			const float tapB = delayLine.GetReadWindow<InputLength>(mNewDelay);
+			const float tapA = delayLine.GetReadWindow.template <InputLength>(mLastDelay);
+			const float tapB = delayLine.GetReadWindow.template <InputLength>(mNewDelay);
 			return tapA * mGainA + tapB * mGainB;
 		}
 
