@@ -182,11 +182,18 @@ namespace JPL
 		// Push one live sample into the ring buffer
 		inline void Push(float sample)
 		{
-			const auto [writeIndex, mirrorIndex] = mIndex--;
-
-			// Write into ring and mirror
-			mBuffer[writeIndex] = sample;
-			mBuffer[mirrorIndex] = sample;
+			if constexpr (WindowSize > 1)
+			{
+				const auto [writeIndex, mirrorIndex] = mIndex--;
+				// Write into ring and mirror
+				mBuffer[writeIndex] = sample;
+				mBuffer[mirrorIndex] = sample;
+			}
+			else
+			{
+				const auto writeIndex = mIndex--;
+				mBuffer[writeIndex] = sample;
+			}
 		}
 
 		// Return span to a contiguous data window that start `intDelay` samples
