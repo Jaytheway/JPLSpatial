@@ -574,7 +574,7 @@ namespace JPL
 		{
 			mInvSampleRate = 1.0f / sampleRate;
 #if 1
-			std::ranges::copy(cPrimeDelayLengths | std::views::take(NumChannels), mDelaySamples.begin());
+			std::ranges::copy_n(cPrimeDelayLengths, NumChannels, mDelaySamples.begin());
 #else
 
 			auto first = std::ranges::lower_bound(cPrime, DelaySamplesMin);
