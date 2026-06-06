@@ -99,7 +99,7 @@ namespace JPL
 			return (x & 1u) ? Sample(1) : Sample(-1);
 		}
 
-		template<class Sample, uint32 NumFDNChannels> requires (Detail::cValidFDNOrder<NumFDNChannels>)
+		template<class Sample, std::size_t NumFDNChannels> requires (Detail::cValidFDNOrder<NumFDNChannels>)
 		static constexpr std::array<Sample, NumFDNChannels> MakeSignMatrix()
 		{
 			std::array<Sample, NumFDNChannels> signs;
@@ -108,7 +108,7 @@ namespace JPL
 			return signs;
 		}
 
-		template<class Sample, uint32 NumFDNChannels, uint32 MaxOutputChannels>
+		template<class Sample, std::size_t NumFDNChannels, uint32 MaxOutputChannels>
 			requires(Detail::cValidFDNOrder<NumFDNChannels> and MaxOutputChannels > 0)
 		static constexpr std::array<std::array<Sample, NumFDNChannels>, MaxOutputChannels> MakeSignMatrix()
 		{
@@ -126,7 +126,7 @@ namespace JPL
 	namespace Matrix
 	{
 		//======================================================================
-		template<class Sample, uint32 Size>
+		template<class Sample, std::size_t Size>
 		JPL_INLINE void Multiply(const std::array<Sample, Size>& dataA, std::array<Sample, Size>& dataBOut)
 		{
 			if constexpr (std::same_as<Sample, float> and Size >= simd::size())
@@ -175,7 +175,7 @@ namespace JPL
 			}
 		}
 
-		template<class Sample, uint32 Size>
+		template<class Sample, std::size_t Size>
 		JPL_INLINE void Multiply(std::array<Sample, Size>& data, Sample value)
 		{
 			if constexpr (std::same_as<Sample, float> and Size >= simd::size())
@@ -202,7 +202,7 @@ namespace JPL
 			}
 		}
 
-		template<class Sample, uint32 Size>
+		template<class Sample, std::size_t Size>
 		JPL_INLINE void Add(std::array<Sample, Size>& data, Sample value)
 		{
 			if constexpr (std::same_as<Sample, float> and Size >= simd::size())
@@ -229,7 +229,7 @@ namespace JPL
 			}
 		}
 
-		template<class Sample, uint32 Size>
+		template<class Sample, std::size_t Size>
 		JPL_INLINE void Add(const std::array<Sample, Size>& dataA, std::array<Sample, Size>& dataBOut)
 		{
 			if constexpr (std::same_as<Sample, float> and Size >= simd::size())
@@ -254,7 +254,7 @@ namespace JPL
 			}
 		}
 
-		template<class Sample, uint32 Size>
+		template<class Sample, std::size_t Size>
 		[[nodiscard]] JPL_INLINE Sample ReduceSum(const std::array<Sample, Size>& data)
 		{
 			Sample sum(0);
@@ -281,14 +281,14 @@ namespace JPL
 			return sum;
 		}
 
-		template<class Sample, uint32 Size>
+		template<class Sample, std::size_t Size>
 		JPL_INLINE void AssignRandomSign(std::array<Sample, Size>& data)
 		{
 			static constexpr auto signs = Detail::MakeSignMatrix<Sample, Size>();
 			Multiply(signs, data);
 		}
 
-		template<uint32 MaxOutSize, class Sample, uint32 Size>
+		template<std::size_t MaxOutSize, class Sample, std::size_t Size>
 		JPL_INLINE void AssignRandomSign(std::array<Sample, Size>& data, uint32 outIndex)
 		{
 			static constexpr auto signs = Detail::MakeSignMatrix<Sample, Size, MaxOutSize>();
@@ -498,7 +498,7 @@ namespace JPL
 		template<uint32 MaxOutputChannels = 16u> requires(MaxOutputChannels > 0)
 		struct FDNOutputProjection
 		{
-			template<class Sample, uint32 NumFDNChannels> requires(Detail::cValidFDNOrder<NumFDNChannels>)
+			template<class Sample, std::size_t NumFDNChannels> requires(Detail::cValidFDNOrder<NumFDNChannels>)
 			static void Mix(const std::array<Sample, NumFDNChannels>& fdn, std::span<Sample> out)
 			{
 				JPL_ASSERT(out.size() <= MaxOutputChannels);
