@@ -368,7 +368,7 @@ namespace JPL::TestUtil
 	{
 		static Vec3 HemisphereCosine(const Vec3& incomingDirection, const SceneInterfaceMock::Intersection& intersection)
 		{
-			return Math::SampleHemisphereCosine(intersection.Normal, TestUtil::RandFloat);
+			return Math::SampleHemisphereCosine(intersection.Normal);
 		}
 
 		static Vec3 ReflectBack(const Vec3& incomingDirection, const SceneInterfaceMock::Intersection& intersection)
@@ -384,7 +384,7 @@ namespace JPL::TestUtil
 		static Vec3 VectorBasedScattering(const Vec3& incomingDirection, const SceneInterfaceMock::Intersection& intersection)
 		{
 			// TODO: maybe parametrize scattering coefficient
-			return Math::VectorBasedScatter(incomingDirection, intersection.Normal, GetMaterialFactor(intersection.Material), TestUtil::RandFloat);
+			return Math::VectorBasedScatter(incomingDirection, intersection.Normal, GetMaterialFactor(intersection.Material));
 		}
 	};
 } // namespace JPL::Test
