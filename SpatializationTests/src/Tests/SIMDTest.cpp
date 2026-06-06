@@ -17,6 +17,7 @@
 //   WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 //   CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+#include "JPLSpatial/Core.h"
 #include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/SIMD.h"
 #include "JPLSpatial/Math/SIMDMath.h"
@@ -398,6 +399,19 @@ namespace JPL
 		EXPECT_EQ(result, 0.0f);
 	}
 
+	TEST(SIMD, ReduceMeanCorrect)
+	{
+		simd s1(Util::cTest0123.data());
+		float result = s1.reduce_mean();
+		float expected =(
+			Util::cTest0123[0] +
+			Util::cTest0123[1] +
+			Util::cTest0123[2] +
+			Util::cTest0123[3]
+			) / Util::cTest0123.Ref.size();
+		EXPECT_EQ(result, expected);
+	}
+
 	TEST(SIMD, SqrtCorrect)
 	{
 		Util::simd_ref arg1{ 4.0f, 9.0f, 16.0f, 25.0f };
@@ -529,6 +543,29 @@ namespace JPL
 			Util::simd_ref arg1{ -Util::nan(), +Util::nan(), 1.0f, 1.0f };
 			simd result = floor(simd(arg1.data()));
 			Util::simd_check expected{ arg1, floorf };
+			EXPECT_EQ(result, expected);
+		}
+	}
+
+	TEST(SIMD, CeilCorrect)
+	{
+		{
+			Util::simd_ref arg1{ +2.7f, -2.9f, +0.7f, -0.9f };
+			simd result = ceil(simd(arg1.data()));
+			Util::simd_check expected{ arg1, ceilf };
+			EXPECT_EQ(result, expected);
+		}
+		{
+			Util::simd_ref arg1{ +0.0f, -0.0f, -Util::inf(), +Util::inf() };
+			simd result = ceil(simd(arg1.data()));
+			Util::simd_check expected{ arg1, ceilf };
+			EXPECT_EQ(result, expected);
+		}
+		{
+			// NaNs are special
+			Util::simd_ref arg1{ -Util::nan(), +Util::nan(), 1.0f, 1.0f };
+			simd result = ceil(simd(arg1.data()));
+			Util::simd_check expected{ arg1, ceilf };
 			EXPECT_EQ(result, expected);
 		}
 	}
