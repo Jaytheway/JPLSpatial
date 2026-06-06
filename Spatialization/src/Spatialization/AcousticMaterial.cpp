@@ -140,7 +140,7 @@ MakeMaterial(#Name_, { Coef_59, Coef_369, Coef_1625, Coef_8669 })
 
 typename AcousticMaterial::List AcousticMaterial::sList
 {
-	AC_MATERIAL(Default,					0.0f,			0.0f,			0.0f,			0.0f),
+	AC_MATERIAL(Default,					0.2f,			0.2f,			0.2f,			0.2f),
 
 	// Basic
 	AC_MATERIAL(Glass6mm,					0.179466f,		0.0556698f,		0.0243776f,		0.02f),
