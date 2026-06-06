@@ -20,6 +20,7 @@
 #pragma once
 
 #include "JPLSpatial/Core.h"
+#include "JPLSpatial/FrequencyBands.h"
 #include "JPLSpatial/Math/Math.h"
 #include "JPLSpatial/Math/SIMD.h"
 #include "JPLSpatial/Math/SIMDMath.h"
@@ -411,13 +412,6 @@ namespace JPL
     };
 
     //==========================================================================
-    /// Split points to Prepare FourBandCrossover
-    struct SplitFrequencies
-    {
-        float F1 = 176.0f, F2 = 775.0f, F3 = 3408.0f;
-    };
-
-    //==========================================================================
     /// 4th order Linkwitz-Riley 4-band crossover
     struct FourBandCrossover
     {
@@ -428,7 +422,7 @@ namespace JPL
         // parts of the first splitter output
         LR4Split2Lanes X13;
 
-        JPL_INLINE void Prepare(float sampleRate, SplitFrequencies splits = {}) noexcept
+        JPL_INLINE void Prepare(float sampleRate, SplitFrequencies splits = cDefaultFrequencySplits) noexcept
         {
             X2.Prepare(sampleRate, splits.F2);
             X13.Prepare(sampleRate, splits.F1, splits.F3);
