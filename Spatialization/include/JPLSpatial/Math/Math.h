@@ -167,7 +167,7 @@ namespace JPL::Math
 		return { std::sin(value), std::cos(value) };
 	}
 
-	/// Linearly interpolate v0 towards v1 and normalize.
+	/// Linearly interpolate v0 towards v1.
 	template<std::floating_point T>
 	[[nodiscard]] JPL_INLINE constexpr T Lerp(const T& v0, const T& v1, T t) noexcept
 	{
