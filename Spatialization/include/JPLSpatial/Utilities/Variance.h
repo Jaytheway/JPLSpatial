@@ -19,14 +19,18 @@
 
 #pragma once
 
+#include <JPLSpatial/Core.h>
+#include <JPLSpatial/Math/Math.h>
+#include <JPLSpatial/Math/SIMD.h>
+
 #include <span>
-#include <cmath>
 #include <cstdint>
 
 namespace JPL
 {
     //==========================================================================
     /// Variance estimation utility
+    template<class T>
     class Variance
     {
     public:
@@ -34,73 +38,83 @@ namespace JPL
         struct Online
         {
             uint32_t Count = 0;
-            float Mean = 0.0f;
-            float M2 = 0.0f;
+            T Mean = T(0.0);
+            T M2 = T(0.0);
 
-            inline constexpr void Add(float x) noexcept
+            inline constexpr void Add(T x) noexcept
             {
                 ++Count;
-                const float delta = x - Mean;
+                const T delta = x - Mean;
                 Mean += delta / Count;
-                const float delta2 = x - Mean;
+                const T delta2 = x - Mean;
                 M2 += delta * delta2;
             }
 
-            inline constexpr float GetVariance() const noexcept
+            inline constexpr T GetVariance() const noexcept
             {
-                return (Count > 1) ? (M2 / (Count - 1)) : 0.0f;
+                return (Count > 1) ? (M2 / (Count - 1)) : T(0);
             }
             
-            inline constexpr float GetSNR() const noexcept
+            inline constexpr T GetSNR() const noexcept
             {
                 if (Count <= 1)
                     return 0.0f; // Not enough data
 
-                const float variance = (M2 / (Count - 1));
-                return variance == 0.0f ? 1.0f : Mean / std::sqrt(variance);
+                const T variance = (M2 / (Count - 1));
+                return variance == T(0) ? T(1) : Mean / Math::Sqrt(variance);
+            }
+
+            inline constexpr T GetSNR_r0() const noexcept
+            {
+                if (Count <= 1)
+                    return T(0); // Not enough data
+
+                const T variance = (M2 / (Count - 1));
+                return variance == T(0) ? T(0) : Mean / Math::Sqrt(variance);
             }
         };
 
-        static inline constexpr float ComputeFor(std::span<const float> values) noexcept
+        static inline constexpr T ComputeFor(std::span<const T> values) noexcept
         {
             const auto count = static_cast<uint32_t>(values.size());
             if (count <= 1)
-                return 0.0f; // Not enough samples to compute variance
+                return T(0); // Not enough samples to compute variance
 
-            float sum = 0.0f;
-            for (float v : values)
+            T sum = T(0);
+            for (T v : values)
                 sum += v;
 
-            const float mean = sum / count;
+            const T mean = sum / count;
 
-            float sumSq = 0.0f;
-            for (float v : values)
+            T sumSq = T(0);
+            for (T v : values)
                 sumSq += (v - mean) * (v - mean);
 
             return sumSq / (count - 1);
         }
 
-        static inline constexpr float ComputeSNRFor(std::span<const float> values) noexcept
+        static inline constexpr T ComputeSNRFor(std::span<const T> values) noexcept
         {
             const auto count = static_cast<uint32_t>(values.size());
             if (count <= 1)
-                return 0.0f;
+                return T(0);
 
-            float sum = 0.0f;
-            for (float v : values)
+            T sum = T(0);
+            for (T v : values)
                 sum += v;
 
-            const float mean = sum / count;
+            const T mean = sum / count;
 
-            float sumSq = 0.0f;
-            for (float v : values)
+            T sumSq = T(0);
+            for (T v : values)
                 sumSq += (v - mean) * (v - mean);
 
-            const float variance = sumSq / (count - 1);
+            const T variance = sumSq / (count - 1);
 
-            return variance == 0.0f ? 1.0f : mean / std::sqrt(variance);
+            return variance == T(0) ? T(1) : mean / Math::Sqrt(variance);
         }
     };
 
-    using OnlineVariance = typename Variance::Online;
+    using OnlineVariance = typename Variance<float>::Online;
+    using OnlineVarianceSIMD = typename Variance<simd>::Online;
 } // namespace JPL
