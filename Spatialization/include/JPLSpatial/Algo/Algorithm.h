@@ -27,6 +27,8 @@
 #include <functional>
 #include <numeric>
 #include <algorithm>
+#include <ranges>
+#include <random>
 
 namespace JPL::Algo
 {
@@ -114,5 +116,43 @@ namespace JPL::Algo
 		using ElementType = Internal::ElementTypeOf<ContainerType>;
 		const ElementType sum2 = Accumulate(data, ElementType(0), AccPow2<ElementType>{});
 		return Math::IsNearlyEqual(static_cast<float>(sum2), 1.0f, tolerance);
+	}
+
+	/// Shuffle 'count' number of elements in a given range.
+	/// This is useful when you need to select X first elements
+	/// from a range as if the entire range was shuffled,
+	/// but much faster if X is < range size.
+	/// 
+	/// @returns iterator to the end of the shuffled range
+	template<std::random_access_iterator I, std::sentinel_for<I> S, class Gen> requires std::permutable<I> && std::uniform_random_bit_generator<std::remove_reference_t<Gen>>
+	constexpr I PartialShuffle(I first, S last, std::size_t count, Gen&& gen)
+	{
+		using diff_t = std::iter_difference_t<I>;
+		using distr_t = std::uniform_int_distribution<diff_t>;
+		using param_t = typename distr_t::param_type;
+		
+		const diff_t n = std::ranges::distance(first, last);
+		const diff_t k = std::min<diff_t>(count, n);
+		distr_t dist;
+
+		for (diff_t i = 0; i < k; ++i)
+		{
+			const diff_t j = dist(gen, param_t(i, n - 1));
+			std::ranges::iter_swap(first + i, first + j);
+		}
+
+		return first + k;
+	}
+
+	/// Shuffle 'count' number of elements in a given range.
+	/// This is useful when you need to select X first elements
+	/// from a range as if the entire range was shuffled,
+	/// but much faster if X is < range size.
+	/// 
+	/// @returns iterator to the end of the shuffled range
+	template<std::ranges::random_access_range R, class Gen> requires std::permutable<std::ranges::iterator_t<R>> and std::uniform_random_bit_generator<std::remove_reference_t<Gen>>
+	JPL_INLINE constexpr std::ranges::borrowed_iterator_t<R> PartialShuffle(R&& r, std::size_t count, Gen&& gen)
+	{
+		return PartialShuffle(std::ranges::begin(r), std::ranges::end(r), count, std::forward<Gen>(gen));
 	}
 } // namespace JPL::Algo
