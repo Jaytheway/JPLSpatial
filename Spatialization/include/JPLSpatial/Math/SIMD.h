@@ -391,10 +391,14 @@ namespace JPL
 	{
 		/// An overload to match our scalar version in Math.h
 		JPL_INLINE simd FMA(const simd& mul1, const simd& mul2, const simd& addV) noexcept { return fma(mul1, mul2, addV); }
+		JPL_INLINE simd Lerp(const simd& a, const simd& b, const simd& t) noexcept { return fma(t, (b - a), a); }
 	}
 
 	/// Element-wise floor
 	JPL_INLINE simd floor(const simd& vec) noexcept;
+
+	/// Element-wise ceil
+	JPL_INLINE simd ceil(const simd& vec) noexcept;
 
 	/// Element-wise round to nearest integer value
 	JPL_INLINE simd round(const simd& vec) noexcept;
@@ -1878,6 +1882,43 @@ namespace JPL
 			std::floorf(vec.mNative[1]),
 			std::floorf(vec.mNative[2]),
 			std::floorf(vec.mNative[3])
+		};
+#endif
+	}
+
+	JPL_INLINE simd ceil(const simd& vec) noexcept
+	{
+		// Error handling...
+		const simd vec_abs = abs(vec);
+		const simd_mask is_nan = vec != vec;
+		const simd_mask is_inf = vec_abs == simd::inf();
+		const simd_mask is_zero = vec_abs == simd::zero();
+
+#if defined (JPL_USE_SSE)
+		const simd_mask requires_rounding = vec_abs < simd(8'388'608.0f);
+#if defined (JPL_USE_SSE4_1)
+		simd ceiled = _mm_ceil_ps(vec.mNative);
+#else
+		// avoid converting NaN, infinity, and large finite values to int32
+		const simd safe_input = simd::select(requires_rounding, vec, simd::zero());
+		// trunc toward 0
+		simd truncated = safe_input.to_mask().to_simd();
+		// ceil = trunc + (trunc < v ? 1 : 0)
+		const simd increment = (truncated < vec).as_simd() & simd(1.0f);
+		simd ceiled = truncated + increment;
+		// restore the sign bit
+		ceiled = ceiled | (vec & simd(-0.0f));
+#endif	
+		return simd::select(requires_rounding, ceiled, vec);
+#elif defined (JPL_USE_NEON)
+		auto ceiled = vrndpq_f32(vec.mNative);
+		return simd::select(is_nan | is_inf | is_zero, vec, ceiled);
+#else
+		return {
+			std::ceilf(vec.mNative[0]),
+			std::ceilf(vec.mNative[1]),
+			std::ceilf(vec.mNative[2]),
+			std::ceilf(vec.mNative[3])
 		};
 #endif
 	}
