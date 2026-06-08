@@ -456,6 +456,13 @@ namespace JPL
 			{
 				static constexpr Sample norm = Math::Sqrt(Sample(1) / Sample(NumFDNChannels));
 				outFDNInput.fill(monoInput * norm);
+			}
+
+			template<class Sample, std::size_t NumFDNChannels> requires(Detail::cValidFDNOrder<NumFDNChannels>)
+			static JPL_INLINE void InjectNormalizedRndSign(Sample monoInput, std::array<Sample, NumFDNChannels>& outFDNInput)
+			{
+				static constexpr Sample norm = Math::Sqrt(Sample(1) / Sample(NumFDNChannels));
+				outFDNInput.fill(monoInput * norm);
 				AssignRandomSign(outFDNInput);
 			}
 		};
@@ -482,13 +489,24 @@ namespace JPL
 					const uint32 outChannel = i % numOutputChannels;
 					out[outChannel] += fdn[i];
 				}
+			}
+
+			// Normalizing output may kill the volume.
+			// It is likely not necesary, if the input was already normalized,
+			// i.e. because the energy comming into the system is normalized by the factor
+			// it is increased when spreading into all FDN channels.
+			template<class Sample, std::size_t NumFDNChannels>
+				requires(Detail::cValidFDNOrder<NumFDNChannels> and std::has_single_bit(NumFDNChannels))
+			static void MixNormalize(std::array<Sample, NumFDNChannels> fdn, std::span<Sample> out)
+			{
+				Mix(fdn, out);
 
 				static constexpr Sample invFDNChannels = Sample(1.0) / NumFDNChannels;
 
 				// Hadamard is already normalized by 1 / sqrt(NumFDNChannels).
 				// This compensates for folding multiple FDN channels into each output.
 				const Sample foldNorm =
-					Math::Sqrt(static_cast<Sample>(numOutputChannels) * invFDNChannels);
+					Math::Sqrt(static_cast<Sample>(out.size()) * invFDNChannels);
 
 				Multiply(out, foldNorm);
 			}
@@ -503,14 +521,20 @@ namespace JPL
 			{
 				JPL_ASSERT(out.size() <= MaxOutputChannels);
 
-
-				for (uint32 o = 0; o < out.size(); ++o)
+				for (uint32 outIdx = 0; outIdx < out.size(); ++outIdx)
 				{
 					std::array<Sample, NumFDNChannels> fdnWithRandSign = fdn;
-					AssignRandomSign<MaxOutputChannels>(fdnWithRandSign, 0);
+					AssignRandomSign<MaxOutputChannels>(fdnWithRandSign, outIdx);
 
-					out[o] = ReduceSum(fdnWithRandSign);
+					out[outIdx] = ReduceSum(fdnWithRandSign);
 				}
+			}
+
+			// Note: see the comment in FDNOutputMixer about normalization
+			template<class Sample, std::size_t NumFDNChannels> requires(Detail::cValidFDNOrder<NumFDNChannels>)
+			static void MixNormalize(const std::array<Sample, NumFDNChannels>& fdn, std::span<Sample> out)
+			{
+				Mix(fdn, out);
 
 				static constexpr Sample norm = Math::Sqrt(Sample(1) / Sample(NumFDNChannels));
 

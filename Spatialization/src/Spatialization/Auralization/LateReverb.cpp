@@ -98,19 +98,34 @@ namespace JPL
 
 			for (uint32 frameIdx = 0, outSampleIdx = 0; frameIdx < buffer.size(); ++frameIdx, outSampleIdx += numOutChannels)
 			{
-				Matrix::FDNInput::InjectNormalized(buffer[frameIdx], fdnInput);
+				static constexpr bool bOutputIsPowTwo = std::has_single_bit(cFDNChannels);
+
+				if constexpr (bOutputIsPowTwo)
+				{
+					// Randomizing sign of the input kills the amplitude when using deafult output mixer,
+					// there's no noticieable affect on the reverb quality without it.
+					Matrix::FDNInput::InjectNormalized(buffer[frameIdx], fdnInput);
+				}
+				else
+				{
+					// ...however, when using FDNOutputProjection, the output may be biased
+					// towards certain channels, in this case randomizing sign on input makes difference.
+					Matrix::FDNInput::InjectNormalizedRndSign(buffer[frameIdx], fdnInput);
+				}
 
 				FDNChannels fdnOutput = mFDN.Process(fdnInput);
 
 				auto outputFrame = outputChunk.subspan(outSampleIdx, numOutChannels);
 
-				if constexpr (std::has_single_bit(cFDNChannels))
+				if constexpr (bOutputIsPowTwo)
 				{
 					Matrix::FDNOutputMixer::Mix(fdnOutput, outputFrame);
+					//Matrix::FDNOutputMixer::MixNormalize(fdnOutput, outputFrame);
 				}
 				else
 				{
 					Matrix::FDNOutputProjection<>::Mix(fdnOutput, outputFrame);
+					//Matrix::FDNOutputProjection<>::MixNormalize(fdnOutput, outputFrame);
 				}
 			}
 
