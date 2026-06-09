@@ -21,88 +21,140 @@ There is aslo [JPL Spatial Application](https://github.com/Jaytheway/JPLSpatialA
 
 ## Features
 
-#### Vector-Base Amplitude Panning (VBAP) / Multi-Direction Amplitude Panning (MDAP)
-![VBAP 2D Animation: quad source -> 5.1 speaker layout](./assets/VBAP2D.gif)
-![VBAP 3D Animation: stereo source -> 9.1.4 speaker layout](./assets/VBAP3D.gif)
+### Vector-Base Amplitude Panning (VBAP) / Multi-Direction Amplitude Panning (MDAP)
 
-- Source elevation / Height channels
+<img src="./assets/VBAP2D.gif" width="500" alt="VBAP 2D Animation: quad source -> 5.1 speaker layout" />
 
-- <details>
-	<summary>Supported source channel layouts</summary>
-	<ul>
-	<li>Mono</li>
-	<li>Stereo</li>
-	<li>LCR</li>
-	<li>Quad</li>
-	<li>Surround 4.1</li>
-	<li>Surround 5.0</li>
-	<li>Surround 5.1</li>
-	<li>Surround 6.0</li>
-	<li>Surround 6.1</li>
-	<li>Surround 7.0</li>
-	<li>Surround 7.1</li>
-	<li>Octagonal</li>
-	</ul>
+<img src="./assets/VBAP3D.gif" width="500" alt="VBAP 3D Animation: stereo source -> 9.1.4 speaker layout" />
+
+**JPL Spatial** implementation of **VBAP/MDAP** handles source elevation and height channels.
+
+<details>
+<summary>Supported source channel layouts</summary>
+<ul>
+<li>Mono</li>
+<li>Stereo</li>
+<li>LCR</li>
+<li>Quad</li>
+<li>Surround 4.1</li>
+<li>Surround 5.0</li>
+<li>Surround 5.1</li>
+<li>Surround 6.0</li>
+<li>Surround 6.1</li>
+<li>Surround 7.0</li>
+<li>Surround 7.1</li>
+<li>Octagonal</li>
+</ul>
 </details>
 
-- <details>
-	<summary>Supported target/output channel layouts</summary>
-	<ul>
-	<br>
-	<b>VBAPanner2D</b>
+<details>
+<summary>Supported target/output channel layouts</summary>
+<ul>
+<br>
+<b>VBAPanner2D</b>
 
-	---
-	
-	<li>Stereo</li>
-	<li>LCR</li>
-	<li>Quad</li>
-	<li>Surround 4.1</li>
-	<li>Surround 5.0</li>
-	<li>Surround 6.0</li>
-	<li>Surround 5.1</li>
-	<li>Surround 6.1</li>
-	<li>Surround 7.0</li>
-	<li>Surround 7.1</li>
-	<li>Octagonal</li>
+---
 
-	<br>
-	<b>VBAPanner3D</b> <i>(layouts with top channels)</i>
+<li>Stereo</li>
+<li>LCR</li>
+<li>Quad</li>
+<li>Surround 4.1</li>
+<li>Surround 5.0</li>
+<li>Surround 6.0</li>
+<li>Surround 5.1</li>
+<li>Surround 6.1</li>
+<li>Surround 7.0</li>
+<li>Surround 7.1</li>
+<li>Octagonal</li>
 
-	---
-	
-	<li>Surround 5.0.2</li>
-	<li>Surround 5.1.2</li>
-	<li>Surround 5.0.4</li>
-	<li>Surround 5.1.4</li>
-	<br>		
-	<i>(as per Dolby Atmos surround, but LFE is always 4th channel)</i>
+<br>
+<b>VBAPanner3D</b> <i>(layouts with top channels)</i>
 
-	<li>Surround 7.0.2</li>
-	<li>Surround 7.1.2</li>
-	<li>Surround 7.0.4</li>
-	<li>Surround 7.1.4</li>
-	<li>Surround 7.0.6</li>
-	<li>Surround 7.1.6</li>
-	<li>Surround 9.0.4</li>
-	<li>Surround 9.1.4</li>
-	<li>Surround 9.0.6</li>
-	<li>Surround 9.1.6</li>
-	</ul>
+---
+
+<li>Surround 5.0.2</li>
+<li>Surround 5.1.2</li>
+<li>Surround 5.0.4</li>
+<li>Surround 5.1.4</li>
+<br>		
+<i>(as per Dolby Atmos surround, but LFE is always 4th channel)</i>
+
+<li>Surround 7.0.2</li>
+<li>Surround 7.1.2</li>
+<li>Surround 7.0.4</li>
+<li>Surround 7.1.4</li>
+<li>Surround 7.0.6</li>
+<li>Surround 7.1.6</li>
+<li>Surround 9.0.4</li>
+<li>Surround 9.1.4</li>
+<li>Surround 9.0.6</li>
+<li>Surround 9.1.6</li>
+</ul>
 </details>
+
+### Allocator-Aware Design & Memory Tracking
+Where possible and reasonable `std::pmr` containers are used.  
+*Polymorphic memory resource* can be provided to **JPL Spatial** containers and classes.
+
+### SIMD / Vectorization
+Fast `simd` math library is provideded and used extensively to speed up computation where reasonable.  
+Decisions to sacrifice code readability in favor of performance are driven by **benchmarks**.
+
+### Ray Tracing
+- **JPL Spatial** implements interface to use you own **Ray Tracer** and **Vec3** type (though minimal **Vec3** class provided)
+- In the future, **JPL Spatial**'s own **Ray Tracer** may be implemented
+
+## Components
+- **Interpolating Fractional Delay Lines**
+- **4th order Linkwitz-Riley Crossover**
+- **Filter Delay Network (FDN) Reverb**
+- **SIMD** math library
+- **Acoustic Materials** definition and a list of common materials to be used for acoustics simulation
+- **Air Absorption** utilities for pure-tone and broadband estimation
+- **Channel Map** utility for handling different kinds of channel layouts
+- ...*a bunch of other utilities (math, algorithms, containers, etc.)*
+
+## Propagation
+
+- Specular **Early Reflections** are traced using **Image Source** method and panned by **VBAP** (single directoin per ER)
+
+- **Late Reverberation Time** can be estimated with provided [Eyring](https://en.wikipedia.org/wiki/Reverberation#Eyring_equation) or [Sabine](https://en.wikipedia.org/wiki/Reverberation#Sabine_equation) equations based on environment properties. 
+
+## Rendering
+#### Direct Sound Effect
+- renders *propagation delay* and *doppler effect* with **Interpolating Delay Lines**
+- *propagation filtering* with **4-band Crossover Filter** (mainly *air absorption*)
+- *panning* handled by **MDAP**
+
+#### Early Reflection Bus
+- can render any arbitrary number of early reflection paths, which can safely change dynamically
+- each **ER** path is rendered as a *Tap* of **Interpolated Delay Line**
+- each **ER** has **4-band Crossover Filter** to process **propagation filtering** (*reflected surface absorption* & *air absorption*)
+- each **ER** is panned with **VBAP**
+
+#### Late Reveb Bus
+- renders late reverberation with 16th order **FDN**
+- the **FDN** is using **4-band Crossover Filter** as *decay filter*
+- *Reverberation timeT (RT60) can be set in the same 4 frequency bands used throughout **JPL Spatial**
+
+---
+
+### High Level Sound Source API
+
+Example of integrating vairous components of **JPL Spatial** are provided as various `Services` **API** 
+- **Spatial Manager** (top level interface managing Sources and Services)
+- **Panning Service**
+- **Direct Path Service** (for now handles just distance and angle attenuation)
 
 #### Distance Attenuation
-- Custom function
+Utilities provided for creative distance attenuation use-cases.
+- Custom Function
 - Curves
 - Predefined models:
 	- Inverse
 	- Linear
 	- Exponential
-#### Angle Attenuation / Cone-based attenuation
-#### **High level sound source API**:
-
-- Spatial Manager (top level interface managing Sources and Services)
-- Panning Service
-- Direct Path Service (for now handles just distance and angle attenuation)
+#### Angle Attenuation / Cone-based Attenuation
   
 ## Supported platforms
 
@@ -111,17 +163,22 @@ There is aslo [JPL Spatial Application](https://github.com/Jaytheway/JPLSpatialA
 * macOS x64/ARM64
 
 ## Examples & Usage
+
+### Panning
+
+<details>
+
 Initializing `VBAPPanner`, `SourceLayout` and querying target channel gains for a source direction:
 ```cpp
-#include "/ChannelMap.h"
-#include "JPLSpatial/Panning/VBAPanning2D.h"
+#include <JPLSpatial/ChannelMap.h>
+#include <JPLSpatial/Panning/VBAPanning2D.h>
 
-#include <span>
+#include <array>
 ...
 
 using PannerType = typename JPL::VBAPanner2D<>;
 using SourceLayout = typename PannerType::SourceLayoutType;
-using ChannelGains = typename JPL::VBAPStandartTraits::ChannelGains;
+using ChannelGains = std::array<float, 2>
 
 const auto targetChannelMap = JPL::ChannelMap::FromChannelMask(JPL::ChannelMask::Stereo)
 const auto sourceChannelMap = JPL::ChannelMap::FromChannelMask(JPL::ChannelMask::Mono)
@@ -154,20 +211,25 @@ void GetChannelGains(
 		panner.ProcessVBAPData(
 			sourceLayout,
 			positionData,
-			[&outGains](uint32 /*channel*/) -> auto& { return outGains; });
+			outGains);
 	}
 }
 
 ```
 
-### SpatialManager quickstart
+</details>
+
+### Spatial Manager
+
+<details>
+
 A typical `SpatialManager` workflow wires together high-level constructs such as `SourceInitParameters` for allocating the source,
 `Position` for spatial placement, and an `AttenuationCurve` for distance rolloff.
 
 ```cpp
-#include "/ChannelMap.h"
-#include "/Math/MinimalVec3.h"
-#include "/SpatialManager.h"
+#include <JPLSpatial/ChannelMap.h>
+#include <JPLSpatial/Math/MinimalVec3.h>
+#include <JPLSpatial/SpatialManager.h>
 
 using Vec3 = JPL::MinimalVec3;
 using Spatializer = JPL::Spatial::SpatialManager<Vec3>;
@@ -177,7 +239,8 @@ const auto targetChannels = JPL::ChannelMap::FromChannelMask(JPL::ChannelMask::Q
 
 SourceInitParameters initParams{
         .NumChannels = 1,
-        .NumTargetChannels = targetChannels.GetNumChannels()
+        .NumTargetChannels = targetChannels.GetNumChannels(),
+		.PanParameters = { .Focus = 0.0f, .Spread = 1.0f }
 };
 const SourceId source = spatializer.CreateSource(initParams);
 
@@ -206,31 +269,35 @@ Once `AdvanceSimulation` has processed the scene, `GetLastUpdatedSource` exposes
 results retrieved through `GetDistanceAttenuation` and `GetChannelGains` can be fed directly into the audio mix for the
 current frame.
 
-### Manual <code>PanningService</code> usage
-
-- <details>
-	<p>
-	When working directly with the panning layer you start by creating the source and target <code>ChannelMap</code> objects that describe each layout you want to support. Those maps are passed to <code>InitializePanningEffect</code>, which returns a <code>PanEffectHandle</code> representing the source's cached panning state. Hold on to that handle for subsequent updates, and query the cached gains after evaluation through <code>GetChannelGainsFor</code>. See <a href="Spatialization/include//Services/PanningService.h">PanningService.h</a> and the sequence in <a href="SpatializationTests/src/Tests/PanningServiceTest.h">PanningServiceTest</a> for a full example.
-	</p>
-
-	<p>
-	A typical update loop mirrors the sequence covered in <code>PanningServiceTest</code>: set the focus/spread shaping via <code>SetPanningEffectParameters</code> (or adjust spread alone with <code>SetPanningEffectSpread</code>) and then call <code>EvaluateDirection</code> with the latest <code>Position</code> to refresh the cached gain buffers. This flow keeps directional data and spread control in sync before the gains are read back for mixing.
-	</p>
-
-	<p>
-	Remember to release handles that are no longer needed by calling <code>ReleasePanningEffect</code>; consult <a href="Spatialization/include//Services/PanningService.h">Services/PanningService.h</a> for the full API surface, including helpers for advanced caching scenarios.
-	</p>
 </details>
 
-### DirectPathService walkthrough
+### Manual Panning Service Usage
+
+<details>
+<p>
+When working directly with the panning layer you start by creating the source and target <code>ChannelMap</code> objects that describe each layout you want to support. Those maps are passed to <code>InitializePanningEffect</code>, which returns a <code>PanEffectHandle</code> representing the source's cached panning state. Hold on to that handle for subsequent updates, and query the cached gains after evaluation through <code>GetChannelGainsFor</code>. See <a href="Spatialization/include//Services/PanningService.h">PanningService.h</a> and the sequence in <a href="SpatializationTests/src/Tests/PanningServiceTest.h">PanningServiceTest</a> for a full example.
+</p>
+
+<p>
+A typical update loop mirrors the sequence covered in <code>PanningServiceTest</code>: set the focus/spread shaping via <code>SetPanningEffectParameters</code> (or adjust spread alone with <code>SetPanningEffectSpread</code>) and then call <code>EvaluateDirection</code> with the latest <code>Position</code> to refresh the cached gain buffers. This flow keeps directional data and spread control in sync before the gains are read back for mixing.
+</p>
+
+<p>
+Remember to release handles that are no longer needed by calling <code>ReleasePanningEffect</code>; consult <a href="Spatialization/include//Services/PanningService.h">Services/PanningService.h</a> for the full API surface, including helpers for advanced caching scenarios.
+</p>
+</details>
+
+### Direct Path Service
+
+<details>
 
 `DirectPathService` owns the distance and cone attenuation caches that the high-level `SpatialManager` queries every update frame. A typical low-level setup is:
 
 ```cpp
-#include "/DistanceAttenuation.h"
-#include "/Math/Math.h"
-#include "/Math/MinimalVec3.h"
-#include "/Services/DirectPathService.h"
+#include <JPLSpatial/DistanceAttenuation.h>
+#include <JPLSpatial/Math/Math.h>
+#include <JPLSpatial/Math/MinimalVec3.h>
+#include <JPLSpatial/Services/DirectPathService.h>
 
 using DirectPath = JPL::DirectPathService<>;
 using Vec3 = JPL::MinimalVec3;
@@ -256,6 +323,7 @@ const float preview = DirectPath::EvaluateDistance(5.0f, curveRef);
 // Frame update path: evaluate and cache
 JPL::Position<Vec3> source{{10.0f, 0.0f, -10.0f}, JPL::Orientation<Vec3>::IdentityForward()};
 JPL::Position<Vec3> listener{{0.0f, 0.0f, 0.0f}, JPL::Orientation<Vec3>::IdentityForward()};
+
 const auto directPathResult = DirectPath::ProcessDirectPath(source, listener);
 directPath.EvaluateDistance(handle, directPathResult.Distance);
 directPath.EvaluateDirection(handle, directPathResult.DirectionDot);
@@ -266,9 +334,7 @@ const float cachedConeFactor = directPath.GetDirectionAttenuation(handle);
 
 `ProcessDirectPath` returns both `DirectionDot` (listener-forward alignment) and `InvDirectionDot` (source-forward alignment) so you can decide whether to reuse the listener-facing or source-facing cosine in subsequent frames—the [DirectPathService API](Spatialization/include//Services/DirectPathService.h) documents these fields, and [`DirectPathServiceTest`](SpatializationTests/src/Tests/DirectPathServiceTest.h) exercises scenarios such as a listener standing behind a source and validates the expected values. Once the per-frame `EvaluateDistance`/`EvaluateDirection` calls run, the cached values retrieved via `GetDistanceAttenuation`/`GetDirectionAttenuation` stay valid until the next evaluation, letting you keep the mixing hot-path free of curve traversals.
 
-### Tuning angle-based roll-off
-
-`AttenuationCone` contains the inner and outer angles in radians. The dot product fed into `EvaluateDirection` is compared against the cosines of half-angles: values above the inner threshold return a factor of `0.0f`, values below the outer threshold return `1.0f`, and everything in between linearly interpolates so you can remap that factor to any outer parameter you want (e.g., `std::lerp(1.0f, coneOuterFactor, filterCutoff)`). See the [DirectPathService header](Spatialization/include//Services/DirectPathService.h) for implementation details and [`DirectPathServiceTest`](SpatializationTests/src/Tests/DirectPathServiceTest.h) for usage examples. To tighten a spotlight-style emitter, reduce `OuterAngle` toward `InnerAngle`; to create a broad ambience, expand both toward `2π` so every direction yields the full gain of `1.0f` without angular attenuation. When paired with the cached cone gain above, this lets you reason in “forward energy” terms: the listener inside the inner cone hears the unattenuated signal, the outer region gradually blends toward your chosen tail gain, and anything behind the source sits at the outer gain floor.
+</details>
 
 ## Coordinate System
 In **JPL Spatial** the coordinate system is **right-handed** and uses a **Y-up axis**.
@@ -282,8 +348,9 @@ Values passed to **JPL Spatial** have to be converted accordingly if the coordin
 - **Spatialization** - source code for the library
 - **SpatializationTests** - a set of tests to validate the behavior of the features and interfaces
 - **docs** - so far non-functioning auto-generated documentation
-- **build** - build scripts; running `cmake_vs2022_cl_x64.bat` will create VS 2022 solution
+- **build** - build scripts; running `cmake_vs2026_cl_x64.bat` will create VS 2026 solution
 - **cmake** - cmake utilities
+
 ## Library structure
 As much of the library as possible is header-only.
 
@@ -305,17 +372,21 @@ As much of the library as possible is header-only.
 	- **VBAP.h**
 	- **DistanceAttenuation.h**
 	- **Panning/VBAPEx.h**
+
 ## Documentation
 - Most of the things annotated in code.
 - For more examples check out tests.
 - For an example of integrating **Services** take a look at [SpatialManager.h](https://github.com/Jaytheway/JPLSpatial/blob/main/Spatialization/include/JPLSpatial/SpatialManager.h)
+- For an example of integrating **JPL Spatial** in an application see [JPL Spatial Application](https://github.com/Jaytheway/JPLSpatialApplication/)
+
 ## Compiling
 - To build the library, run appropriate build script in `build` folder.
 - Some includes can be used as is as a single header include in your project.
 - Depends only on the standard template library.
-- Tests fetch `glm` to validate `glm::vec3` type working with library's interfaces, and optionally can be ran with `JoltPhysics`'s `JPH::Vec3` by passing `-DTEST_WITH_JOLT=ON` flag to test project generator.
+- Tests fetch `glm` to validate `glm::vec3` type working with library's interfaces
 - Compiles with Visual Studio 2022 and Visual Studio 2026, other compiles haven't been tested.
 - Uses C++20
+
 ## Updates
 **JPL Spatial** is going to be updated as the need for more features matches my time availability to work on them.
 
