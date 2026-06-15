@@ -47,7 +47,7 @@ jobs:
         shell: pwsh
         run: >
           cmake -S . -B "${{ env.BUILD_ROOT }}/windows-msvc-x64/${{ matrix.config }}"
-          -G "Visual Studio 17 2022"
+          -G "Visual Studio 18 2026"
           -A x64
 
       - name: Build
