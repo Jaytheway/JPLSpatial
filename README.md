@@ -132,7 +132,7 @@ Decisions to sacrifice code readability in favor of performance are driven by **
 #### Late Reveb Bus
 - renders late reverberation with 16th order **FDN**
 - the **FDN** is using **4-band Crossover Filter** as *decay filter*
-- *Reverberation timeT (RT60) can be set in the same 4 frequency bands used throughout **JPL Spatial**
+- *Reverberation time* (RT60) can be set in the same 4 frequency bands used throughout **JPL Spatial**
 
 ---
 
