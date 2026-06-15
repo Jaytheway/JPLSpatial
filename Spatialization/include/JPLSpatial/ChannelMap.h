@@ -257,6 +257,8 @@ namespace JPL
         {
         }
 
+        NamedChannelMask() noexcept = default;
+
         JPL_INLINE bool operator==(const NamedChannelMask& other) const noexcept { return other.Layout == Layout; }
     };
 } // namespace JPL
