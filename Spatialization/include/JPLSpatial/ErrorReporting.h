@@ -33,8 +33,16 @@
 namespace JPL
 {
 /// Trace function, needs to be overridden by application. This should output a line of text to the log / TTY.
-using TraceFunction = void (*)(const char* message);
-JPL_EXPORT extern TraceFunction SpatialTrace;
+#ifdef JPL_TAGGED_LOGGING
+	using TaggedTraceFunction = void (*)(std::string_view tag, std::string_view message);
+	JPL_EXPORT extern TaggedTraceFunction JPLTraceTaggedTrace;
+	JPL_EXPORT extern TaggedTraceFunction JPLTraceTaggedInfo;
+	JPL_EXPORT extern TaggedTraceFunction JPLTraceTaggedWarn;
+	JPL_EXPORT extern TaggedTraceFunction JPLTraceTaggedError;
+#else
+	using TraceFunction = void (*)(const char* message);
+	JPL_EXPORT extern TraceFunction SpatialTrace;
+#endif
 
 // Always turn on asserts in Debug mode
 #if defined(JPL_DEBUG)
@@ -86,15 +94,35 @@ inline bool AssertFailedParamHelper(const char* inExpression, const std::source_
 #endif // !JPL_ENSURE
 
 #ifndef JPL_TRACE_TAG
-#define JPL_TRACE_TAG(tag, message) SpatialTrace(std::format("[{}]: Trace: {}", tag, message).c_str())
+	#ifdef JPL_TAGGED_LOGGING
+		#define JPL_TRACE_TAG(tag, message) JPLTraceTaggedTrace(tag, message)
+	#else
+		#define JPL_TRACE_TAG(tag, message) SpatialTrace(std::format("[{}]: Trace: {}", tag, message).c_str())
+	#endif
 #endif // !JPL_TRACE_TAG
 
 #ifndef JPL_INFO_TAG
-#define JPL_INFO_TAG(tag, message) SpatialTrace(std::format("[{}]: Info: {}", tag, message).c_str())
+	#ifdef JPL_TAGGED_LOGGING
+		#define JPL_INFO_TAG(tag, message) JPLTraceTaggedInfo(tag, message)
+	#else
+		#define JPL_INFO_TAG(tag, message) SpatialTrace(std::format("[{}]: Info: {}", tag, message).c_str())
+	#endif
 #endif // !JPL_INFO_TAG
 
+#ifndef JPL_WARN_TAG
+	#ifdef JPL_TAGGED_LOGGING
+		#define JPL_WARN_TAG(tag, message) JPLTraceTaggedWarn(tag, message)
+	#else
+		#define JPL_WARN_TAG(tag, message) SpatialTrace(std::format("[{}]: Warning: {}", tag, message).c_str())
+	#endif
+#endif // !JPL_WARN_TAG
+
 #ifndef JPL_ERROR_TAG
-#define JPL_ERROR_TAG(tag, message) SpatialTrace(std::format("[{}]: Error: {}", tag, message).c_str())
+	#ifdef JPL_TAGGED_LOGGING
+		#define JPL_ERROR_TAG(tag, message) JPLTraceTaggedError(tag, message)
+	#else
+		#define JPL_ERROR_TAG(tag, message) SpatialTrace(std::format("[{}]: Error: {}", tag, message).c_str())
+	#endif
 #endif // !JPL_ERROR_TAG
 
 } // namespace JPL
