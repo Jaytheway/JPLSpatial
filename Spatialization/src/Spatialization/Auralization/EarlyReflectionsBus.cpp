@@ -154,10 +154,8 @@ namespace JPL
 
 				// After we stopp, non-realtime thread may take time
 				// to remove the stale, faded-out tap
-				// Note: this will let through target state Rendering,
-				// which means that this tap was "restarted"
 				const ERState currentRTState = realtimeData.State.load(std::memory_order_relaxed);
-				if (currentRTState == ERState::Stopped && targetData.State == ERState::FadingOut)
+				if (currentRTState == ERState::Stopped)
 					continue;
 
 				// Update the current rendering state
@@ -253,8 +251,8 @@ namespace JPL
 			// flag the TargetData as Stopped, to ensure render thread doesn't touch the RealtimeState
 			for (ER& er : ers)
 			{
-				if (er.RealtimeState->State.load(std::memory_order_acquire) == ERState::Stopped &&
-					er.TargetData.State != ERState::Rendering) // check for both, FadingOut and Stopped
+				const ERState realtiemState = er.RealtimeState->State.load(std::memory_order_acquire);
+				if (realtiemState == ERState::Stopped)
 				{
 					er.TargetData.State = ERState::Stopped;
 					
@@ -279,8 +277,11 @@ namespace JPL
 			{
 				if (er.TargetData.State == ERState::Stopped)
 				{
+					const ERState realtimeState = er.RealtimeState->State.load(std::memory_order_acquire);
+					JPL_ASSERT(realtimeState != ERState::Rendering);
+
 					// This is a very rare, but possible case
-					while(er.RealtimeState->State.load(std::memory_order_acquire) != ERState::Stopped)
+					while(realtimeState == ERState::FadingOut)
 					{}
 
 					// Now it's safe to add RealtimeState to erase list
@@ -363,6 +364,11 @@ namespace JPL
 					const ERState currentRealtimeState = toUpdateER->RealtimeState->State.load(std::memory_order_acquire);
 					if (currentRealtimeState == ERState::FadingOut)
 					{
+						// Once realtime state enters FadingOut, it will exit to Stopped and removal on non-realtime thread.
+						JPL_ASSERT(false,
+								   "We've removed \"restarting\" capability/loop-hole "
+								   "which was causing a deadlock, so this should be a dead path.");
+
 						// Wait to finish fading out
 						// (in practice this never spins)
 						while (toUpdateER->RealtimeState->State.load(std::memory_order_acquire) != ERState::Stopped)
