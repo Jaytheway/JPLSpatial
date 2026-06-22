@@ -35,7 +35,7 @@
 namespace JPL
 {
 	template<CFloatOrSIMD T>
-	JPL_INLINE float ReflectionLoss_dB(const T& alpha)
+	JPL_INLINE T ReflectionLoss_dB(const T& alpha)
 	{
 		if constexpr (std::same_as<T, simd>)
 		{
@@ -76,8 +76,8 @@ namespace JPL
 		float AbsorptionAverageOneMinus = 1.0f;
 
 		AbsorptionCoeffs Coeffs; // alpha coefficient
+		AbsorptionCoeffs Absorption_dB;
 		AbsorptionCoeffs AmplitudeFactors;
-		AbsorptionCoeffs LevelDrop;
 
 		static const AcousticMaterial* Get(uint32 materialID);
 		static const AcousticMaterial* Get(std::string_view materialName);

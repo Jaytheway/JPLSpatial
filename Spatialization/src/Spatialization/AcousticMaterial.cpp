@@ -118,8 +118,8 @@ std::pair<uint32, AcousticMaterial> AcousticMaterial::MakeMaterial(std::string_v
 
 	const simd oneMinusAlpha = simd(1.0f) - coeffs;
 	
-	// ReflectionLoss_dB for simd LevelDrop data member
-	const simd levelDrop = IntencityTodB(max(1e-6f, oneMinusAlpha));
+	// ReflectionLoss_dB
+	const simd absortpionDB = IntencityTodB(max(1e-6f, oneMinusAlpha));
 	
 	const uint32 hash = GenerateFNVHash(name);
 
@@ -130,8 +130,8 @@ std::pair<uint32, AcousticMaterial> AcousticMaterial::MakeMaterial(std::string_v
 		.AbsorptionAverage = avg,
 		.AbsorptionAverageOneMinus = 1.0f - avg,
 		.Coeffs = coeffs,
-		.AmplitudeFactors = Math::Sqrt(oneMinusAlpha),
-		.LevelDrop = levelDrop
+		.Absorption_dB = absortpionDB,
+		.AmplitudeFactors = Math::Sqrt(oneMinusAlpha)
 	}};
 }
 
