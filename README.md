@@ -359,7 +359,7 @@ Values passed to **JPL Spatial** have to be converted accordingly if the coordin
 ## Folder structure
 - **Spatialization** - source code for the library
 - **SpatializationTests** - a set of tests to validate the behavior of the features and interfaces
-- **docs** - so far non-functioning auto-generated documentation
+- **Documentation** - documentation for the library
 - **build** - build scripts; running `cmake_vs2026_cl_x64.bat` will create VS 2026 solution
 - **cmake** - cmake utilities
 
