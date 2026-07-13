@@ -153,11 +153,28 @@ Utilities provided for creative distance attenuation use-cases.
 	- Exponential
 #### Angle Attenuation / Cone-based Attenuation
   
-## Supported platforms
+## Platform support
 
-* Windows (Desktop) x64/ARM64
-* Linux (tested on Ubuntu) x64/ARM64
-* macOS x64/ARM64
+The following configurations are built and tested by
+[GitHub Actions](https://github.com/Jaytheway/JPLSpatial/actions/workflows/build.yml).
+
+| Platform | Architecture | Compiler | Configuration |
+|:---------|:-------------|:---------|:--------------|
+| Windows  | x64          | MSVC       | Debug, Release |
+| Linux    | x64          | GCC        | Debug, Release |
+| Linux    | x64          | Clang      | Debug, Release |
+| macOS    | x64          | AppleClang | Debug, Release |
+| Linux    | ARM64*       | GCC        | Debug |
+| macOS    | ARM64*       | AppleClang | Debug |
+
+\* ARM64 configurations are tested through the extended CI workflow.
+
+Linux/Clang Debug builds are additionally tested with `AddressSanitizer`.
+
+> [!NOTE]
+> Windows ARM64 is intended to be supported, but is not currently covered by CI.
+
+**JPL Spatial** requires a C++20 compiler.
 
 ## Examples & Usage
 
