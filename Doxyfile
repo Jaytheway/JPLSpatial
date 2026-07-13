@@ -67,7 +67,7 @@ PROJECT_LOGO           =
 # when the HTML document is shown. Doxygen will copy the logo to the output
 # directory.
 
-PROJECT_ICON           = Documentation/assets/jplsa_app_icon.ico
+PROJECT_ICON           =
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) path
 # into which the generated documentation will be written. If a relative path is
@@ -1435,7 +1435,8 @@ HTML_EXTRA_STYLESHEET  = Documentation/theme/vendor/doxygen-awesome/doxygen-awes
 
 HTML_EXTRA_FILES = Documentation/theme/vendor/doxygen-awesome/doxygen-awesome-darkmode-toggle.js \
                    Documentation/assets/fonts/IBMPlexSans-Variable.ttf \
-                   Documentation/assets/fonts/IBMPlexSans-Italic-Variable.ttf
+                   Documentation/assets/fonts/IBMPlexSans-Italic-Variable.ttf \
+                   Documentation/assets/jplsa_app_icon.png
 
 # The HTML_COLORSTYLE tag can be used to specify if the generated HTML output
 # should be rendered with a dark or light theme.

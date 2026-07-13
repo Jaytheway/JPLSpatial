@@ -114,3 +114,7 @@ span.mlabel {
     color: var(--on-accent-gold);
     background: var(--accent-gold);
 }
+
+html.dark-mode {
+    --font-family: "IBM Plex Sans", sans-serif !important;
+}
