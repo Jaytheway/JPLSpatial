@@ -164,15 +164,13 @@ The following configurations are built and tested by
 | Linux    | x64          | GCC        | Debug, Release |
 | Linux    | x64          | Clang      | Debug, Release |
 | macOS    | x64          | AppleClang | Debug, Release |
+| Windows  | ARM64*       | MSVC       | Debug |
 | Linux    | ARM64*       | GCC        | Debug |
 | macOS    | ARM64*       | AppleClang | Debug |
 
 \* ARM64 configurations are tested through the extended CI workflow.
 
 Linux/Clang Debug builds are additionally tested with `AddressSanitizer`.
-
-> [!NOTE]
-> Windows ARM64 is intended to be supported, but is not currently covered by CI.
 
 **JPL Spatial** requires a C++20 compiler.
 
