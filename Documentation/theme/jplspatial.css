@@ -109,7 +109,8 @@ span.mlabel {
 }
 
 html,
-html.dark-mode {
+html.dark-mode,
+html.light-mode {
     --font-family:
         "IBM Plex Sans",
         -apple-system,
