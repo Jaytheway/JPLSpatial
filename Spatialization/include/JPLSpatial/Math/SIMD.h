@@ -1213,7 +1213,11 @@ namespace JPL
 #elif defined(JPL_USE_NEON)
 		static_assert(JPL_CPU_ADDRESS_BITS == 64 && "32-bit arm doesn't support this.");
 		uint32x4_t bits = vshrq_n_u32(mNative, 31);
+#if defined(JPL_COMPILER_MSVC)
+		const uint32x4_t w = { .n128_u32 = { 1u, 2u, 4u, 8u } };
+#else
 		const uint32x4_t w = { 1u, 2u, 4u, 8u };
+#endif
 		return static_cast<int>(vaddvq_u32(vmulq_u32(bits, w)));
 #else
 		return (mNative[0] >> 31)
