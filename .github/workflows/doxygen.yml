@@ -1,0 +1,44 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+   build-and-deploy:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Install Doxygen
+      run: |
+        sudo apt-get update
+        sudo apt-get install --yes doxygen
+
+    - name: Configure Pages
+      uses: actions/configure-pages@v6
+
+    - name: Generate documentation
+      run: doxygen Doxyfile
+
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@v5
+      with:
+        path: build/doxygen/html
+
+    - name: Deploy
+      id: deployment
+      uses: actions/deploy-pages@v5
+      
