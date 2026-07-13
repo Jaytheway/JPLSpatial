@@ -30,6 +30,7 @@ namespace JPL
 	public:
 		// Speed of sound at reference temperature (20C)
 		static constexpr float cReference = 343.2f;
+		static constexpr float cInvReference = 1.0f / cReference;
 
 		//======================================================================
 		/// Compute speed of sound for `temperature` in m/s.
