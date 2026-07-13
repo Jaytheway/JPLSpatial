@@ -381,7 +381,6 @@ As much of the library as possible is header-only.
 - Some includes can be used as is as a single header include in your project.
 - Depends only on the standard template library.
 - Tests fetch `glm` to validate `glm::vec3` type working with library's interfaces
-- Compiles with Visual Studio 2022 and Visual Studio 2026, other compiles haven't been tested.
 - Uses C++20
 
 ## Updates
