@@ -1,0 +1,72 @@
+/* JPL Spatial theme overides */
+
+html {
+    --primary-color: #087f8c;
+    --primary-dark-color: #075e68;
+    --primary-light-color: #bfeff2;
+    --on-primary-color: #ffffff;
+    --link-color: #096fa8;
+
+    --page-background-color: #fbfcfe;
+    --page-foreground-color: #1b2638;
+    --page-secondary-foreground-color: #607087;
+    --separator-color: #dce3ec;
+
+    --side-nav-background: #f3f6fa;
+    --code-background: #eef3f8;
+    --fragment-background: #f6f8fb;
+    --fragment-foreground: #26374a;
+    --tablehead-background: #edf2f7;
+    --blockquote-background: #f0f5f8;
+
+    --content-maxwidth: 1180px;
+    --content-line-height: 26px;
+    --searchbar-width: 260px;
+
+    --border-radius-small: 6px;
+    --border-radius-medium: 9px;
+    --border-radius-large: 13px;
+
+    --box-shadow: 0 4px 18px rgba(28, 48, 72, 0.08);
+
+    --fragment-keyword: #8b5cf6;
+    --fragment-keywordtype: #2563eb;
+    --fragment-keywordflow: #c2410c;
+    --fragment-token: #15803d;
+    --fragment-comment: #7c8b9d;
+    --fragment-preprocessor: #087f8c;
+}
+
+html.dark-mode {
+    --primary-color: #55d8df;
+    --primary-dark-color: #9be8ec;
+    --primary-light-color: #164b55;
+    --on-primary-color: #071419;
+    --link-color: #72d7ff;
+
+    --page-background-color: #0b111b;
+    --page-foreground-color: #dce7f3;
+    --page-secondary-foreground-color: #91a2b7;
+    --separator-color: #263549;
+
+    --side-nav-background: #101927;
+    --code-background: #111c2b;
+    --fragment-background: #0d1623;
+    --fragment-foreground: #d6e2ef;
+    --tablehead-background: #152235;
+    --blockquote-background: #111c2b;
+
+    --box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+
+    --fragment-keyword: #c4b5fd;
+    --fragment-keywordtype: #93c5fd;
+    --fragment-keywordflow: #fdba74;
+    --fragment-token: #86efac;
+    --fragment-comment: #718096;
+    --fragment-preprocessor: #5eead4;
+}
+
+#projectname {
+    letter-spacing: -0.025em;
+    font-weight: 650;
+}
