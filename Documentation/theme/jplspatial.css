@@ -46,11 +46,11 @@ html {
 }
 
 html.dark-mode {
-    --primary-color: #43c7bb;
+    --primary-color: #6bd6d3;
     --primary-dark-color: #82ddd5;
     --primary-light-color: #174b47;
     --on-primary-color: #071715;
-    --link-color: #55d6d1;
+    --link-color: #6bd6d3;
 
     --accent-gold: #e0aa45;
     --accent-gold-soft: rgba(224, 170, 69, 0.17);
