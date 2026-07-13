@@ -220,7 +220,7 @@ namespace JPL
 	/// sound sources, or any other cases where position and spatial
 	/// extend of each channel needed to be manually cotrolled.
 	/// 
-	/// Instead of using VBAPannerBase direction, it is adviced to use
+	/// Instead of using VBAPannerBase directly, it is adviced to use
 	/// 'VBAPanner2D' and 'VBAPanner3D' aliases from the similarly named files.
 	template<class PannerType, class Traits>
 	class VBAPannerBase
