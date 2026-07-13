@@ -387,7 +387,8 @@ As much of the library as possible is header-only.
 
 ## Documentation
 - Most of the things annotated in code.
-- For more examples check out tests.
+- [Documentation and API reference](https://jaytheway.github.io/JPLSpatial/)
+- For more examples check out [Tests](SpatializationTests//src//Tests)
 - For an example of integrating **Services** take a look at [SpatialManager.h](https://github.com/Jaytheway/JPLSpatial/blob/main/Spatialization/include/JPLSpatial/SpatialManager.h)
 - For an example of integrating **JPL Spatial** in an application see [JPL Spatial Application](https://github.com/Jaytheway/JPLSpatialApplication/)
 
@@ -404,5 +405,6 @@ As much of the library as possible is header-only.
 > [!WARNING]
 > - API may change
 > - Things may get added, removed, and restructured
+
 ## License
 The project is distributed under the [ISC license](https://github.com/Jaytheway/JPLSpatial?tab=License-1-ov-file).
