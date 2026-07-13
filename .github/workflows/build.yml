@@ -260,3 +260,34 @@ jobs:
         run: >
           ctest --test-dir "${{ env.BUILD_ROOT }}/macos-appleclang-arm64/Debug"
           --output-on-failure --verbose
+
+  windows-msvc-arm64:
+    name: Windows MSVC ARM64 (Debug) [manual]
+    if: |
+      (github.event_name == 'workflow_dispatch' && inputs.run_extended) ||
+      contains(github.event.head_commit.message, '#build-arm')
+    runs-on: windows-11-vs2026-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure (CMake)
+        shell: pwsh
+        run: >
+          cmake -S . -B "${{ env.BUILD_ROOT }}/windows-msvc-arm64/Debug"
+          -G "Visual Studio 18 2026"
+          -A ARM64
+
+      - name: Build
+        shell: pwsh
+        run: >
+          cmake --build "${{ env.BUILD_ROOT }}/windows-msvc-arm64/Debug"
+          --config Debug
+
+      - name: Test
+        shell: pwsh
+        run: >
+          ctest --test-dir "${{ env.BUILD_ROOT }}/windows-msvc-arm64/Debug"
+          -C Debug
+          --output-on-failure --verbose
