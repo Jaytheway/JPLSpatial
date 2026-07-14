@@ -81,43 +81,67 @@
 
 	//==========================================================================
 	// Detect enabled instruction sets
-	#if defined(__AVX512F__) && defined(__AVX512VL__) && defined(__AVX512DQ__) && !defined(JPL_USE_AVX512)
-		#define JPL_USE_AVX512
-	#endif
-	#if (defined(__AVX2__) || defined(JPL_USE_AVX512)) && !defined(JPL_USE_AVX2)
-		#define JPL_USE_AVX2
-	#endif
-	#if (defined(__AVX__) || defined(JPL_USE_AVX2)) && !defined(JPL_USE_AVX)
-		#define JPL_USE_AVX
-	#endif
-	#if (defined(__SSE4_2__) || defined(JPL_USE_AVX)) && !defined(JPL_USE_SSE4_2)
-		#define JPL_USE_SSE4_2
-	#endif
-	#if (defined(__SSE4_1__) || defined(JPL_USE_SSE4_2)) && !defined(JPL_USE_SSE4_1)
-		#define JPL_USE_SSE4_1
-	#endif
-	#if (defined(__F16C__) || defined(JPL_USE_AVX2)) && !defined(JPL_USE_F16C)
-		#define JPL_USE_F16C
-	#endif
-	#if (defined(__LZCNT__) || defined(JPL_USE_AVX2)) && !defined(JPL_USE_LZCNT)
-		#define JPL_USE_LZCNT
-	#endif
-	#if (defined(__BMI__) || defined(JPL_USE_AVX2)) && !defined(JPL_USE_TZCNT)
-		#define JPL_USE_TZCNT
+
+	// Detect compiler-enabled features when no authoritative configuration
+	// was supplied by the build system.
+	#if !defined(JPL_SIMD_CONFIGURED)
+		#if defined(__AVX512F__) && defined(__AVX512VL__) && defined(__AVX512DQ__) && !defined(JPL_USE_AVX512)
+			#define JPL_USE_AVX512
+		#endif
+
+		#if defined(__AVX2__) && !defined(JPL_USE_AVX2) 
+			#define JPL_USE_AVX2
+		#endif
+
+		#if defined(__AVX__) && !defined(JPL_USE_AVX)
+			#define JPL_USE_AVX
+		#endif
+
+		#if defined(__SSE4_2__) && !defined(JPL_USE_SSE4_2)
+			#define JPL_USE_SSE4_2
+		#endif
+
+		#if defined(__SSE4_1__) && !defined(JPL_USE_SSE4_1)
+			#define JPL_USE_SSE4_1
+		#endif
+
+		#if !defined(JPL_CROSS_PLATFORM_DETERMINISTIC) // FMA is not compatible with cross platform determinism
+			#if defined(JPL_COMPILER_CLANG) || defined(JPL_COMPILER_GCC)
+				#if defined(__FMA__) && !defined(JPL_USE_FMADD)
+					#define JPL_USE_FMADD
+				#endif
+			#elif defined(JPL_COMPILER_MSVC)
+				#if defined(__AVX2__) && !defined(JPL_USE_FMADD) // AVX2 also enables fused multiply add
+					#define JPL_USE_FMADD
+				#endif
+			#else
+				#error Undefined compiler
+			#endif
+		#endif
 	#endif
 
-	#ifndef JPL_CROSS_PLATFORM_DETERMINISTIC // FMA is not compatible with cross platform determinism
-		#if defined(JPL_COMPILER_CLANG) || defined(JPL_COMPILER_GCC)
-			#if defined(__FMA__) && !defined(JPL_USE_FMADD)
-				#define JPL_USE_FMADD
-			#endif
-		#elif defined(JPL_COMPILER_MSVC)
-			#if defined(__AVX2__) && !defined(JPL_USE_FMADD) // AVX2 also enables fused multiply add
-				#define JPL_USE_FMADD
-			#endif
-		#else
-			#error Undefined compiler
-		#endif
+	// Cross platform deterministic mode is not yet integrated, or needed,
+	// for now we just error out if the user tries to enable it with FMA
+	#if defined(JPL_CROSS_PLATFORM_DETERMINISTIC) && defined(JPL_USE_FMADD)
+    	#error "FMA is incompatible with cross-platform deterministic mode"
+	#endif
+
+	// Normalize the feature hierarchy regardless of whether it came from
+	// CMake or compiler detection
+	#if defined(JPL_USE_AVX512) && !defined(JPL_USE_AVX2)
+		#define JPL_USE_AVX2
+	#endif
+
+	#if defined(JPL_USE_AVX2) && !defined(JPL_USE_AVX)
+		#define JPL_USE_AVX
+	#endif
+
+	#if defined(JPL_USE_AVX) && !defined(JPL_USE_SSE4_2)
+		#define JPL_USE_SSE4_2
+	#endif
+
+	#if defined(JPL_USE_SSE4_2) && !defined(JPL_USE_SSE4_1)
+		#define JPL_USE_SSE4_1
 	#endif
 
 #elif defined(__aarch64__) || defined(_M_ARM64) || defined(__arm__) || defined(_M_ARM)

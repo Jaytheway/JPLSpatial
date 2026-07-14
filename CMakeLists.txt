@@ -10,6 +10,8 @@ option(TEST_WITH_JOLT "Enable tests that require JoltPhysics" OFF)
 
 option(JPL_FETCH_DEPS "Allow fetching dependencies with FetchContent" ON)
 
+option(JPL_ENABLE_AVX2_FMA "Require AVX2 and FMA on x86-64" OFF)
+
 project(JPLSpatial LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")

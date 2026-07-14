@@ -49,19 +49,26 @@ if(UNIX AND NOT APPLE)
   set_target_properties(JPLSpatial PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
-# x86/AVX2 vs x86/SSE2, skip on non-x86
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
-  if(MSVC)
-    target_compile_options(JPLSpatial PRIVATE /arch:AVX2)
-  else()
-    target_compile_options(JPLSpatial PRIVATE -mavx2 -mfma)
-  endif()
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86|i[3-6]86)$")
-  if(MSVC)
-    target_compile_options(JPLSpatial PRIVATE /arch:SSE2)
-  else()
-    target_compile_options(JPLSpatial PRIVATE -msse2)
-  endif()
+# Setup ISAs
+if(JPL_ENABLE_AVX2_FMA)
+	if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+		target_compile_definitions(JPLSpatial PUBLIC
+			JPL_SIMD_CONFIGURED=1
+			JPL_USE_AVX2=1
+			JPL_USE_FMADD=1
+		)
+		if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+			target_compile_options(JPLSpatial PUBLIC /arch:AVX2)
+		elseif(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+			target_compile_options(JPLSpatial PUBLIC -mavx2 -mfma)
+		else()
+			message(FATAL_ERROR "Unsupported compiler frontend for AVX2_FMA")
+		endif()
+	else()
+		message(FATAL_ERROR "JPL_ENABLE_AVX2_FMA is only supported on x86-64 architectures")
+	endif()
+else()
+	target_compile_definitions(JPLSpatial PUBLIC JPL_SIMD_CONFIGURED=1)
 endif()
 
 # Set output directories
