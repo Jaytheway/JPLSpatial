@@ -393,11 +393,13 @@ As much of the library as possible is header-only.
 - For an example of integrating **JPL Spatial** in an application see [JPL Spatial Application](https://github.com/Jaytheway/JPLSpatialApplication/)
 
 ## Compiling
-- To build the library, run appropriate build script in `build` folder.
+- To build the library with Visual Studio solution, run appropriate build script in [build](build) folder.
 - Some includes can be used as is as a single header include in your project.
 - Depends only on the standard template library.
 - Tests fetch `glm` to validate `glm::vec3` type working with library's interfaces
 - Uses C++20
+
+For detailed build instructions see [Building and integrating](build/README.md) section.
 
 ## Updates
 **JPL Spatial** is going to be updated as the need for more features matches my time availability to work on them.
