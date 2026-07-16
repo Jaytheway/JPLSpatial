@@ -1,6 +1,6 @@
 add_library(JPLSpatial STATIC)
 
-jpl_enable_ipo()
+jpl_enable_ipo(JPLSpatial)
 
 # Sources
 file(GLOB_RECURSE JPLSPATIAL_SRC
@@ -31,17 +31,10 @@ set_target_properties(JPLSpatial PROPERTIES FOLDER "Core")
 
 # Global defines
 target_compile_definitions(JPLSpatial
-  PRIVATE
+  PUBLIC
     JPL_HAS_ENV_PROPAGATION=0
     JPL_HAS_PATH_TRACING=0
     JPL_HAS_BEAM_TRACING=0
-)
-
-# Per-config defines (DEBUG/NDEBUG + JPL_TEST if tests are enabled)
-target_compile_definitions(JPLSpatial
-  PRIVATE
-    $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
-    $<$<BOOL:${BUILD_TESTING}>:JPL_TESTS>
 )
 
 # Linux PIC
@@ -72,4 +65,6 @@ else()
 endif()
 
 # Set output directories
-jpl_set_output_dirs(JPLSpatial)
+if(PROJECT_IS_TOP_LEVEL)
+  jpl_set_output_dirs(JPLSpatial)
+endif()

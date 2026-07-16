@@ -21,7 +21,7 @@ target_include_directories(JPLSpatialTests PRIVATE
 
 # === 3rd-party dependencies ===
 include(Dependencies.cmake)
-jpl_setup_dependencie()
+jpl_setup_dependencies()
 
 #jpl_enable_ipo()
 
@@ -46,12 +46,13 @@ gtest_discover_tests(JPLSpatialTests
 # Per-config defines
 target_compile_definitions(JPLSpatialTests PRIVATE
   JPL_TEST
-  $<$<BOOL:${TEST_WITH_JOLT}>:JPL_TEST_WITH_JOLT>
-  $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
+  $<$<BOOL:${JPL_TEST_WITH_JOLT}>:JPL_TEST_WITH_JOLT>
 )
 
 # Ensure we build a console app
 set_target_properties(JPLSpatialTests PROPERTIES WIN32_EXECUTABLE OFF)
 
 # Set output directories
-jpl_set_output_dirs(JPLSpatialTests)
+if(PROJECT_IS_TOP_LEVEL)
+  jpl_set_output_dirs(JPLSpatialTests)
+endif()
