@@ -56,6 +56,9 @@ namespace JPL
     template<class Traits = VBAPStandardTraits, auto cLUTType = VBAP::ELUTSize::KB_983>
     using VBAPanner3D = VBAPannerBase<VBAP::Panning3D<Traits, cLUTType>, Traits>;
 
+    /// Alias for 3D panner that doesn't customize any traits
+    using StandardPanner3D = VBAPanner3D<>;
+
     namespace VBAP
     {
         //==================================================================

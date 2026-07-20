@@ -39,7 +39,7 @@
 
 namespace JPL
 {
-	using StandardPanner = VBAPanner2D<VBAPStandardTraits>;
+	using StandardPanner = StandardPanner2D; // TODO: integrate 3D panning into PanningService
 	using StandardSourceLayout = typename StandardPanner::SourceLayoutType;
 	using StandardPanData = typename StandardPanner::PanUpdateData;
 	using StandardPanDataWithOrientation = typename StandardPanner::PanUpdateDataWithOrientation;

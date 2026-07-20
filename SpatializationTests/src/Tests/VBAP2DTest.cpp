@@ -152,7 +152,7 @@ namespace JPL
 	TEST_F(VBAPTest, InitializeLUT_PrecomputedGains)
 	{
 		// Initialize VBAP panner
-		VBAPanner2D<> panner;
+		StandardPanner2D panner;
 
 		struct VBAPTestCase
 		{
@@ -268,7 +268,7 @@ namespace JPL
 
 	TEST_F(VBAPTest, EachLUTEntryIsNormalized)
 	{
-		VBAPanner2D<> panner;
+		StandardPanner2D panner;
 
 		for (const NamedChannelMask& test : mChannelMasks)
 		{
@@ -391,10 +391,10 @@ namespace JPL
 			}
 		};
 
-		VBAPanner2D<> panner;
+		StandardPanner2D panner;
 		ASSERT_TRUE(panner.Initialize(ChannelMap::FromNumChannels(4)));
 
-		typename VBAPanner2D<>::SourceLayoutType data;
+		typename StandardPanner2D::SourceLayoutType data;
 
 		// Just test the fact that SourceLayout internally initializes minimum of 2 virtual sources per channel,
 		// the rest of data we can test fot the actual 2 virtual sources test case
@@ -424,7 +424,7 @@ namespace JPL
 
 			for (uint32 i = 0; i < data.ChannelGroups.size(); ++i)
 			{
-				const VBAPanner2D<>::ChannelGroup& channelGroup = data.ChannelGroups[i];
+				const StandardPanner2D::ChannelGroup& channelGroup = data.ChannelGroups[i];
 				const auto& excpectedChannelGroup = test.ExpectedChannelGroups[i];
 
 				SCOPED_TRACE(std::format("Channel: {}", channelGroup.Channel));
@@ -472,7 +472,7 @@ namespace JPL
 			}
 		};
 
-		VBAPanner2D<> panner;
+		StandardPanner2D panner;
 
 		for (const auto& testCase : testCases)
 		{
@@ -481,7 +481,7 @@ namespace JPL
 			ASSERT_TRUE(panner.Initialize(ChannelMap::FromNumChannels(static_cast<uint32>(testCase.ExpectedGains.size()))));
 
 			// Prepare virtual sources
-			std::vector<typename VBAPanner2D<>::VirtualSource> virtualSources;
+			std::vector<typename StandardPanner2D::VirtualSource> virtualSources;
 			const float weight = 1.0f / testCase.VirtualSourceAnglesDegrees.size();
 			for (float angleDeg : testCase.VirtualSourceAnglesDegrees)
 			{
@@ -700,9 +700,9 @@ namespace JPL
 
 	TEST_F(VBAPTest, VBAPPannedGainsL2Normalized)
 	{
-		VBAPanner2D<> panner;
+		StandardPanner2D panner;
 
-		using ParametersType = typename VBAPanner2D<>::PanUpdateData;
+		using ParametersType = typename StandardPanner2D::PanUpdateData;
 
 		const std::vector<NamedChannelLayout> testTargetsChannelMaps
 		{
@@ -806,7 +806,7 @@ namespace JPL
 				const ChannelMap& sourceChannels,
 				const ParametersType& params)
 			{
-				typename VBAPanner2D<>::SourceLayoutType data;
+				typename StandardPanner2D::SourceLayoutType data;
 				ASSERT_TRUE(panner.InitializeSourceLayout(sourceChannels, data));
 
 				const uint32 numTargetChannels = panner.GetNumChannels();
@@ -921,7 +921,7 @@ namespace JPL
 			if (not targetLayoutMap.IsValid() || targetLayoutMap.GetNumChannels() < 2)
 				continue;
 
-			VBAPanner2D<> panner;
+			StandardPanner2D panner;
 			ASSERT_TRUE(panner.Initialize(targetLayoutMap)) << targetLayoutName;
 
 			for (const auto& [sourceLayoutName, sourceLayoutMap] : mChannelMasks)
@@ -929,7 +929,7 @@ namespace JPL
 				if (not sourceLayoutMap.IsValid())
 					continue;
 
-				typename VBAPanner2D<>::SourceLayoutType sourceLayout;
+				typename StandardPanner2D::SourceLayoutType sourceLayout;
 				ASSERT_TRUE(panner.InitializeSourceLayout(sourceLayoutMap, sourceLayout)) << sourceLayoutName;
 
 				const float minDistanceBetweenSamples = sourceLayout.GetMinDistanceBetweenSamples();

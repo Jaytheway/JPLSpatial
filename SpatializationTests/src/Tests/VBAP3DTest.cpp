@@ -191,12 +191,12 @@ namespace JPL
 	{
 		for (const auto& [targetLayoutName, targetLayoutMap] : mValid3DLayouts)
 		{
-			VBAPanner3D<> panner;
+			StandardPanner3D panner;
 			ASSERT_TRUE(panner.Initialize(targetLayoutMap)) << targetLayoutName;
 
 			for (const auto& [sourceLayoutName, sourceLayoutMap] : mValidSourceLayouts)
 			{
-				typename VBAPanner3D<>::SourceLayoutType sourceLayout;
+				typename StandardPanner3D::SourceLayoutType sourceLayout;
 				EXPECT_TRUE(panner.InitializeSourceLayout(sourceLayoutMap, sourceLayout)) << sourceLayoutName;
 			}
 		}
@@ -355,7 +355,7 @@ namespace JPL
 	{
 		auto testLUTFor = [this](ChannelMap targetLayout)
 		{
-			using PannerType = VBAPanner3D<>;
+			using PannerType = StandardPanner3D;
 			using CodecType = typename PannerType::PanType::LUTCodec;
 
 			PannerType panner;
@@ -509,9 +509,9 @@ namespace JPL
 
 	TEST_F(VBAP3DTest, VBAPPannedGainsL2Normalized)
 	{
-		VBAPanner3D<> panner;
+		StandardPanner3D panner;
 
-		using ParametersType = typename VBAPanner3D<>::PanUpdateData;
+		using ParametersType = typename StandardPanner3D::PanUpdateData;
 
 		const std::vector<ChannelMap> testSourceChannelMaps
 		{
@@ -609,7 +609,7 @@ namespace JPL
 				const ChannelMap& sourceChannels,
 				const ParametersType& params)
 			{
-				typename VBAPanner3D<>::SourceLayoutType data;
+				typename StandardPanner3D::SourceLayoutType data;
 				ASSERT_TRUE(panner.InitializeSourceLayout(sourceChannels, data));
 
 				//const uint32 numTargetChannels = panner.GetNumChannels();
@@ -684,9 +684,9 @@ namespace JPL
 			}
 		};
 
-		VBAPanner3D<> panner;
+		StandardPanner3D panner;
 
-		static constexpr auto tolerance = static_cast<float>(VBAPanner3D<>::PanType::LUTCodec::cMaxComponentError);
+		static constexpr auto tolerance = static_cast<float>(StandardPanner3D::PanType::LUTCodec::cMaxComponentError);
 
 		for (const auto& testCase : testCases)
 		{
@@ -695,7 +695,7 @@ namespace JPL
 			ASSERT_TRUE(panner.Initialize(targetChannelMap));
 
 			// Prepare virtual sources
-			std::vector<typename VBAPanner3D<>::VirtualSource> virtualSources;
+			std::vector<typename StandardPanner3D::VirtualSource> virtualSources;
 			const float weight = 1.0f / testCase.VirtualSourceAnglesDegrees.size();
 			for (float angleDeg : testCase.VirtualSourceAnglesDegrees)
 			{
@@ -721,7 +721,7 @@ namespace JPL
 
 		// TODO: At Focus 1, spread 1 (or 0.5?), channel mapping should be direct from source to output, or do we still want to spread evenly?
 
-		using PannerType = VBAPanner3D<>;
+		using PannerType = StandardPanner3D;
 		PannerType panner;
 
 		// Quadraphonic channel layout
@@ -775,7 +775,7 @@ namespace JPL
 			// Add more tests if needed...
 		};
 
-		static constexpr auto tolerance = static_cast<float>(VBAPanner3D<>::PanType::LUTCodec::cMaxComponentError);
+		static constexpr auto tolerance = static_cast<float>(StandardPanner3D::PanType::LUTCodec::cMaxComponentError);
 
 		for (const auto& testCase : testCases)
 		{
@@ -880,7 +880,7 @@ namespace JPL
 			using PannerType = VBAPanner3D<VBAPBaseTraits<Vec3Type>>;
 			PannerType panner;
 
-			static constexpr auto tolerance = static_cast<float>(VBAPanner3D<>::PanType::LUTCodec::cMaxComponentError);
+			static constexpr auto tolerance = static_cast<float>(StandardPanner3D::PanType::LUTCodec::cMaxComponentError);
 
 			for (const auto& testCase : testCases)
 			{
@@ -920,12 +920,12 @@ namespace JPL
 
 		for (const auto& [targetLayoutName, targetLayoutMap] : mValid3DLayouts)
 		{
-			VBAPanner3D<> panner;
+			StandardPanner3D panner;
 			ASSERT_TRUE(panner.Initialize(targetLayoutMap)) << targetLayoutName;
 
 			for (const auto& [sourceLayoutName, sourceLayoutMap] : mValidSourceLayouts)
 			{
-				typename VBAPanner3D<>::SourceLayoutType sourceLayout;
+				typename StandardPanner3D::SourceLayoutType sourceLayout;
 				ASSERT_TRUE(panner.InitializeSourceLayout(sourceLayoutMap, sourceLayout)) << sourceLayoutName;
 
 				const float minDistanceBetweenSamples = sourceLayout.GetMinDistanceBetweenSamples();

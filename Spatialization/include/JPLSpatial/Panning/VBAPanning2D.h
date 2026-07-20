@@ -55,6 +55,9 @@ namespace JPL
     template<class Traits = VBAPStandardTraits>
     using VBAPanner2D = VBAPannerBase<VBAP::Panning2D<Traits>, Traits>;
 
+    /// Alias for 2D panner that doesn't customize any traits
+    using StandardPanner2D = VBAPanner2D<>;
+
     namespace VBAP
     {
         //==================================================================
