@@ -104,5 +104,5 @@ With `JPL_FETCH_DEPS=OFF`, CMake searches for installed GoogleTest, glm, and opt
 You should link `JPL::Spatial` and should not override exported `JPL_*` feature definitions manually.
 
 > [!NOTE]
-> The repository currently supports build-tree integration through `add_subdirectory`/`FetchContent`. 
+> The repository currently supports build-tree integration through `add_subdirectory`/`FetchContent`.
 > A complete installed CMake package workflow is not provided yet.

@@ -310,8 +310,8 @@ namespace JPL
 	public:
 
 		//======================================================================
-		/// Initialize LUT for a specific `channelMap`.
-		/// @param channelMap : target channel map to create LUT for
+		/// Initialize the panner specific output layout.
+		/// @param channelMap : target channel map to initialize the panner for
 		inline bool Initialize(ChannelMap channelMap);
 
 		[[nodiscard]] JPL_INLINE bool IsLUTInitialized() const noexcept { return mLUT != nullptr; }
@@ -328,7 +328,7 @@ namespace JPL
 		/// @param outGains : must be of size equals to number of target channels of this panner
 		JPL_INLINE void GetSpeakerGains(const Vec3Type& direction, std::span<float> outGains) const;
 
-		/// Get speaker gains from LUT based on 'direction' vector. Vecrorized version.
+		/// Get speaker gains from LUT based on 'direction' vector. Vectorized version.
 		/// Each SIMD lane must describe a normalized, non-zero unit vector; invalid input is undefined behavior.
 		/// @param outGains : must be of size equals to number of target channels of this panner
 		JPL_INLINE void GetSpeakerGains(const simd& dirX, const simd& dirY, const simd& dirZ, std::span<simd> outGains) const;

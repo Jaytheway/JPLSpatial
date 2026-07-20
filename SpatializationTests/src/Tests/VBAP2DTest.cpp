@@ -149,7 +149,7 @@ namespace JPL
 		};
 	};
 
-	TEST_F(VBAPTest, InitializeLUT_PrecomputedGains)
+	TEST_F(VBAPTest, Initialize_PrecomputedGains)
 	{
 		// Initialize VBAP panner
 		StandardPanner2D panner;
