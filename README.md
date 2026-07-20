@@ -17,10 +17,14 @@ The core library **has no external dependencies**.
 > otherwise, public APIs may change without deprecation or migration support.
 > Deprecation and migration support may be introduced as the API matures.
 
+<div align="center">
+
 [Hello JPL Spatial](Examples/HelloJPLSpatial) ·
 [Build and integrate](build/README.md) ·
 [Documentation and API reference](https://jaytheway.github.io/JPLSpatial/) ·
 [JPL Spatial Application](https://github.com/Jaytheway/JPLSpatialApplication/)
+
+</div>
 
 ## What it provides
 
