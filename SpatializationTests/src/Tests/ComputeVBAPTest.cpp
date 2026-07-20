@@ -71,7 +71,7 @@ namespace JPL
 			channelMap.ForEachChannel([&vectors](EChannel channel/*, uint32 index*/)
 			{
 				if (channel != EChannel::LFE)
-					vectors.push_back(VBAPStandartTraits::GetChannelVector(channel));
+					vectors.push_back(VBAPStandardTraits::GetChannelVector(channel));
 			});
 			return vectors;
 		}

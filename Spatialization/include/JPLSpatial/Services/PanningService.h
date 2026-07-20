@@ -39,10 +39,10 @@
 
 namespace JPL
 {
-	using StandartPanner = VBAPanner2D<VBAPStandartTraits>;
-	using StandartSourceLayout = typename StandartPanner::SourceLayoutType;
-	using StandartPanData = typename StandartPanner::PanUpdateData;
-	using StandartPanDataWithOrientation = typename StandartPanner::PanUpdateDataWithOrientation;
+	using StandardPanner = VBAPanner2D<VBAPStandardTraits>;
+	using StandardSourceLayout = typename StandardPanner::SourceLayoutType;
+	using StandardPanData = typename StandardPanner::PanUpdateData;
+	using StandardPanDataWithOrientation = typename StandardPanner::PanUpdateDataWithOrientation;
 
 	struct PanningServiceIDTag {};
 	using PanEffectHandle = IDType<PanningServiceIDTag>;

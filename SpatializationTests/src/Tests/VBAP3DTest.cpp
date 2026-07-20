@@ -325,7 +325,7 @@ namespace JPL
 			std::pmr::vector<Vec3> vertices(GetDefaultMemoryResource());
 			std::pmr::vector<Vec3i> triangles(GetDefaultMemoryResource());
 
-			const bool bSuccess = SpeakerTriangulation::TriangulateSpeakerLayout<&VBAPStandartTraits::GetChannelVector, Vec3>(test.Layout, vertices, triangles);
+			const bool bSuccess = SpeakerTriangulation::TriangulateSpeakerLayout<&VBAPStandardTraits::GetChannelVector, Vec3>(test.Layout, vertices, triangles);
 
 			if (IsValid3DLayout(test.Layout))
 			{
@@ -615,7 +615,7 @@ namespace JPL
 				//const uint32 numTargetChannels = panner.GetNumChannels();
 				const uint32 numChannels = sourceChannels.GetNumChannels() - sourceChannels.HasLFE();
 
-				std::array<float, VBAPStandartTraits::MAX_CHANNEL_MIX_MAP_SIZE> gainsData;
+				std::array<float, VBAPStandardTraits::MAX_CHANNEL_MIX_MAP_SIZE> gainsData;
 				std::span<float> gains(gainsData.data(), numChannels * panner.GetNumChannels());
 				std::ranges::fill(gains, 0.0f);
 
@@ -624,7 +624,7 @@ namespace JPL
 				SCOPED_TRACE(std::format("Source number of channels: {} | Parameters: {}",
 										 numChannels, paramsToString(params)));
 
-				typename VBAPStandartTraits::ChannelGains accumulatedGains;
+				typename VBAPStandardTraits::ChannelGains accumulatedGains;
 				accumulatedGains.fill(0.0f);
 
 				// Accumulate per output channel gains
@@ -793,7 +793,7 @@ namespace JPL
 				.Spread = testCase.Spread
 			};
 
-			typename VBAPStandartTraits::ChannelGains gains;
+			typename VBAPStandardTraits::ChannelGains gains;
 			gains.fill(0.0f);
 
 			panner.ProcessVBAPData(data, positionData, std::span(gains.data(), panner.GetNumChannels()));
@@ -823,7 +823,7 @@ namespace JPL
 				.Spread = 0.5f
 			};
 
-			StaticArray<float, VBAPStandartTraits::MAX_CHANNEL_MIX_MAP_SIZE> gains(numSourceChannels * pannerB.GetNumChannels(), 0.0f);
+			StaticArray<float, VBAPStandardTraits::MAX_CHANNEL_MIX_MAP_SIZE> gains(numSourceChannels * pannerB.GetNumChannels(), 0.0f);
 
 			const uint32 numOutputChannels = pannerB.GetNumChannels();
 

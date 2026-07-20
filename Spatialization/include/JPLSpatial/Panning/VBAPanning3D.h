@@ -46,14 +46,14 @@ namespace JPL
     /// Forward declaration
     namespace VBAP
     {
-        template<class Traits = VBAPStandartTraits, auto cLUTType = VBAP::ELUTSize::KB_983>
+        template<class Traits = VBAPStandardTraits, auto cLUTType = VBAP::ELUTSize::KB_983>
         class Panning3D;
     } // namespace VBAP
 
     //======================================================================
     /// Alias for VBAP panner for panning to a 3D speaker layout
     /// (i.e. layout including top/bottom speakers)
-    template<class Traits = VBAPStandartTraits, auto cLUTType = VBAP::ELUTSize::KB_983>
+    template<class Traits = VBAPStandardTraits, auto cLUTType = VBAP::ELUTSize::KB_983>
     using VBAPanner3D = VBAPannerBase<VBAP::Panning3D<Traits, cLUTType>, Traits>;
 
     namespace VBAP

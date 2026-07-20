@@ -122,7 +122,7 @@ namespace JPL
 				targetLayout.ForEachChannel([this](EChannel channel/*, uint32 index*/)
 				{
 					if (channel != EChannel::LFE)
-						Points.emplace_back(VBAPStandartTraits::GetChannelVector(channel), 0.0f);
+						Points.emplace_back(VBAPStandardTraits::GetChannelVector(channel), 0.0f);
 				});
 			}
 
@@ -812,7 +812,7 @@ namespace JPL
 				const uint32 numTargetChannels = panner.GetNumChannels();
 				const uint32 numChannels = sourceChannels.GetNumChannels() - sourceChannels.HasLFE();
 
-				std::array<float, VBAPStandartTraits::MAX_CHANNEL_MIX_MAP_SIZE> gainsData;
+				std::array<float, VBAPStandardTraits::MAX_CHANNEL_MIX_MAP_SIZE> gainsData;
 				std::span<float> gains(gainsData.data(), numChannels * panner.GetNumChannels());
 
 				panner.ProcessVBAPData(data, params, gains);
@@ -820,7 +820,7 @@ namespace JPL
 				SCOPED_TRACE(std::format("Source number of channels: {} | Parameters: {}",
 										 numChannels, paramsToString(params)));
 
-				typename VBAPStandartTraits::ChannelGains accumulatedGains;
+				typename VBAPStandardTraits::ChannelGains accumulatedGains;
 				accumulatedGains.fill(0.0f);
 
 				// Accumulate per output channel gains

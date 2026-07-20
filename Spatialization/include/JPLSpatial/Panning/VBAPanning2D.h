@@ -44,7 +44,7 @@ namespace JPL
     /// Forward declaration
     namespace VBAP
     {
-        template<class Traits = VBAPStandartTraits>
+        template<class Traits = VBAPStandardTraits>
         class Panning2D;
     } // namespace VBAP
 
@@ -52,7 +52,7 @@ namespace JPL
     //======================================================================
     /// Alias for VBAP panner for panning to a plane speaker layout
     /// (i.e. no top/bottom channels, only floor plane)
-    template<class Traits = VBAPStandartTraits>
+    template<class Traits = VBAPStandardTraits>
     using VBAPanner2D = VBAPannerBase<VBAP::Panning2D<Traits>, Traits>;
 
     namespace VBAP

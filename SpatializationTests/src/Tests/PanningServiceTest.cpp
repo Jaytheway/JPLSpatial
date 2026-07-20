@@ -89,7 +89,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, CreatePannerFor_ValidChannelMap_ReturnsPanner)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::ChannelMap validChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
         const auto* panner = panningService.CreatePannerFor(validChannelMap);
@@ -104,7 +104,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, CreatePannerFor_InvalidChannelMap_ReturnsNullptr)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::ChannelMap invalidChannelMap = CreateInvalidChannelMap();
         const auto* panner = panningService.CreatePannerFor(invalidChannelMap);
@@ -114,7 +114,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, CreatePannerFor_DuplicateCreation_ReturnsSamePanner)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::ChannelMap validChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
         const auto* panner1 = panningService.CreatePannerFor(validChannelMap);
@@ -127,7 +127,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, GetPannerFor_ExistingPanner_ReturnsPanner)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::ChannelMap validChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
         const auto* pannerCreated = panningService.CreatePannerFor(validChannelMap);
@@ -139,7 +139,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, GetPannerFor_NonExistentPanner_ReturnsNullptr)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::ChannelMap validChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
         const auto* panner = panningService.GetPannerFor(validChannelMap);
@@ -149,7 +149,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, InitializePanningEffect_ValidSourceAndTargets_ReturnsValidHandle)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::ChannelMap sourceChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
         std::vector<JPL::ChannelMap> targetChannelMaps = CreateValidTargetChannelMaps({ JPL::ChannelMask::Stereo, JPL::ChannelMask::Quad });
@@ -175,7 +175,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, InitializePanningEffect_ValidSourceNoTargets_ReturnsInvalidHandle)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::ChannelMap sourceChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
 
@@ -189,7 +189,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, InitializePanningEffect_InvalidSource_ReturnsInvalidHandle)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::ChannelMap invalidSourceChannelMap = CreateInvalidChannelMap();
         std::vector<JPL::ChannelMap> targetChannelMaps = CreateValidTargetChannelMaps({ JPL::ChannelMask::Stereo, JPL::ChannelMask::Quad });
@@ -205,7 +205,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, ReleasePanningEffect_ValidHandle_CleansUpData)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::ChannelMap sourceChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
         std::vector<JPL::ChannelMap> targetChannelMaps = CreateValidTargetChannelMaps({ JPL::ChannelMask::Stereo, JPL::ChannelMask::Quad });
@@ -235,7 +235,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, ReleasePanningEffect_InvalidHandle_ReturnsFalse)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::PanEffectHandle invalidHandle = CreateInvalidPanEffectHandle();
 
@@ -246,7 +246,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, CreatePanningDataFor_ValidSourceChannelMap_ReturnsVBAPData)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::ChannelMap sourceChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
         std::vector<JPL::ChannelMap> targetChannelMaps = CreateValidTargetChannelMaps({ JPL::ChannelMask::Stereo, JPL::ChannelMask::Quad });
@@ -267,7 +267,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, CreatePanningDataFor_InvalidSourceChannelMap_ReturnsNullptr)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::ChannelMap invalidSourceChannelMap = CreateInvalidChannelMap();
         std::vector<JPL::ChannelMap> targetChannelMaps = CreateValidTargetChannelMaps({ JPL::ChannelMask::Stereo, JPL::ChannelMask::Quad });
@@ -283,7 +283,7 @@ namespace JPL
 #if 0 // Now we enfrce initialization of panning sources with target layouts
     TEST_F(PanningServiceTest, MultipleSourcesAndTargets_IndependentData)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         // Initialize first source
         JPL::ChannelMap sourceChannelMap1 = CreateValidChannelMap(JPL::ChannelMask::Stereo);
@@ -328,7 +328,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, SetPanningEffectParameters_InvalidHandle_ReturnsFalse)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::PanEffectHandle invalidHandle = CreateInvalidPanEffectHandle();
 
@@ -339,7 +339,7 @@ namespace JPL
 
     TEST_F(PanningServiceTest, SetPanningEffectParameters_ValidHandle_ReturnsTrue)
     {
-        JPL::PanningService<VBAPStandartTraits> panningService;
+        JPL::PanningService<VBAPStandardTraits> panningService;
 
         JPL::ChannelMap sourceChannelMap = CreateValidChannelMap(JPL::ChannelMask::Stereo);
         std::vector<JPL::ChannelMap> targetChannelMaps = CreateValidTargetChannelMaps({ JPL::ChannelMask::Stereo, JPL::ChannelMask::Quad });

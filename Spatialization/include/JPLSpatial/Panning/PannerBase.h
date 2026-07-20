@@ -81,7 +81,7 @@ namespace JPL
 	class VBAPannerBase;
 
 	//======================================================================
-	using VBAPStandartTraits = VBAPBaseTraits<MinimalVec3>;
+	using VBAPStandardTraits = VBAPBaseTraits<MinimalVec3>;
 
 	//======================================================================
 	/// Customization. You can either inherit from this and shadow some types
