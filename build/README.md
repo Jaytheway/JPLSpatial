@@ -16,6 +16,19 @@ Standalone multi-config builds additionally provide:
 
 User-provided configurations are preserved.
 
+### Minimal example
+
+The dependency-free `HelloJPLSpatial` console example is a separate CMake
+project that adds JPL Spatial with `add_subdirectory`:
+
+```sh
+cmake -S Examples/HelloJPLSpatial -B build/hello
+cmake --build build/hello --config Release
+```
+
+See [Hello JPL Spatial](../Examples/HelloJPLSpatial) for expected output and
+usage notes.
+
 ### Integration
 
 Add the repository directly:
