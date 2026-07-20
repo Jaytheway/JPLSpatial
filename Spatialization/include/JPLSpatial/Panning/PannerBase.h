@@ -324,10 +324,12 @@ namespace JPL
 		JPL_INLINE bool InitializeSourceLayout(ChannelMap channelMap, SourceLayoutType& outLayout) const;
 
 		/// Get speaker gains from LUT based on 'direction' vector.
+		/// @param direction : must be a normalized, non-zero unit vector; invalid input is undefined behavior
 		/// @param outGains : must be of size equals to number of target channels of this panner
 		JPL_INLINE void GetSpeakerGains(const Vec3Type& direction, std::span<float> outGains) const;
 
 		/// Get speaker gains from LUT based on 'direction' vector. Vecrorized version.
+		/// Each SIMD lane must describe a normalized, non-zero unit vector; invalid input is undefined behavior.
 		/// @param outGains : must be of size equals to number of target channels of this panner
 		JPL_INLINE void GetSpeakerGains(const simd& dirX, const simd& dirY, const simd& dirZ, std::span<simd> outGains) const;
 
