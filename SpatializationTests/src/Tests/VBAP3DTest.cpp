@@ -192,7 +192,7 @@ namespace JPL
 		for (const auto& [targetLayoutName, targetLayoutMap] : mValid3DLayouts)
 		{
 			VBAPanner3D<> panner;
-			ASSERT_TRUE(panner.InitializeLUT(targetLayoutMap)) << targetLayoutName;
+			ASSERT_TRUE(panner.Initialize(targetLayoutMap)) << targetLayoutName;
 
 			for (const auto& [sourceLayoutName, sourceLayoutMap] : mValidSourceLayouts)
 			{
@@ -362,11 +362,11 @@ namespace JPL
 
 			if (!IsValid3DLayout(targetLayout))
 			{
-				EXPECT_FALSE(panner.InitializeLUT(targetLayout));
+				EXPECT_FALSE(panner.Initialize(targetLayout));
 				return;
 			}
 
-			ASSERT_TRUE(panner.InitializeLUT(targetLayout));
+			ASSERT_TRUE(panner.Initialize(targetLayout));
 
 			const auto* LUT = panner.GetLUT();
 			ASSERT_TRUE(LUT != nullptr);
@@ -603,7 +603,7 @@ namespace JPL
 			if (test.Layout.GetNumChannels() >= 13)
 				continue;
 
-			ASSERT_TRUE(panner.InitializeLUT(test.Layout));
+			ASSERT_TRUE(panner.Initialize(test.Layout));
 
 			auto testResultingGainSum = [&panner](
 				const ChannelMap& sourceChannels,
@@ -692,7 +692,7 @@ namespace JPL
 		{
 			SCOPED_TRACE(testCase.Description);
 
-			ASSERT_TRUE(panner.InitializeLUT(targetChannelMap));
+			ASSERT_TRUE(panner.Initialize(targetChannelMap));
 
 			// Prepare virtual sources
 			std::vector<typename VBAPanner3D<>::VirtualSource> virtualSources;
@@ -725,7 +725,7 @@ namespace JPL
 		PannerType panner;
 
 		// Quadraphonic channel layout
-		ASSERT_TRUE(panner.InitializeLUT(targetChannelMap));
+		ASSERT_TRUE(panner.Initialize(targetChannelMap));
 
 		struct ProcessVBAPDataTestCase
 		{
@@ -807,7 +807,7 @@ namespace JPL
 
 		{
 			PannerType pannerB;
-			pannerB.InitializeLUT(ChannelMap::FromChannelMask(ChannelMask::Surround_9_0_4));
+			pannerB.Initialize(ChannelMap::FromChannelMask(ChannelMask::Surround_9_0_4));
 
 			SCOPED_TRACE("Mono source in front, 9.0.4 target, equal gains LR");
 			static constexpr uint32 numSourceChannels = 1;
@@ -886,7 +886,7 @@ namespace JPL
 			{
 				SCOPED_TRACE(testCase.Description);
 
-				ASSERT_TRUE(panner.InitializeLUT(targetChannelMap));
+				ASSERT_TRUE(panner.Initialize(targetChannelMap));
 
 				// Prepare virtual sources
 				std::vector<typename PannerType::VirtualSource> virtualSources;
@@ -921,7 +921,7 @@ namespace JPL
 		for (const auto& [targetLayoutName, targetLayoutMap] : mValid3DLayouts)
 		{
 			VBAPanner3D<> panner;
-			ASSERT_TRUE(panner.InitializeLUT(targetLayoutMap)) << targetLayoutName;
+			ASSERT_TRUE(panner.Initialize(targetLayoutMap)) << targetLayoutName;
 
 			for (const auto& [sourceLayoutName, sourceLayoutMap] : mValidSourceLayouts)
 			{

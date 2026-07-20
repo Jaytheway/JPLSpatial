@@ -276,7 +276,7 @@ namespace JPL
 		auto& panner = mPanners[targetChannelMap];
 		if (!panner.IsInitialized())
 		{
-			if (!panner.InitializeLUT(targetChannelMap))
+			if (!panner.Initialize(targetChannelMap))
 			{
 				mPanners.erase(targetChannelMap);
 				return nullptr;

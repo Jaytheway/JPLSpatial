@@ -312,7 +312,7 @@ namespace JPL
 		//======================================================================
 		/// Initialize LUT for a specific `channelMap`.
 		/// @param channelMap : target channel map to create LUT for
-		inline bool InitializeLUT(ChannelMap channelMap);
+		inline bool Initialize(ChannelMap channelMap);
 
 		[[nodiscard]] JPL_INLINE bool IsLUTInitialized() const noexcept { return mLUT != nullptr; }
 
@@ -444,7 +444,7 @@ namespace JPL
 	}
 
 	template<class PannerType, class Traits>
-	inline bool VBAPannerBase<PannerType, Traits>::InitializeLUT(ChannelMap channelMap)
+	inline bool VBAPannerBase<PannerType, Traits>::Initialize(ChannelMap channelMap)
 	{
 		if (auto error = PanType::IsValidTargetChannelMap(channelMap))
 		{

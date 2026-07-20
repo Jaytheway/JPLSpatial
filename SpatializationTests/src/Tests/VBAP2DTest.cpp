@@ -221,12 +221,12 @@ namespace JPL
 
 			if (!testCase.channelMap.IsValid())
 			{
-				EXPECT_FALSE(panner.InitializeLUT(testCase.channelMap));
+				EXPECT_FALSE(panner.Initialize(testCase.channelMap));
 				continue;
 			}
 			else
 			{
-				EXPECT_TRUE(panner.InitializeLUT(testCase.channelMap));
+				EXPECT_TRUE(panner.Initialize(testCase.channelMap));
 			}
 
 			std::vector<float> lutGains(panner.GetNumChannels(), 0.0f);
@@ -277,12 +277,12 @@ namespace JPL
 			const ChannelMap channelMap = test.Layout;
 			if (!channelMap.IsValid() || channelMap.GetNumChannels() == 1)
 			{
-				EXPECT_FALSE(panner.InitializeLUT(channelMap));
+				EXPECT_FALSE(panner.Initialize(channelMap));
 				continue;
 			}
 			else
 			{
-				ASSERT_TRUE(panner.InitializeLUT(channelMap));
+				ASSERT_TRUE(panner.Initialize(channelMap));
 			}
 
 			for (int pos = 0; pos < panner.GetLUT()->GetLUTResolution(); ++pos)
@@ -392,7 +392,7 @@ namespace JPL
 		};
 
 		VBAPanner2D<> panner;
-		ASSERT_TRUE(panner.InitializeLUT(ChannelMap::FromNumChannels(4)));
+		ASSERT_TRUE(panner.Initialize(ChannelMap::FromNumChannels(4)));
 
 		typename VBAPanner2D<>::SourceLayoutType data;
 
@@ -478,7 +478,7 @@ namespace JPL
 		{
 			SCOPED_TRACE(testCase.Description);
 
-			ASSERT_TRUE(panner.InitializeLUT(ChannelMap::FromNumChannels(static_cast<uint32>(testCase.ExpectedGains.size()))));
+			ASSERT_TRUE(panner.Initialize(ChannelMap::FromNumChannels(static_cast<uint32>(testCase.ExpectedGains.size()))));
 
 			// Prepare virtual sources
 			std::vector<typename VBAPanner2D<>::VirtualSource> virtualSources;
@@ -515,7 +515,7 @@ namespace JPL
 		PannerType panner;
 
 		// Quadraphonic channel layout
-		ASSERT_TRUE(panner.InitializeLUT(ChannelMap::FromNumChannels(4)));
+		ASSERT_TRUE(panner.Initialize(ChannelMap::FromNumChannels(4)));
 
 		struct ProcessVBAPDataTestCase
 		{
@@ -635,7 +635,7 @@ namespace JPL
 
 		{
 			PannerType stereoPanner;
-			stereoPanner.InitializeLUT(ChannelMap::FromNumChannels(2));
+			stereoPanner.Initialize(ChannelMap::FromNumChannels(2));
 
 			SCOPED_TRACE("Mono source in front, Stereo target, equal gains");
 			static constexpr uint32 numSourceChannels = 1;
@@ -800,7 +800,7 @@ namespace JPL
 			if (!test.Layout.IsValid() || test.Layout.GetNumChannels() < 2)
 				continue;
 
-			ASSERT_TRUE(panner.InitializeLUT(test.Layout));
+			ASSERT_TRUE(panner.Initialize(test.Layout));
 
 			auto testResultingGainSum = [&panner](
 				const ChannelMap& sourceChannels,
@@ -877,7 +877,7 @@ namespace JPL
 			using PannerType = VBAPanner2D<VBAPBaseTraits<Vec3Type>>;
 			PannerType panner;
 
-			ASSERT_TRUE(panner.InitializeLUT(targetChannelMap));
+			ASSERT_TRUE(panner.Initialize(targetChannelMap));
 
 			typename PannerType::SourceLayoutType sourceLayout;
 			ASSERT_TRUE(panner.InitializeSourceLayout(sourceChannelMap, sourceLayout));
@@ -922,7 +922,7 @@ namespace JPL
 				continue;
 
 			VBAPanner2D<> panner;
-			ASSERT_TRUE(panner.InitializeLUT(targetLayoutMap)) << targetLayoutName;
+			ASSERT_TRUE(panner.Initialize(targetLayoutMap)) << targetLayoutName;
 
 			for (const auto& [sourceLayoutName, sourceLayoutMap] : mChannelMasks)
 			{
