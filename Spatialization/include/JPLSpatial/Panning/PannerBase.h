@@ -63,8 +63,8 @@
 
 namespace JPL
 {
-#define JPL_SCOPE_TIME(outFloat)
 #define JPL_SCOPE_TIME(outFloat) // TODO
+
 	// TODO: maybe find a better place for this function
 	JPL_INLINE float GetSpreadFromSourceSize(float sourceSize, float distance)
 	{
