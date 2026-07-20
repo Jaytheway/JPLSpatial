@@ -78,6 +78,10 @@ namespace JPL
         Invalid = 0
     };
 
+    constexpr std::string_view ToString(EChannel channel);
+    constexpr std::string_view ToStringShort(EChannel channel);
+
+
     //==========================================================================
     /// Common channel masks
     namespace ChannelMask
@@ -315,6 +319,68 @@ namespace JPL
         default:
             JPL_ASSERT(false, "Unknown channel mask.");
             return "< UKNOWN >";
+        }
+    }
+
+    constexpr std::string_view ToString(EChannel channel)
+    {
+        switch (channel)
+        {
+        case EChannel::FrontLeft:           return "FrontLeft";
+        case EChannel::FrontRight:          return "FrontRight";
+        case EChannel::FrontCenter:         return "FrontCenter";
+        case EChannel::LFE:                 return "LFE";
+        case EChannel::SideLeft:            return "SideLeft";
+        case EChannel::SideRight:           return "SideRight";
+        case EChannel::FrontLeftCenter:     return "FrontLeftCenter";
+        case EChannel::FrontRightCenter:    return "FrontRightCenter";
+        case EChannel::BackLeft:            return "BackLeft";
+        case EChannel::BackRight:           return "BackRight";
+        case EChannel::BackCenter:          return "BackCenter";
+        case EChannel::WideLeft:            return "WideLeft";
+        case EChannel::WideRight:           return "WideRight";
+        case EChannel::TopCenter:           return "TopCenter";
+        case EChannel::TopFrontLeft:        return "TopFrontLeft";
+        case EChannel::TopFrontCenter:      return "TopFrontCenter";
+        case EChannel::TopFrontRight:       return "TopFrontRight";
+        case EChannel::TopSideLeft:         return "TopSideLeft";
+        case EChannel::TopSideRight:        return "TopSideRight";
+        case EChannel::TopBackLeft:         return "TopBackLeft";
+        case EChannel::TopBackCenter:       return "TopBackCenter";
+        case EChannel::TopBackRight:        return "TopBackRight";
+        default:
+        case EChannel::Invalid: return "Invalid";
+        }
+    }
+
+    constexpr std::string_view ToStringShort(EChannel channel)
+    {
+        switch (channel)
+        {
+        case EChannel::FrontLeft:           return "FL";
+        case EChannel::FrontRight:          return "FR";
+        case EChannel::FrontCenter:         return "FC";
+        case EChannel::LFE:                 return "LFE";
+        case EChannel::SideLeft:            return "SL";
+        case EChannel::SideRight:           return "SR";
+        case EChannel::FrontLeftCenter:     return "FLC";
+        case EChannel::FrontRightCenter:    return "FRC";
+        case EChannel::BackLeft:            return "BL";
+        case EChannel::BackRight:           return "BR";
+        case EChannel::BackCenter:          return "BC";
+        case EChannel::WideLeft:            return "WL";
+        case EChannel::WideRight:           return "WR";
+        case EChannel::TopCenter:           return "TC";
+        case EChannel::TopFrontLeft:        return "TFL";
+        case EChannel::TopFrontCenter:      return "TFC";
+        case EChannel::TopFrontRight:       return "TFR";
+        case EChannel::TopSideLeft:         return "TSL";
+        case EChannel::TopSideRight:        return "TSR";
+        case EChannel::TopBackLeft:         return "TBL";
+        case EChannel::TopBackCenter:       return "TBC";
+        case EChannel::TopBackRight:        return "TBR";
+        default:
+        case EChannel::Invalid: return "-";
         }
     }
 } // namespace JPL
