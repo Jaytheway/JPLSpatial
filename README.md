@@ -91,9 +91,11 @@ structures, and synchronization policy.
 
 | Layer | Use it when |
 |---|---|
-| Low-level panners, propagation algorithms, and DSP | You want explicit control or need one feature in an existing engine/audio graph. This is the recommended starting point today. |
-| Services | You want JPL Spatial to manage reusable layouts, handles, cached parameters, and repeated evaluation. |
-| `SpatialManager` | You want one object to coordinate sources, listeners, and services. This is the oldest high-level API and remains under active design review. |
+| Components (panners, propagation algorithms, and DSP) | You want explicit control or need one feature in an existing engine/audio graph. This is the recommended starting point today. |
+| Services* | You want JPL Spatial to manage reusable layouts, handles, cached parameters, and repeated evaluation. |
+| Source Manager* | You want one object to coordinate sources, listeners, and services. |
+
+\* *The Services and Source Manager layers are older high-level APIs and remain under active design review.*
 
 The layers are optional rather than progressive requirements. An integration can
 use a low-level panner directly while using a service for another feature.
@@ -164,7 +166,7 @@ The following configurations are built and tested by
 | Linux | ARM64* | GCC | Debug |
 | macOS | ARM64* | AppleClang | Debug |
 
-\* ARM64 configurations are tested through the extended CI workflow.
+\* *ARM64 configurations are tested through the extended CI workflow.*
 
 Linux/Clang Debug builds are additionally tested with AddressSanitizer.
 
