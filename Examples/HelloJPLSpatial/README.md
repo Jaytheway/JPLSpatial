@@ -1,4 +1,4 @@
-# Hello JPL Spatial
+# Hello JPL Spatial {#hello-example}
 
 This dependency-free console example uses JPL Spatial's low-level 2D VBAP
 panner. It places a point source in front of, to the right of, behind, and to the

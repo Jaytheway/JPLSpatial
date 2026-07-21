@@ -967,7 +967,9 @@ WARN_LOGFILE           =
 
 INPUT                  = ./Spatialization/include \
                          ./Documentation/pages \
-                         ./build/README.md
+                         ./build/README.md \
+                         ./Examples/HelloJPLSpatial/README.md \
+                         ./Examples/SpatializerExample/README.md
 
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses
