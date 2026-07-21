@@ -195,7 +195,7 @@ namespace JPL::Spatial
 		/// to process changed positions of all the sources.
 		JPL_INLINE void AdvanceSimulation();
 
-		JPL_INLINE std::span<const SourceId> GetLastUpdatedSource() const;
+		JPL_INLINE std::span<const SourceId> GetLastUpdatedSources() const;
 
 		JPL_INLINE ListenerId CreateListener();
 		JPL_INLINE bool DeleteListener(ListenerId listener);
@@ -430,7 +430,7 @@ namespace JPL::Spatial
 	}
 
 	template<CVec3 Vec3Type, class VBAPTraits>
-	JPL_INLINE std::span<const SourceId> SpatialManager<Vec3Type, VBAPTraits>::GetLastUpdatedSource() const
+	JPL_INLINE std::span<const SourceId> SpatialManager<Vec3Type, VBAPTraits>::GetLastUpdatedSources() const
 	{
 		return mLastUpdatedSources;
 	}
