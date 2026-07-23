@@ -22,10 +22,23 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v6
 
-    - name: Install Doxygen
+    - name: Install Doxygen 1.12.0
+      env:
+        DOXYGEN_VERSION: 1.12.0
       run: |
-        sudo apt-get update
-        sudo apt-get install --yes doxygen
+        archive="$RUNNER_TEMP/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz"
+        release_version="${DOXYGEN_VERSION//./_}"
+        curl --fail --location --silent --show-error \
+          --output "$archive" \
+          "https://github.com/doxygen/doxygen/releases/download/Release_${release_version}/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz"
+        tar --extract --gzip --file "$archive" --directory "$RUNNER_TEMP"
+        echo "$RUNNER_TEMP/doxygen-${DOXYGEN_VERSION}/bin" >> "$GITHUB_PATH"
+
+    - name: Verify Doxygen version
+      run: |
+        doxygen_version="$(doxygen --version)"
+        echo "Doxygen ${doxygen_version}"
+        test "$doxygen_version" = "1.12.0"
 
     - name: Configure Pages
       uses: actions/configure-pages@v6
@@ -41,4 +54,3 @@ jobs:
     - name: Deploy
       id: deployment
       uses: actions/deploy-pages@v5
-      
