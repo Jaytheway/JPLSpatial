@@ -38,7 +38,7 @@ jobs:
       run: |
         doxygen_version="$(doxygen --version)"
         echo "Doxygen ${doxygen_version}"
-        test "$doxygen_version" = "1.12.0"
+        test "${doxygen_version%% *}" = "1.12.0"
 
     - name: Configure Pages
       uses: actions/configure-pages@v6
