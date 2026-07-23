@@ -73,7 +73,10 @@ namespace JPL
 			Edge& operator =(const Edge&) = delete;
 		public:
 
-			Edge(Face* inFace, int inStartIdx);
+			Edge(Face* inFace, int inStartIdx)
+				: mFace(inFace), mStartIdx(inStartIdx)
+			{
+			}
 
 			/// Get the previous edge
 			Edge* GetPreviousEdge();
@@ -320,13 +323,6 @@ namespace JPL
 
 namespace JPL
 {
-	//==========================================================================
-	template<CVec3 Vec3Type>
-	inline ConvexHullBuilder<Vec3Type>::Edge::Edge(ConvexHullBuilder<Vec3Type>::Face* inFace, int inStartIdx)
-		: mFace(inFace), mStartIdx(inStartIdx)
-	{
-	}
-
 	template<CVec3 Vec3Type>
 	inline ConvexHullBuilder<Vec3Type>::Edge* ConvexHullBuilder<Vec3Type>::Edge::GetPreviousEdge()
 	{

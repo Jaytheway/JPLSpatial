@@ -330,7 +330,10 @@ namespace JPL
 
 		/// Get speaker gains from LUT based on 'direction' vector. Vectorized version.
 		/// Each SIMD lane must describe a normalized, non-zero unit vector; invalid input is undefined behavior.
-		/// @param outGains : must be of size equals to number of target channels of this panner
+		/// @param dirX X components of the direction vectors.
+		/// @param dirY Y components of the direction vectors.
+		/// @param dirZ Z components of the direction vectors.
+		/// @param outGains Must have one entry per target channel of this panner.
 		JPL_INLINE void GetSpeakerGains(const simd& dirX, const simd& dirY, const simd& dirZ, std::span<simd> outGains) const;
 
 
@@ -355,10 +358,13 @@ namespace JPL
 		/// by `getOutGains` callback.
 		/// SourceLayout must be initialized beforehand.
 		/// E.g. this would be called for each source that has unique channel layout or panning state
+		/// @param sourceLayout Initialized layout of the source channels.
+		/// @param updateData Direction, focus, and spread parameters to process.
 		/// @param outChannelMixMap :	outptut channel mixing map, where for each
 		///							source chanel there's a set of gain values
 		///							for each target (e.g. for Stereo->Stereo
 		///							[ sl_tl, sl_tr, sr_tl, sr_tr ])
+		/// @param onVSsGeneratedCb Optional callback receiving the generated virtual-source directions and source-channel index.
 		template<class OnChannelGeneratedCallback = std::identity>
 		JPL_INLINE void ProcessVBAPData(const SourceLayoutType& sourceLayout,
 										const PanUpdateData& updateData,
@@ -372,8 +378,10 @@ namespace JPL
 										OnChannelGeneratedCallback&& onVSsGeneratedCb = {}) const;
 
 		//======================================================================
-		/// Get and accumulate speaker gains for all virtual soruces into @outGains
-		/// Weights of the virtual sources must be L1 normalized
+		/// Get and accumulate speaker gains for all virtual sources.
+		/// Weights of the virtual sources must be L1 normalized.
+		/// @param virtualSources Virtual sources to process.
+		/// @param outGains Accumulated speaker gains.
 		JPL_INLINE void ProcessVirtualSources(std::span<const VirtualSource> virtualSources,
 											  std::span<float> outGains) const;
 

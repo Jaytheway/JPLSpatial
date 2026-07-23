@@ -293,7 +293,8 @@ namespace JPL
 				}
 			}
 
-			/// @param index: index of the sample to mirror, must be < mRing;
+			/// @param index Index of the sample to mirror; must be less than the ring size.
+			/// @param maxWindow Indices below this value are mirrored.
 			inline uint32_t GetMirrorIndex(uint32_t index, uint32_t maxWindow) const
 			{
 				// (branch version)

@@ -196,8 +196,10 @@ namespace JPL
 		JPL_INLINE bool SetPanningEffectSpread(PanEffectHandle effect, float spread);
 
 		/// Process channel gains for the source for all target channel maps initialized for it.
-		/// @param position		position of the source relative to listener
-		/// @returns				false if the source hanlde is invalid, true otherwise
+		/// @param source Handle of the panning effect to evaluate.
+		/// @param position Position of the source relative to the listener.
+		/// @param spatialziationType Spatialization mode used for the evaluation.
+		/// @return False if the source handle is invalid, true otherwise.
 		JPL_INLINE bool EvaluateDirection(PanEffectHandle source, const Position<Vec3Type>& position, ESpatializationType spatialziationType);
 
 		/// @returns		channel mix map gains for the source and target channel map,

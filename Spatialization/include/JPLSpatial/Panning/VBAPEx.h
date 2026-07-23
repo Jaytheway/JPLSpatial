@@ -41,9 +41,12 @@
 
 namespace JPL
 {
-	/// Compute 3-dimentional VBAP for a point within triangle of speaker directions.
-	/// @param sourceDirection : normalized direction from listener towards the source
-	/// @returns : gain factors for the three speakers, not normalized
+	/// Compute three-dimensional VBAP for a point within a triangle of speaker directions.
+	/// @param sourceDirection Normalized direction from the listener towards the source.
+	/// @param triPointA Direction of the first speaker in the triangle.
+	/// @param triPointB Direction of the second speaker in the triangle.
+	/// @param triPointC Direction of the third speaker in the triangle.
+	/// @return Gain factors for the three speakers, not normalized.
 	template<CVec3 Vec3Type>
 	[[nodiscard]] inline Vec3Type ComputeVBAP(const Vec3Type& sourceDirection, const Vec3Type& triPointA, const Vec3Type& triPointB, const Vec3Type& triPointC)
 	{

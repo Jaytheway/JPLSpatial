@@ -35,8 +35,8 @@ namespace JPL
 
         static constexpr uint32 InputLength = 1;
 
-        /// @param fraction must be in (0,1).
-        inline void SetFraction(float /*fraction*/)
+        /// @param fraction Fractional offset in [0, 1]; ignored by nearest interpolation.
+        inline void SetFraction([[maybe_unused]] float fraction)
         {
             //JPL_ASSERT(fraction >= 0.0f && fraction <= 1.0f);
             //mFraction = static_cast<uint32_t>(fraction + 0.5f);

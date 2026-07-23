@@ -48,7 +48,7 @@ namespace JPL
 		}
 
 		/// Creates a basis from the given forward (normal vector).
-		/// @param n : normal vector, must be normalized
+		/// @param forward Normal vector; must be normalized.
 		[[nodiscard]] JPL_INLINE static Basis FromForward(const Vec3& forward) noexcept
 		{
 			Basis basis{ .Z = forward };
@@ -73,7 +73,8 @@ namespace JPL
 		/// Build a rotation "matrix" axis–angle.
 		/// Columns are R*ex, R*ey, R*ez (column-major).
 		/// (this is cheaper than Quat if > 2 vectors need the same rotation)
-		/// @param axis : must be a normalized direction vector
+		/// @param axis Normalized rotation axis.
+		/// @param angleRad Rotation angle in radians.
 		[[nodiscard]] inline static Basis Rotation(const Vec3& axis, Float angleRad) noexcept
 		{
 			const auto [s, c] = Math::SinCos(angleRad);

@@ -248,7 +248,8 @@ namespace JPL::VBAP
         JPL_INLINE explicit LUTQuery(const LUTType& lut) noexcept : LUT(lut) {}
 
         /// Function to query LUT gains for a direction.
-        /// @param direction : has to be normalized unit vector
+        /// @param direction Normalized direction unit vector.
+        /// @param outSpeakerGains Speaker indices and gains for the queried LUT cell.
         template<CVec3 Vec3Type>
         void GainsFor(const Vec3Type& direction, VBAPCell& outSpeakerGains) const;
 

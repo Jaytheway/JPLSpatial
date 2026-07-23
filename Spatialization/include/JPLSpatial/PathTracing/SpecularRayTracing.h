@@ -159,11 +159,13 @@ namespace JPL
 		/// 
 		/// Note: here source is assumed to be listener and thus the Image Sources
 		/// are constructed from the receivers.
-		/// 
-		/// @param sourceData		data for the source of the traces
-		/// @param receiverData	data for the receiver of the traces
-		/// @param traces			traces done from the source position
-		/// 
+		///
+		/// @param sceneInterface Scene-query adapter used to validate paths.
+		/// @param sourceData Data for the source of the traces.
+		/// @param traces Traces generated from the source position.
+		/// @param receiverData Data for the receivers of the traces.
+		/// @param caches Per-receiver specular-path caches updated with valid paths.
+		///
 		/// @tparam SpecularPathCacheContainer	must have operator[] overloaded
 		///									to access cache for a receiver index
 		template<class SceneType, class SpecularPathCacheContainer> 
@@ -178,12 +180,14 @@ namespace JPL
 		/// 
 		/// Note: here source is assumed to be listener and thus the Image Sources
 		/// are constructed from the receivers.
-		/// 
-		/// @param sourceData		data for the source of the traces
-		/// @param receiverData	data for the receivers of the traces
-		/// @param sourceTraces	traces done from the source position
-		/// @param receiverTraces	traces done from the positions of receivers
-		/// 
+		///
+		/// @param sceneInterface Scene-query adapter used to validate paths.
+		/// @param sourceData Data for the source of the traces.
+		/// @param sourceTraces Traces generated from the source position.
+		/// @param receiverData Data for the receivers of the traces.
+		/// @param receiverTraces Traces generated from the receiver positions.
+		/// @param caches Per-receiver specular-path caches updated with valid paths.
+		///
 		/// @tparam SpecularPathCacheContainer	must have operator[] overloaded
 		///									to access cache for a receiver index
 		template<class SceneType, class SpecularPathCacheContainer>

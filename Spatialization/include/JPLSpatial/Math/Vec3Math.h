@@ -100,9 +100,9 @@ namespace JPL::Math
 	}
 
 	/// Rotate a 3D vector using Rodrigues' formula
-	/// @param v : vector to rotate
-	/// @param k : axis to rotate 'v' around
-	/// @param theta : angle to rotate 'v' around 'k' axis
+	/// @param vector Vector to rotate.
+	/// @param rotationAxis Normalized axis to rotate around.
+	/// @param angleRad Rotation angle in radians.
 	template<CVec3 Vec3>
 	[[nodiscard]] JPL_INLINE Vec3 RotateVector(const Vec3& vector, const Vec3& rotationAxis, float angleRad) noexcept
 	{

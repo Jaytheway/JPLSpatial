@@ -107,15 +107,14 @@ namespace JPL
 		/// `attenuationFunction` must be constructed with make_pmr_shared
 		JPL_INLINE AttenuationCurveRef AssignAttenuationCurve(DirectEffectHandle source, AttenuationCurveRef attenuationFunction);
 
-		/// Compute direct path parameters based on position of the soruce and listener.
+		/// Compute direct path parameters based on the positions of the source and listener.
 		/// This can be used to compute parameters for position of a source
 		/// relative to listener, as well as position of the listener relative
 		/// to a source.
-		/// 
-		/// @param position			position to compute parameters for, in world space
-		/// @param referencePoint		reference point to compute parameters from, in world space
-		/// 
-		/// @returns					paramteres of the position relative to the reference point
+		///
+		/// @param source Source position and orientation in world space.
+		/// @param listener Listener position and orientation in world space.
+		/// @return Direct-path parameters of the source relative to the listener.
 		template<CVec3 Vec3Type>
 		static JPL_INLINE DirectPathResult<Vec3Type> ProcessDirectPath(const Position<Vec3Type>& source,
 															 const Position<Vec3Type>& listener);

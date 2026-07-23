@@ -55,7 +55,8 @@ namespace JPL
         }
 
         /// Construct quaternion from the a rotation around the given axis.
-        /// @param axis : must be a normalized direction vector
+        /// @param axis Normalized rotation axis.
+        /// @param angleRad Rotation angle in radians.
         [[nodiscard]] static JPL_INLINE Quat Rotation(const Vec3& axis, Float angleRad) noexcept
         {
             const Float halfAngle = Float(0.5) * angleRad;

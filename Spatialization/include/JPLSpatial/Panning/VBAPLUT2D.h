@@ -129,7 +129,7 @@ namespace JPL::VBAP
         [[nodiscard]] JPL_INLINE size_t GetLUTResolution() const noexcept { return mLUTResolution; }
 
         /// Get LUT position from direction angle, where 0.0 is forward
-        /// @param angleNormalized angle in radians in [0, 2Pi]
+        /// @param angleNormalised Angle in radians in [0, 2Pi].
         [[nodiscard]] JPL_INLINE int AngleNormalizedToLUTPosition(float angleNormalised) const;
 
         /// Get LUT position from direction angle, where 0.0 is forward
@@ -187,8 +187,8 @@ namespace JPL::VBAP
         JPL_INLINE explicit LUTQuery2D(const LUT2D& lut) noexcept : LUT(lut) {}
 
         /// Function to query LUT gains for a direction.
-        /// @param direction : has to be normalized unit vector
-        /// @param outGains : must be of size at least number of target speakers the LUT was built for
+        /// @param direction Direction to query.
+        /// @param outGains Must have at least one entry per target speaker in the LUT.
         template<CVec3 Vec3Type>
         JPL_INLINE void GainsFor(const Vec3Type& direction, std::span<float> outGains) const
         {
@@ -205,8 +205,10 @@ namespace JPL::VBAP
         }
 
         /// Function to query LUT gains for a direction.
-        /// @param direction : has to be normalized unit vector
-        /// @param outGains : must be of size at least number of target speakers the LUT was built for
+        /// @param dirX X components of the direction vectors.
+        /// @param dirY Y components of the direction vectors; ignored by this 2D query.
+        /// @param dirZ Z components of the direction vectors.
+        /// @param outGains Must have at least one entry per target speaker in the LUT.
         JPL_INLINE void GainsFor(const simd& dirX, const simd& dirY, const simd& dirZ, std::span<simd> outGains) const
         {
             LUT.GetSpeakerGains(
