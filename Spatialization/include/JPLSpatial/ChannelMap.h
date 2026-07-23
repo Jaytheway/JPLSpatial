@@ -90,58 +90,58 @@ namespace JPL
         
         // TODO: Extended setups WIP. Integrate, test, etc...
 
-        static constexpr uint32 Invalid = uint32(0);
+        inline constexpr uint32 Invalid = uint32(0);
         
         //======================================================================
-        static constexpr uint32 Mono                = FrontCenter;
-        static constexpr uint32 Stereo              = FrontLeft | FrontRight;
-        static constexpr uint32 LCR                 = FrontLeft | FrontRight | FrontCenter;
-	    static constexpr uint32 LRS                 = FrontLeft | FrontRight | BackCenter;
-	    static constexpr uint32 LCRS                = FrontLeft | FrontRight | FrontCenter | BackCenter;
-        static constexpr uint32 Quad                = FrontLeft | FrontRight | BackLeft | BackRight;
+        inline constexpr uint32 Mono                = FrontCenter;
+        inline constexpr uint32 Stereo              = FrontLeft | FrontRight;
+        inline constexpr uint32 LCR                 = FrontLeft | FrontRight | FrontCenter;
+	    inline constexpr uint32 LRS                 = FrontLeft | FrontRight | BackCenter;
+	    inline constexpr uint32 LCRS                = FrontLeft | FrontRight | FrontCenter | BackCenter;
+        inline constexpr uint32 Quad                = FrontLeft | FrontRight | BackLeft | BackRight;
 
         // TODO: this clashes with Surround 5.0, we should just remove it, or refactor ChannelMask to be a more than just an integer bitmask
-	    static constexpr uint32 Pentagonal          = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight;
+	    inline constexpr uint32 Pentagonal          = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight;
         
         //? Couldn't arrange in a way to preserve channel order across different setups
-	    //?static constexpr uint32 Hexagonal           = FrontLeft | FrontRight | FrontCenter | BackCenter | BackLeft | BackRight;
+	    //?inline constexpr uint32 Hexagonal           = FrontLeft | FrontRight | FrontCenter | BackCenter | BackLeft | BackRight;
 	    
-        static constexpr uint32 Octagonal           = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight | BackCenter | WideLeft | WideRight;
+        inline constexpr uint32 Octagonal           = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight | BackCenter | WideLeft | WideRight;
 
         //======================================================================
-        static constexpr uint32 Surround_4_1        = FrontLeft | FrontRight | LFE | BackLeft | BackRight;
-	    static constexpr uint32 Surround_5_0        = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight;
-        static constexpr uint32 Surround_5_1        = FrontLeft | FrontRight | FrontCenter | LFE | BackLeft | BackRight;
-	    static constexpr uint32 Surround_6_0        = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight | BackCenter;
-        static constexpr uint32 Surround_6_1        = FrontLeft | FrontRight | FrontCenter | LFE | BackLeft | BackRight | BackCenter;
+        inline constexpr uint32 Surround_4_1        = FrontLeft | FrontRight | LFE | BackLeft | BackRight;
+	    inline constexpr uint32 Surround_5_0        = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight;
+        inline constexpr uint32 Surround_5_1        = FrontLeft | FrontRight | FrontCenter | LFE | BackLeft | BackRight;
+	    inline constexpr uint32 Surround_6_0        = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight | BackCenter;
+        inline constexpr uint32 Surround_6_1        = FrontLeft | FrontRight | FrontCenter | LFE | BackLeft | BackRight | BackCenter;
         
         //======================================================================
         // DTS surround setups
-	    static constexpr uint32 Surround_7_0        = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight;
-	    static constexpr uint32 Surround_7_1        = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight;
+	    inline constexpr uint32 Surround_7_0        = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight;
+	    inline constexpr uint32 Surround_7_1        = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight;
 
         //======================================================================
-        static constexpr uint32 Surround_5_0_2      = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight | TopSideLeft | TopSideRight;
-	    static constexpr uint32 Surround_5_1_2      = FrontLeft | FrontRight | FrontCenter | LFE | BackLeft | BackRight | TopSideLeft | TopSideRight;
-	    static constexpr uint32 Surround_5_0_4      = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
-	    static constexpr uint32 Surround_5_1_4      = FrontLeft | FrontRight | FrontCenter | LFE | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
+        inline constexpr uint32 Surround_5_0_2      = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight | TopSideLeft | TopSideRight;
+	    inline constexpr uint32 Surround_5_1_2      = FrontLeft | FrontRight | FrontCenter | LFE | BackLeft | BackRight | TopSideLeft | TopSideRight;
+	    inline constexpr uint32 Surround_5_0_4      = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
+	    inline constexpr uint32 Surround_5_1_4      = FrontLeft | FrontRight | FrontCenter | LFE | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
 	    
         //======================================================================
         // Dolby Atmos surround setups
-        static constexpr uint32 Surround_7_0_2      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | TopSideLeft | TopSideRight;
-        static constexpr uint32 Surround_7_1_2      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | TopSideLeft | TopSideRight;
-        static constexpr uint32 Surround_7_0_4      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
-	    static constexpr uint32 Surround_7_1_4      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
+        inline constexpr uint32 Surround_7_0_2      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | TopSideLeft | TopSideRight;
+        inline constexpr uint32 Surround_7_1_2      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | TopSideLeft | TopSideRight;
+        inline constexpr uint32 Surround_7_0_4      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
+	    inline constexpr uint32 Surround_7_1_4      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
 
-        static constexpr uint32 Surround_7_0_6      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
-	    static constexpr uint32 Surround_7_1_6      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
+        inline constexpr uint32 Surround_7_0_6      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
+	    inline constexpr uint32 Surround_7_1_6      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
 	    
         //======================================================================
         // Atmos surround setups
-        static constexpr uint32 Surround_9_0_4      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
-	    static constexpr uint32 Surround_9_1_4      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
-	    static constexpr uint32 Surround_9_0_6      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
-	    static constexpr uint32 Surround_9_1_6      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
+        inline constexpr uint32 Surround_9_0_4      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
+	    inline constexpr uint32 Surround_9_1_4      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopBackLeft | TopBackRight;
+	    inline constexpr uint32 Surround_9_0_6      = FrontLeft | FrontRight | FrontCenter | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
+	    inline constexpr uint32 Surround_9_1_6      = FrontLeft | FrontRight | FrontCenter | LFE | SideLeft | SideRight | BackLeft | BackRight | WideLeft | WideRight | TopFrontLeft | TopFrontRight | TopSideLeft | TopSideRight | TopBackLeft | TopBackRight;
 
         JPL_INLINE std::string_view ToString(uint32 channelMask);
     }
