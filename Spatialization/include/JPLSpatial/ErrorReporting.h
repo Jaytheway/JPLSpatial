@@ -27,7 +27,9 @@
 
 #include "Core.h"
 
+#ifndef JPL_TAGGED_LOGGING
 #include <format>
+#endif
 #include <source_location>
 
 namespace JPL
