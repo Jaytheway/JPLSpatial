@@ -25,6 +25,12 @@ html {
     --on-primary-color: #ffffff;
     --link-color: #007d86;
 
+    /* Decorative callout markers; labels and semantics remain Doxygen-owned. */
+    --callout-note-icon: "📝";
+    --callout-remark-icon: "💡";
+    --callout-important-icon: "❗";
+    --callout-warning-icon: "⚠️";
+
     --accent-gold: #a66f10;
     --accent-gold-soft: rgba(166, 111, 16, 0.14);
     --on-accent-gold: #ffffff;
@@ -106,6 +112,32 @@ html.dark-mode {
 span.mlabel {
     color: var(--on-accent-gold);
     background: var(--accent-gold);
+}
+
+/* Keep callout emoji styling limited to Doxygen's semantic block labels. */
+dl.section:is(.note, .remark, .important, .warning, .attention) > dt::before {
+    display: inline-block;
+    margin-inline-end: 0.4em;
+    font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+}
+
+dl.section.note > dt::before {
+    content: var(--callout-note-icon);
+}
+
+dl.section.remark > dt::before {
+    content: var(--callout-remark-icon);
+}
+
+dl.section.important > dt::before {
+    content: var(--callout-important-icon);
+}
+
+dl.section:is(.warning, .attention) > dt::before {
+    content: var(--callout-warning-icon);
 }
 
 html,
