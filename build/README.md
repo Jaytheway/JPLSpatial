@@ -1,8 +1,8 @@
-## Building and integrating
+## Building and Linking
 
 **JPL Spatial** requires CMake 3.28 or newer and a C++20 compiler. The main `JPLSpatial` static library has no external dependencies.
 
-### Standalone build
+### Standalone Build
 
 ```sh
 cmake -S . -B build -DBUILD_TESTING=OFF
@@ -16,7 +16,7 @@ Standalone multi-config builds additionally provide:
 
 User-provided configurations are preserved.
 
-### Minimal example
+### Minimal Example
 
 The dependency-free `HelloJPLSpatial` console example is a separate CMake
 project that adds JPL Spatial with `add_subdirectory`:
@@ -62,7 +62,7 @@ When used as a subproject, **JPL Spatial** creates only its library target. It d
 - override parent output directories;
 - change the parent’s compiler or linker flags.
 
-### Build options
+### Build Options
 
 | Option | Default | Description |
 |---|---:|---|

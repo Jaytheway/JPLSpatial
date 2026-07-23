@@ -138,15 +138,15 @@ target_link_libraries(MyTarget PRIVATE JPL::Spatial)
 
 `FetchContent` is supported as well. The complete build guide documents both
 paths, build options, CPU requirements, tests, and subproject behavior:
-[Building and integrating](build/README.md).
+[Building and Linking](build/README.md).
 
 ## Coordinate system
 
 JPL Spatial uses a right-handed coordinate system with Y up and -Z forward:
 
-- +X: right;
-- +Y: up;
-- -Z: forward.
+- +X: right
+- +Y: up
+- -Z: forward
 
 Hosts with a different convention should convert positions, directions, and
 orientations at the integration boundary.
@@ -170,7 +170,7 @@ The following configurations are built and tested by
 
 Linux/Clang Debug builds are additionally tested with AddressSanitizer.
 
-## Reference integrations
+## Reference Integrations
 
 - JPL Spatial is used for sound spatialization in
   [Hazel Engine](https://hazelengine.com/). Its integration is available to
@@ -182,9 +182,9 @@ Linux/Clang Debug builds are additionally tested with AddressSanitizer.
 
 ## Documentation
 
-- [Building and integrating](build/README.md)
+- [Building and Linking](build/README.md)
 - [Hello JPL Spatial](Examples/HelloJPLSpatial)
-- [Generated documentation and API reference](https://jaytheway.github.io/JPLSpatial/)
+- [Documentation and API reference](https://jaytheway.github.io/JPLSpatial/)
 - [Tests](SpatializationTests/src/Tests) for detailed behavioral examples
 
 ## License
