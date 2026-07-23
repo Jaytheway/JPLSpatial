@@ -49,15 +49,19 @@ namespace JPL
 						  std::span<const float> initialMixMap);
 		~DirectSoundEffect();
 
-		/// Must be called from audio thread.
-		/// Number of input channels inferred from `intput.size() / numFrames`.
+		/// Real-time safe. May be called from one audio thread after construction.
+		/// Number of input channels inferred from `input.size() / numFrames`.
 		/// Number of output channels inferred from `output.size() / numFrames`.
-		/// Both channel counts must match what as passed to constructor.
-		/// 
-		/// @input and @output must have the same nubmer of frames
+		/// Both channel counts must match what was passed to the constructor.
+		///
+		/// @param input Interleaved source samples.
+		/// @param output Interleaved output buffer. Must contain the same number
+		/// of frames as `input`.
+		/// @param numFrames Number of frames in both buffers.
 		void ProcessInterleaved(std::span<const float> input, std::span<float> output, uint32 numFrames);
 
-		/// Must be called from non-RT thread
+		/// Must be called from a single non-audio thread.
+		/// May run concurrently with ProcessInterleaved().
 		void UpdateParameters(const simd& filterGains, float delayTimeSeconds, std::span<const float> channelMixMap);
 
 	private:

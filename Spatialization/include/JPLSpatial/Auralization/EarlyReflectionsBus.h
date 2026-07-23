@@ -61,21 +61,26 @@ namespace JPL
 		ERBus(float sampleRate, uint32 numChannels);
 		~ERBus();
 
-		/// Must be called from single non-audio thread
+		/// Must be called from a single non-audio thread before the audio thread
+		/// begins calling ProcessInterleaved().
 		void Prepare(float sampleRate, uint32 numChannels);
 
-		/// Must be called from audio thread
-		/// @param numInputChannels :	number of input channels,
-		///							number of output channels in the `output` buffer
-		///							must be equal to what ERBus was initialized to.
-		/// 
-		/// @input and @output must have the same nubmer of frames
+		/// Real-time safe. May be called from one audio thread after Prepare().
+		///
+		/// @param input Interleaved source samples.
+		/// @param output Interleaved output buffer to which the rendered
+		/// reflections are added. Must contain the same number of frames as
+		/// `input`.
+		/// @param numInputChannels Number of channels in `input`. The number of
+		/// channels in `output` must match the value passed to Prepare().
+		/// @param numFrames Number of frames in both buffers.
 		void ProcessInterleaved(std::span<const float> input, std::span<float> output, uint32 numInputChannels, uint32 numFrames);
 
 		uint32 GetNumChannels() const { return mNumChannels; }
 
-		// Add/remove/update early reflection taps
-		/// Must be called from the same non-audio thread
+		/// Add/remove/update early reflection taps
+		/// Must be called from the same non-audio thread.
+		/// May run concurrently with ProcessInterleaved().
 		void SetTaps(std::span<const ERUpdateData> newERs);
 
 		//std::atomic<float> RMS{ 0.0f };
