@@ -102,8 +102,7 @@ namespace JPL
 		{
 			TraceResults<Scene::Intersection> traceResult;
 			SpecularPathCache<Vec3> spc;
-			SpecularPathCache<Vec3>* spcPtr = &spc;
-			std::span cacheContainer(&spcPtr, 1);
+			std::span cacheContainer(&spc, 1);
 
 			TraceParameters parameters
 			{
