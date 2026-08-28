@@ -52,6 +52,15 @@ namespace JPL
     /// Estimate RT60 using Eyring-Norris equation, taking into account air absorption
     [[nosiscard]] JPL_INLINE simd EstimateRT60_Eyring(float w, float l, float h, const simd& avgAbsorption, const simd& airAttenuation_dB);
 
+    /// Estimate RT60 from Mean Free Path using Eyring-Norris equation.
+    // Note: air absortion factor requires knowing total surface area and cannot be derived just from mean free path
+    [[nodiscard]] JPL_INLINE simd EstimateRT60FromMFP(float mfpMeters, const simd& avgAbsorption)
+    {
+        static constexpr float eps = 1.0e-4f;
+        const simd absorption = clamp(avgAbsorption, eps, 1.0f - eps);
+        return simd(0.161f * mfpMeters) / (4.0f * -log(simd(1.0f) - absorption));
+    }
+
 } // namespace JPL
 
 //==============================================================================
