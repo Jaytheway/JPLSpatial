@@ -33,7 +33,7 @@ set_target_properties(JPLSpatial PROPERTIES FOLDER "Core")
 target_compile_definitions(JPLSpatial
   PUBLIC
     JPL_HAS_ENV_PROPAGATION=0
-    JPL_HAS_PATH_TRACING=0
+    JPL_HAS_PATH_TRACING=1
     JPL_HAS_BEAM_TRACING=0
 )
 
