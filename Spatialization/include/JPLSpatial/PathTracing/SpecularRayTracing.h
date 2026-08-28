@@ -34,6 +34,7 @@
 #include <memory_resource>
 #include <span>
 #include <ranges>
+#include <type_traits>
 #include <vector>
 #include <utility>
 
@@ -102,6 +103,18 @@ namespace JPL
 	{
 		std::pmr::vector<TracedPath<IntersectionType>> Paths;
 	};
+
+	template<class R, class IntersectionType>
+	concept CTraceResultsRange =
+		std::ranges::input_range<R> &&
+		std::same_as<std::remove_cvref_t<std::ranges::range_value_t<R>>, TraceResults<IntersectionType>>;
+
+	template<class V, class IntersectionType>
+	concept CTraceResultsView =
+		std::ranges::view<V> &&
+		std::ranges::input_range<V> &&
+		std::same_as<std::remove_cvref_t<std::ranges::range_value_t<V>>, TraceResults<IntersectionType>>;
+
 
 	//==========================================================================
 	/// Specular Ray Tracing algorithm.
@@ -195,7 +208,7 @@ namespace JPL
 								  const typename SceneType::SourceData& sourceData,
 								  TraceResults<typename SceneType::Intersection>& sourceTraces,
 								  std::span<const typename SceneType::ReceiverData> receiverData,
-								  std::span<TraceResults<typename SceneType::Intersection>> receiverTraces,
+								  CTraceResultsRange<typename SceneType::Intersection> auto receiverTraces,
 								  SpecularPathCacheContainer& caches);
 
 	private:
@@ -238,7 +251,7 @@ namespace JPL
 		//======================================================================
 		/// Wrapper class to hold parameters used in various stages
 		/// of the trace processing routine
-		template<class SceneType, class SpecularPathCacheContainer>
+		template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
 		class ProcessRoutine
 		{
 			using Vec3 = typename SceneType::Vec3;
@@ -252,7 +265,7 @@ namespace JPL
 			const SourceData& mSourceData;
 			TraceResults<Intersection>& mSourceTraces;
 			std::span<const ReceiverData> mReceiverData;
-			std::span<TraceResults<Intersection>> mReceiverTraces;
+			TRView mReceiverTraces;
 			SpecularPathCacheContainer& mCaches;
 
 		public:
@@ -260,13 +273,13 @@ namespace JPL
 						   const SourceData& sourceData,
 						   TraceResults<Intersection>& sourceTraces,
 						   std::span<const ReceiverData> receiverData,
-						   std::span<TraceResults<Intersection>> receiverTraces,
+						   TRView receiverTraces,
 						   SpecularPathCacheContainer& caches);
 
 			/// Run the trace processing routine
 			void Process();
 
-			std::pair<uint32, uint32> GetSubpathCountAndMaxOrder() const;
+			std::pair<uint32, uint32> GetSubpathCountAndMaxOrder();
 
 			/// Remove invalid/empty paths, parse TraceInfo about TraceResults
 			static TraceInfo PreprocessTraces(TraceResults<Intersection>& traces);
@@ -275,7 +288,7 @@ namespace JPL
 											  ScratchHashSetIdentity& uniqueCheckSet,
 											  std::pmr::vector<NewSubpathEntry>& outNewSubpaths) const;
 
-			void CreateBackwardSubpathsEntries(std::span<TraceResults<Intersection>> traces,
+			void CreateBackwardSubpathsEntries(TRView traces,
 											   ScratchHashSetIdentity& uniqueCheckSet,
 											   std::pmr::vector<NewSubpathEntry>& outNewSubpaths) const;
 
@@ -486,7 +499,8 @@ namespace JPL
 	{
 		JPL_PROFILE(SpecularRayTracing_ProcessTraces);
 
-		ProcessRoutine(sceneInterface, sourceData, traces, receiverData, {}, caches).Process();
+		std::span<TraceResults<typename SceneType::Intersection>> emptyReceiverTRs;
+		ProcessRoutine(sceneInterface, sourceData, traces, receiverData, emptyReceiverTRs, caches).Process();
 	}
 
 	//==========================================================================
@@ -495,7 +509,7 @@ namespace JPL
 												  const typename SceneType::SourceData& sourceData,
 												  TraceResults<typename SceneType::Intersection>& sourceTraces,
 												  std::span<const typename SceneType::ReceiverData> receiverData,
-												  std::span<TraceResults<typename SceneType::Intersection>> receiverTraces,
+												  CTraceResultsRange<typename SceneType::Intersection> auto receiverTraces,
 												  SpecularPathCacheContainer& caches)
 	{
 		JPL_PROFILE(SpecularRayTracing_ProcessTraces);
@@ -504,26 +518,26 @@ namespace JPL
 	}
 
 	//==========================================================================
-	template<class SceneType, class SpecularPathCacheContainer>
-	inline SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::
+	template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
+	inline SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer, TRView>::
 		ProcessRoutine(SceneType& sceneInterface,
 					   const SourceData& sourceData,
 					   TraceResults<Intersection>& sourceTraces,
 					   std::span<const ReceiverData> receiverData,
-					   std::span<TraceResults<Intersection>> receiverTraces,
+					   TRView receiverTraces,
 					   SpecularPathCacheContainer& caches)
 		: mSceneInterface(sceneInterface)
 		, mSourceData(sourceData)
 		, mSourceTraces(sourceTraces)
 		, mReceiverData(receiverData)
-		, mReceiverTraces(receiverTraces)
+		, mReceiverTraces(std::move(receiverTraces))
 		, mCaches(caches)
 	{
 		// TODO: stack allocator to reuse memory throughout the routine stages (?)
 	}
 
-	template<class SceneType, class SpecularPathCacheContainer>
-	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::Process()
+	template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
+	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer, TRView>::Process()
 	{
 		// 1. Preprocess traces
 		const auto [totalSubpathCount, maxPathOrder] = GetSubpathCountAndMaxOrder();
@@ -559,8 +573,8 @@ namespace JPL
 		CacheValidatedSubpaths(std::span(newSubpaths), maxPathOrder); //? allocating
 	}
 
-	template<class SceneType, class SpecularPathCacheContainer>
-	inline std::pair<uint32, uint32> SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::GetSubpathCountAndMaxOrder() const
+	template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
+	inline std::pair<uint32, uint32> SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer, TRView>::GetSubpathCountAndMaxOrder()
 	{
 		JPL_PROFILE(SpecularRayTracing_PreprocessTraces);
 
@@ -582,8 +596,8 @@ namespace JPL
 	}
 
 	//==========================================================================
-	template<class SceneType, class SpecularPathCacheContainer>
-	inline auto SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::PreprocessTraces(TraceResults<Intersection>& traces) -> TraceInfo
+	template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
+	inline auto SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer, TRView>::PreprocessTraces(TraceResults<Intersection>& traces) -> TraceInfo
 	{
 		// Remove empty paths
 		std::erase_if(traces.Paths, [](const auto& path) { return path.Nodes.empty(); });
@@ -618,10 +632,11 @@ namespace JPL
 	}
 
 	//==========================================================================
-	template<class SceneType, class SpecularPathCacheContainer>
-	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::CreateForwardSubpathsEntries(TraceResults<Intersection>& traces,
-																														ScratchHashSetIdentity& uniqueCheckSet,
-																														std::pmr::vector<NewSubpathEntry>& outNewSubpaths) const
+	template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
+	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer, TRView>::
+		CreateForwardSubpathsEntries(TraceResults<Intersection>& traces,
+									 ScratchHashSetIdentity& uniqueCheckSet,
+									 std::pmr::vector<NewSubpathEntry>& outNewSubpaths) const
 	{
 		using NewSubpathEntry = NewSubpath<PathNodeType, Vec3>;
 
@@ -639,8 +654,7 @@ namespace JPL
 				for (uint32 receiverIdx = 0; receiverIdx < mReceiverData.size(); ++receiverIdx)
 				{
 					const ReceiverData& receiver = mReceiverData[receiverIdx];
-					JPL::SpecularPathCache<Vec3>* pathCache = mCaches[receiverIdx];
-					JPL_ASSERT(pathCache);
+					JPL::SpecularPathCache<Vec3>& pathCache = mCaches[receiverIdx];
 
 					// Connected path ID
 					JPL::SpecularPathId pathId = pathPartialId;
@@ -654,7 +668,7 @@ namespace JPL
 					}
 
 					// See if PathCach already contains this subpath
-					if (not pathCache->Contains(pathId))
+					if (not pathCache.Contains(pathId))
 					{
 						outNewSubpaths.emplace_back(
 							NewSubpathEntry{
@@ -669,10 +683,11 @@ namespace JPL
 		}
 	}
 
-	template<class SceneType, class SpecularPathCacheContainer>
-	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::CreateBackwardSubpathsEntries(std::span<TraceResults<Intersection>> traces,
-																														 ScratchHashSetIdentity& uniqueCheckSet,
-																														 std::pmr::vector<NewSubpathEntry>& outNewSubpaths) const
+	template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
+	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer, TRView>::
+		CreateBackwardSubpathsEntries(TRView traces,
+									  ScratchHashSetIdentity& uniqueCheckSet,
+									  std::pmr::vector<NewSubpathEntry>& outNewSubpaths) const
 	{
 		JPL::SpecularPathId pathPartialId{ .Id = mSourceData.Id };
 
@@ -691,8 +706,7 @@ namespace JPL
 		{
 			const TraceResults<Intersection>& traceResults = traces[receiverIdx];
 			const ReceiverData& receiver = mReceiverData[receiverIdx];
-			JPL::SpecularPathCache<Vec3>* pathCache = mCaches[receiverIdx];
-			JPL_ASSERT(pathCache);
+			JPL::SpecularPathCache<Vec3>& pathCache = mCaches[receiverIdx];
 
 			for (uint32 pathIdx = 0; pathIdx < traceResults.Paths.size(); ++pathIdx)
 			{
@@ -715,7 +729,7 @@ namespace JPL
 					}
 
 					// See if PathCach already contains this subpath
-					if (not pathCache->Contains(pathId))
+					if (not pathCache.Contains(pathId))
 					{
 						outNewSubpaths.emplace_back(
 							NewSubpathEntry{
@@ -731,11 +745,12 @@ namespace JPL
 	}
 
 	//==========================================================================
-	template<class SceneType, class SpecularPathCacheContainer>
+	template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
 	template<ETraceDirection PathDirection>
-	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::ConstructImageSources(const Vec3& sourcePosition,
-																												 std::span<const TraceNode<Intersection>> path,
-																												 std::span<Vec3> outImageSources) const
+	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer, TRView>::
+		ConstructImageSources(const Vec3& sourcePosition,
+							  std::span<const TraceNode<Intersection>> path,
+							  std::span<Vec3> outImageSources) const
 	{
 		JPL_ASSERT(outImageSources.size() >= path.size() + 1);
 
@@ -763,12 +778,13 @@ namespace JPL
 		}
 	}
 
-	template<class SceneType, class SpecularPathCacheContainer>
+	template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
 	template<ETraceDirection TraceDirection>
-	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::ConstructImageSources(const Vec3& sourcePosition,
-																												 std::span<const TraceNode<Intersection>> path,
-																												 ETraceDirection pathDirection,
-																												 std::span<Vec3> outImageSources) const
+	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer, TRView>::
+		ConstructImageSources(const Vec3& sourcePosition,
+							  std::span<const TraceNode<Intersection>> path,
+							  ETraceDirection pathDirection,
+							  std::span<Vec3> outImageSources) const
 	{
 		if (pathDirection == ETraceDirection::Forward)
 		{
@@ -782,11 +798,12 @@ namespace JPL
 		}
 	}
 
-	template<class SceneType, class SpecularPathCacheContainer>
+	template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
 	template<ETraceDirection PathDirection>
-	inline bool SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::ValidatePathForListener(std::span<const TraceNode<Intersection>> nodes,
-																												   std::span<const Vec3> imageSources,
-																												   const Vec3& listenerPosition) const
+	inline bool SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer, TRView>::
+		ValidatePathForListener(std::span<const TraceNode<Intersection>> nodes,
+								std::span<const Vec3> imageSources,
+								const Vec3& listenerPosition) const
 	{
 		// Check that we do intersect the correct surface sequance,
 		// and nothing is obstructing visibility of the image source
@@ -831,12 +848,13 @@ namespace JPL
 		return not mSceneInterface.IsOccluded(R, imageSources[0]);
 	}
 
-	template<class SceneType, class SpecularPathCacheContainer>
+	template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
 	template<ETraceDirection TraceDirection>
-	inline bool SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::ValidatePathForListener(std::span<const TraceNode<Intersection>> nodes,
-																												   ETraceDirection pathDirection,
-																												   std::span<const Vec3> imageSources,
-																												   const Vec3& listenerPosition) const
+	inline bool SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer, TRView>::
+		ValidatePathForListener(std::span<const TraceNode<Intersection>> nodes,
+								ETraceDirection pathDirection,
+								std::span<const Vec3> imageSources,
+								const Vec3& listenerPosition) const
 	{
 		if (pathDirection == ETraceDirection::Forward)
 		{
@@ -850,9 +868,10 @@ namespace JPL
 		}
 	}
 
-	template<class SceneType, class SpecularPathCacheContainer>
-	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::ValidateNewSubpaths(std::span<NewSubpathEntry> newSubpaths,
-																											   const Vec3 listenerPosition) const
+	template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
+	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer, TRView>::
+		ValidateNewSubpaths(std::span<NewSubpathEntry> newSubpaths,
+							const Vec3 listenerPosition) const
 	{
 		//! This takes all of the function processing time
 		JPL_PROFILE(SpecularRayTracing_ValidateNewSubpaths);
@@ -912,9 +931,10 @@ namespace JPL
 		}
 	}
 
-	template<class SceneType, class SpecularPathCacheContainer>
-	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::AccumulateMaterialAbsorption(std::span<const TraceNode<Intersection>> surfaces,
-																														EnergyBands& outEnergyLoss) const
+	template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
+	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer, TRView>::
+		AccumulateMaterialAbsorption(std::span<const TraceNode<Intersection>> surfaces,
+									 EnergyBands& outEnergyLoss) const
 	{
 		for (const auto& surfaceHit : surfaces)
 		{
@@ -927,9 +947,10 @@ namespace JPL
 	}
 
 	//==========================================================================
-	template<class SceneType, class SpecularPathCacheContainer>
-	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer>::CacheValidatedSubpaths(std::span<NewSubpathEntry> validatedSubpaths,
-																												  uint32 maxPathOrderHint) const
+	template<class SceneType, class SpecularPathCacheContainer, CTraceResultsView<typename SceneType::Intersection> TRView>
+	inline void SpecularRayTracing::ProcessRoutine<SceneType, SpecularPathCacheContainer, TRView>::
+		CacheValidatedSubpaths(std::span<NewSubpathEntry> validatedSubpaths,
+							   uint32 maxPathOrderHint) const
 	{
 		JPL_PROFILE(SpecularRayTracing_CacheValidPaths);
 
@@ -970,12 +991,11 @@ namespace JPL
 			nodeCache.push_back(static_cast<int32>(mReceiverData[entry.ReceiverIdx].Id));
 
 			// Add set of Geometry Cache handles to Path Cache
-			JPL::SpecularPathCache<Vec3>* pathCache = mCaches[entry.ReceiverIdx];
-			JPL_ASSERT(pathCache);
+			JPL::SpecularPathCache<Vec3>& pathCache = mCaches[entry.ReceiverIdx];
 
 			// Add new entry to the receiver's path cache
 			// (this cannot be called concurrently)
-			pathCache->Add(entry.PathId, nodeCache, entry.LastImageSource, entry.EnergyLoss, entry.bIsValid);
+			pathCache.Add(entry.PathId, nodeCache, entry.LastImageSource, entry.EnergyLoss, entry.bIsValid);
 
 			numValidPathsFound += entry.bIsValid;
 		}
