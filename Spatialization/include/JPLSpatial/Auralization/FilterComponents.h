@@ -106,6 +106,14 @@ namespace JPL
 
 			JPL_INLINE void SetCoefficients(const Topology::Biquad& other);
 		};
+
+		template<std::size_t N>
+		struct Cascade
+		{
+			std::array<Biquad, N> Stages;
+
+			[[nodiscard]] JPL_INLINE std::complex<double> CalculateResponse(double normalizedFrequency) const;
+		};
 	} // namespace Topology
 
 	//==========================================================================
@@ -166,6 +174,22 @@ namespace JPL
 				s1 = biquad.b1 * x - biquad.a1 * y + s2;
 				s2 = biquad.b2 * x - biquad.a2 * y;
 				return y;
+			}
+		};
+
+		template<std::size_t N>
+		struct Cascade
+		{
+			using Sample = float;
+
+			std::array<State::DirectFormI, N> States;
+
+			[[nodiscard]] JPL_INLINE Sample Process(float x, const Topology::Cascade<N>& topo)
+			{
+				Sample s = x;
+				for (uint32 i = 0; i < States.size(); ++i)
+					s = States[i].Process(s, topo.Stages[i]);
+				return s;
 			}
 		};
 	} // namespace State
@@ -505,6 +529,33 @@ namespace JPL
 	JPL_INLINE void Topology::Biquad::SetCoefficients(const Topology::Biquad& other)
 	{
 		*this = other;
+	}
+
+	//==========================================================================
+	template<std::size_t N>
+	JPL_INLINE std::complex<double> Topology::Cascade<N>::CalculateResponse(double normalizedFrequency) const
+	{
+		// From DSPFilters by Vinnie Falco (MIT)
+		using Complex = std::complex<double>;
+		const double omega = 2.0f * std::numbers::pi_v<double> *normalizedFrequency;
+		const Complex czn1 = std::polar(1.0, -omega);
+		const Complex czn2 = std::polar(1.0, -2.0 * omega);
+		Complex ch(1);
+		Complex cbot(1);
+
+		for (const Biquad& stage : Stages)
+		{
+			Complex cb(1);
+			Complex ct(stage.b0);
+			ct = ct + static_cast<double>(stage.b1) * czn1;
+			ct = ct + static_cast<double>(stage.b2) * czn2;
+			cb = cb + static_cast<double>(stage.a1) * czn1;
+			cb = cb + static_cast<double>(stage.a2) * czn2;
+			ch *= ct;
+			cbot *= cb;
+		}
+
+		return ch / cbot;
 	}
 
 } // namespace JPL
