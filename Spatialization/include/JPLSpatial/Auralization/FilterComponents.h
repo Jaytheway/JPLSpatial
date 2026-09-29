@@ -175,7 +175,6 @@ namespace JPL
 
 namespace JPL
 {
-	//==========================================================================
 	namespace FilterUtils
 	{
 		//======================================================================
@@ -296,22 +295,13 @@ namespace JPL
 		template<bool bDecibels, class FilterType>
 		void ComputeFilterResponse(const FilterType& filter, float sampleRate, std::vector<float>& outMagnitudes)
 		{
-			static constexpr float cMinFrequency = 20.0f;
-			const float nyquist = sampleRate * 0.5f;
-			const uint32 octaves = static_cast<uint32>(std::round(log2f(nyquist / cMinFrequency)));
-
-			static constexpr uint32 cNumSteps = 12;
 				const auto semitoneGrid = SemitoneGridView(sampleRate * 0.5f);
 
 			outMagnitudes.clear();
-			outMagnitudes.reserve(octaves * cNumSteps);
 				outMagnitudes.reserve(semitoneGrid.size());
 
-			static const float cSemitoneMultiplier = ::powf(2.0f, 1.0f / cNumSteps);
 			const float invSampleRate = 1.0f / sampleRate;
 
-			float frequency = cMinFrequency;
-			while (frequency < nyquist)
 				auto projection = [](auto&& v)
 				{
 					using Func = decltype(&FilterType::CalculateResponse);
@@ -321,8 +311,6 @@ namespace JPL
 
 					if constexpr (bIsComplex)
 			{
-				outMagnitudes.push_back(filter.CalculateResponse(frequency * invSampleRate));
-				frequency *= cSemitoneMultiplier;
 						return std::abs(v);
 			}
 					else
@@ -342,9 +330,6 @@ namespace JPL
 		}
 	} // namespace Impl
 
-	//==========================================================================
-	namespace FilterUtils
-	{
 		//======================================================================
 		template<class FilterType>
 		void ComputeFilterResponse(const FilterType& filter, float sampleRate, std::vector<float>& outMagnitudes)
