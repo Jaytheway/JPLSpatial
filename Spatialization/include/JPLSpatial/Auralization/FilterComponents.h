@@ -412,24 +412,26 @@ namespace JPL
 	}
 
 	//==========================================================================
-	inline auto Topology::Biquad::CalculateResponse(float normalziedFrequency) const -> Sample
+	inline std::complex<double> Topology::Biquad::CalculateResponse(float normalizedFrequency) const
 	{
-		// Note: this will have to change for SIMD Sample
+		// DSPFilters by Vinnie Falco (MIT)
+		using Complex = std::complex<double>;
+		const double omega = 2 * std::numbers::pi_v<double> *normalizedFrequency;
+		const Complex czn1 = std::polar(1.0, -omega);
+		const Complex czn2 = std::polar(1.0, -2.0 * omega);
+		Complex ch(1.0);
+		Complex cbot(1.0);
 
-		const double omega = 2.0 * std::numbers::pi_v<double> *double(normalziedFrequency);
+		Complex ct(b0);
+		Complex cb(1.0);
+		ct = ct + static_cast<double>(b1) * czn1;
+		ct = ct + static_cast<double>(b2) * czn2;
+		cb = cb + static_cast<double>(a1) * czn1;
+		cb = cb + static_cast<double>(a2) * czn2;
+		ch *= ct;
+		cbot *= cb;
 
-		const double c1 = std::cos(omega);
-		const double s1 = std::sin(omega);
-		const double c2 = std::cos(2.0 * omega);
-		const double s2 = std::sin(2.0 * omega);
-
-		const double numeratorReal = double(b0) + double(b1) * c1 + double(b2) * c2;
-		const double numeratorImag = -double(b1) * s1 - double(b2) * s2;
-
-		const double denominatorReal = 1.0 + double(a1) * c1 + double(a2) * c2;
-		const double denominatorImag = -double(a1) * s1 - double(a2) * s2;
-
-		return static_cast<Sample>(std::hypot(numeratorReal, numeratorImag) / std::hypot(denominatorReal, denominatorImag));
+		return ch / cbot;
 	}
 
 	inline Topology::Biquad Topology::Biquad::Combine(const OnePole& low, const OnePole& high, float broadbandGain)
