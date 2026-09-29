@@ -35,6 +35,17 @@ namespace JPL
 
 		template<class FilterType>
 		void ComputeFilterResponse_dB(const FilterType& filter, float sampleRate, std::vector<float>& outMagnitudes);
+
+		//======================================================================
+		/// Simple helper to iterate over a semitone-spaced grid.
+		/// 
+		/// Implements of std::ranges::view_interface.
+		/// Can be iterated over in a loop, or used with std::ranges/views utils:
+		/// for (auto frequency : SemitoneGridView(optionalMinFrequency, sampleRate)
+		///		foo(frequency);
+		/// 
+		template<std::floating_point T>
+		class SemitoneGridView;
 	} // namespace FilterUtils
 
 	//==========================================================================
@@ -165,6 +176,121 @@ namespace JPL
 namespace JPL
 {
 	//==========================================================================
+	namespace FilterUtils
+	{
+		//======================================================================
+		template<std::floating_point T>
+		class SemitoneGridView : public std::ranges::view_interface<SemitoneGridView<T>>
+		{
+		public:
+			static constexpr T cSemitoneRatio = T(1.0594630943592953); // pow(2, 1/12)
+			static constexpr T cMinFrequency = T(20.0);
+
+		public:
+			constexpr explicit SemitoneGridView(T minFrequency, T maxFrequency)
+				: mMin(std::max(cMinFrequency, minFrequency)), mMax(maxFrequency)
+			{
+			}
+			constexpr explicit SemitoneGridView(T maxFrequency)
+				: SemitoneGridView(cMinFrequency, maxFrequency)
+			{
+			}
+
+			class iterator;
+
+			constexpr iterator begin() const noexcept
+			{
+				return iterator(mMin, mMax, mMin > mMax);
+			}
+
+			constexpr iterator end() const noexcept
+			{
+				return iterator(mMax, mMax, /* end */ true);
+			}
+
+			[[nodiscard]] constexpr std::size_t size() const noexcept
+			{
+				if (mMax < mMin)
+					return 0;
+
+				if (mMax == mMin)
+					return 1;
+
+				if (std::is_constant_evaluated())
+				{
+					std::size_t s = 0;
+					T frequency = mMin;
+
+					while (frequency <= mMax)
+					{
+						++s;
+						frequency *= cSemitoneRatio;
+					}
+
+					return s;
+				}
+				else
+				{
+					return static_cast<std::size_t>(std::floor(T(12) * std::log2(mMax / mMin))) + 1;
+				}
+			}
+
+		public:
+			class iterator
+			{
+			public:
+				using iterator_concept = std::forward_iterator_tag;
+				using iterator_category = std::forward_iterator_tag;
+				using value_type = T;
+				using difference_type = std::ptrdiff_t;
+
+			public:
+				constexpr iterator() : mCurrent(0), mMaxValue(0), bIsEnd(true) {}
+				constexpr iterator(T start, T max, bool end = false)
+					: mCurrent(start), mMaxValue(max), bIsEnd(end)
+				{
+				}
+
+				constexpr T operator*() const noexcept { return mCurrent; }
+
+				constexpr iterator& operator++() noexcept
+				{
+					if (not bIsEnd)
+					{
+						mCurrent *= cSemitoneRatio;
+						bIsEnd = mCurrent - mMaxValue > T(1e-9);
+					}
+					return *this;
+				}
+
+				constexpr iterator operator++(int) noexcept
+				{
+					iterator tmp = *this;
+					++(*this);
+					return tmp;
+				}
+
+				constexpr bool operator==(const iterator& other) const noexcept
+				{
+					if (bIsEnd and other.bIsEnd)
+						return true;
+					if (bIsEnd or other.bIsEnd)
+						return false;
+					return JPL::Math::IsNearlyEqual(mCurrent, other.mCurrent, T(1e-9));
+				}
+
+			private:
+				T mCurrent;
+				T mMaxValue;
+				bool bIsEnd;
+			};
+
+		private:
+			T mMin;
+			T mMax;
+		};
+
+		//======================================================================
 	namespace Impl
 	{
 		template<bool bDecibels, class FilterType>
@@ -175,19 +301,38 @@ namespace JPL
 			const uint32 octaves = static_cast<uint32>(std::round(log2f(nyquist / cMinFrequency)));
 
 			static constexpr uint32 cNumSteps = 12;
+				const auto semitoneGrid = SemitoneGridView(sampleRate * 0.5f);
 
 			outMagnitudes.clear();
 			outMagnitudes.reserve(octaves * cNumSteps);
+				outMagnitudes.reserve(semitoneGrid.size());
 
 			static const float cSemitoneMultiplier = ::powf(2.0f, 1.0f / cNumSteps);
 			const float invSampleRate = 1.0f / sampleRate;
 
 			float frequency = cMinFrequency;
 			while (frequency < nyquist)
+				auto projection = [](auto&& v)
+				{
+					using Func = decltype(&FilterType::CalculateResponse);
+					static constexpr bool bIsComplex =
+						std::same_as<std::invoke_result_t<Func, FilterType, float>, std::complex<double>> or
+						std::same_as<std::invoke_result_t<Func, FilterType, double>, std::complex<double>>;
+
+					if constexpr (bIsComplex)
 			{
 				outMagnitudes.push_back(filter.CalculateResponse(frequency * invSampleRate));
 				frequency *= cSemitoneMultiplier;
+						return std::abs(v);
 			}
+					else
+					{
+						return v;
+					}
+				};
+
+				for (float frequency : semitoneGrid)
+					outMagnitudes.push_back(projection(filter.CalculateResponse(frequency * invSampleRate)));
 
 			if constexpr (bDecibels)
 			{
@@ -200,6 +345,7 @@ namespace JPL
 	//==========================================================================
 	namespace FilterUtils
 	{
+		//======================================================================
 		template<class FilterType>
 		void ComputeFilterResponse(const FilterType& filter, float sampleRate, std::vector<float>& outMagnitudes)
 		{
