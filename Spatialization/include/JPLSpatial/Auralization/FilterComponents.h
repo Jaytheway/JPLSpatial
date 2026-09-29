@@ -22,6 +22,9 @@
 #include "JPLSpatial/Math/DecibelsAndGain.h"
 
 #include <cmath>
+#include <concepts>
+#include <complex>
+#include <numbers>
 #include <span>
 #include <vector>
 
