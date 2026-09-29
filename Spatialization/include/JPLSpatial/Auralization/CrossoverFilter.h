@@ -332,7 +332,7 @@ namespace JPL
         }
 
         // Process one sample through a proper LR4 crossover:
-        // returns {low, high} such that low+high == x (exact) and magnitudes are LR4
+        // returns {low, high} such that low+high == x (allpass-filtered) and magnitudes are LR4
         JPL_INLINE void Process(float x, float& low, float& high) noexcept
         {
             static constexpr float minusR = -std::numbers::sqrt2_v<float>;
