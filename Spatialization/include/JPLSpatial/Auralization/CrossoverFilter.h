@@ -27,11 +27,25 @@
 
 #include <algorithm>
 #include <cmath>
+#include <complex>
 #include <numbers>
 #include <span>
 
 namespace JPL
 {
+    struct SVFResponse
+    {
+        std::complex<double> Low;
+        std::complex<double> Band;
+        std::complex<double> High;
+    };
+
+    struct LR4Response
+    {
+        std::complex<double> Low;
+        std::complex<double> High;
+    };
+
     //==========================================================================
     /// State Variable Filter with Topology-Preserving Transform structure
     struct StateVariableFilterTPT
@@ -56,6 +70,28 @@ namespace JPL
                 .g = g,
                 .d = 1.0f / Math::FMA(g, R + g, 1.0f),
                 .MinusRg = -(R + g)
+            };
+        }
+
+        [[nodiscard]] static SVFResponse CalculateResponse(const Params& params, double normalizedFrequency)
+        {
+            using Complex = std::complex<double>;
+
+            const double omega = 2.0 * std::numbers::pi_v<double> * normalizedFrequency;
+            
+            const Complex q = std::polar(1.0, -omega);
+            const Complex u = Complex(1.0, 0.0) - q;
+            const Complex v = Complex(1.0, 0.0) + q;
+
+            const double g = params.g;
+            static constexpr double R = std::numbers::sqrt2_v<double>;
+
+            const Complex denominator = u * u + R * g * u * v + g * g *  v * v;
+
+            return SVFResponse{
+                .Low = g * g * v * v / denominator,
+                .Band = g * u * v / denominator,
+                .High = u * u / denominator
             };
         }
 
@@ -215,6 +251,12 @@ namespace JPL
             StateVariableFilterTPT::Process(Params, x, yL, yB, yH);
             return Math::FMA(minusR, yB, yH + yL); // yL - R * yB + yH;
         }
+
+        [[nodiscard]] static auto CalculateResponse(const typename StateVariableFilterTPT::Params& params, double normalizedFrequency)
+        {
+            const SVFResponse response = StateVariableFilterTPT::CalculateResponse(params, normalizedFrequency);
+            return response.Low - std::numbers::sqrt2_v<double> * response.Band + response.High;
+        }
     };
 
     //==========================================================================
@@ -307,6 +349,16 @@ namespace JPL
             low = yL2;
             // high = yL - R * yB + yH - yL2;
             high = Math::FMA(minusR, yB, yL + yH - yL2);
+        }
+
+
+        [[nodiscard]] static LR4Response CalculateResponse(const typename StateVariableFilterTPT::Params& params, double normalizedFrequency)
+        {
+            const SVFResponse svf = StateVariableFilterTPT::CalculateResponse(params, normalizedFrequency);
+            const std::complex<double> allpass = svf.Low - std::numbers::sqrt2_v<double> * svf.Band + svf.High;
+            const auto low = svf.Low * svf.Low;
+            const auto high = allpass - low;
+            return LR4Response{ .Low = low, .High = high };
         }
     };
 
@@ -532,6 +584,26 @@ namespace JPL
 
                 startGains += increment;
             }
+        }
+
+        [[nodiscard]] static std::complex<double> CalculateResponse(double sampleRate, double normalizedFrequency, std::span<const float, 4> gains, SplitFrequencies splits = cDefaultFrequencySplits)
+        {
+            using Complex = std::complex<double>;
+
+            const auto [L1, H1] = LR4Split::CalculateResponse(StateVariableFilterTPT::Prepare(sampleRate, splits.F1), normalizedFrequency);
+            const auto [L2, H2] = LR4Split::CalculateResponse(StateVariableFilterTPT::Prepare(sampleRate, splits.F2), normalizedFrequency);
+            const auto [L3, H3] = LR4Split::CalculateResponse(StateVariableFilterTPT::Prepare(sampleRate, splits.F3), normalizedFrequency);
+
+            const Complex A1 = L1 + H1;
+            const Complex A3 = L3 + H3;
+
+            const Complex total =
+                double(gains[0]) * L2 * L1 * A3 +
+                double(gains[1]) * L2 * H1 * A3 +
+                double(gains[2]) * H2 * L3 * A1 +
+                double(gains[3]) * H2 * H3 * A1;
+
+            return total;
         }
     };
 } // namespace JPL
