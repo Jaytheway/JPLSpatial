@@ -61,6 +61,17 @@ namespace JPL
 			float sqrtK;	// sqrt(gain)
 			float gain;
 		};
+
+		struct BiquadShelf
+		{
+			double cosOmega;		// cos(2.0 * PI * frequency / sampleRate)
+			double sqrt2SinOmega;	// sqrt(2.0) * sin(2.0 * PI * frequency / sampleRate)
+
+			[[nodiscard]] static JPL_INLINE BiquadShelf From(double normalizedFrequency);
+
+			// Note: for now we don't cache gain term, since within the current use-case,
+			// when frequency changes, we need to recompute gain anyway.
+		};
 	} // namespace Cache
 
 	//==========================================================================
@@ -321,17 +332,17 @@ namespace JPL
 		};
 
 		//======================================================================
-	namespace Impl
-	{
-		template<bool bDecibels, class FilterType>
-		void ComputeFilterResponse(const FilterType& filter, float sampleRate, std::vector<float>& outMagnitudes)
+		namespace Impl
 		{
+			template<bool bDecibels, class FilterType>
+			void ComputeFilterResponse(const FilterType& filter, float sampleRate, std::vector<float>& outMagnitudes)
+			{
 				const auto semitoneGrid = SemitoneGridView(sampleRate * 0.5f);
 
-			outMagnitudes.clear();
+				outMagnitudes.clear();
 				outMagnitudes.reserve(semitoneGrid.size());
 
-			const float invSampleRate = 1.0f / sampleRate;
+				const float invSampleRate = 1.0f / sampleRate;
 
 				auto projection = [](auto&& v)
 				{
@@ -341,9 +352,9 @@ namespace JPL
 						std::same_as<std::invoke_result_t<Func, FilterType, double>, std::complex<double>>;
 
 					if constexpr (bIsComplex)
-			{
+					{
 						return std::abs(v);
-			}
+					}
 					else
 					{
 						return v;
@@ -353,13 +364,13 @@ namespace JPL
 				for (float frequency : semitoneGrid)
 					outMagnitudes.push_back(projection(filter.CalculateResponse(frequency * invSampleRate)));
 
-			if constexpr (bDecibels)
-			{
-				for (float& magnitude : outMagnitudes)
-					magnitude = -GainTodB(magnitude);
+				if constexpr (bDecibels)
+				{
+					for (float& magnitude : outMagnitudes)
+						magnitude = -GainTodB(magnitude);
+				}
 			}
-		}
-	} // namespace Impl
+		} // namespace Impl
 
 		//======================================================================
 		template<class FilterType>
@@ -473,6 +484,49 @@ namespace JPL
 			.b2 = broadbandGain * (low.b1 * high.b1),
 			.a1 = low.a1 + high.a1,
 			.a2 = low.a1 * high.a1
+		};
+	}
+
+	JPL_INLINE Topology::Biquad Topology::Biquad::MakeHighShelf(double normalizedFrequency, double gainDb)
+	{
+		return MakeHighShelf(Cache::BiquadShelf::From(normalizedFrequency), gainDb);
+	}
+
+	JPL_INLINE Cache::BiquadShelf Cache::BiquadShelf::From(double normalizedFrequency)
+	{
+		const double omega = 2.0 * std::numbers::pi_v<double> * normalizedFrequency;
+		const auto [sineOmega, cosOmega] = Math::SinCos(omega);
+		return Cache::BiquadShelf{ .cosOmega = cosOmega, .sqrt2SinOmega = Math::Sqrt(2.0) * sineOmega };
+	}
+
+	inline Topology::Biquad Topology::Biquad::MakeHighShelf(const Cache::BiquadShelf& cache, double gainDb)
+	{
+		// log2(10) / 40
+		static constexpr double log2_10_over40 = std::numbers::ln10 * std::numbers::log2e / 40.0;
+		const double A = std::exp2(gainDb * log2_10_over40); // std::pow(10.0, gainDb / 40.0);
+
+		// Fixed term for Q = 0.7071 (S = 1)
+		const double beta = std::sqrt(A) * cache.sqrt2SinOmega;
+
+		const double A_plus_1 = A + 1.0;
+		const double A_minus_1 = A - 1.0;
+		const double A_minus_1_cos = A_minus_1 * cache.cosOmega;
+		const double A_plus_1_cos = A_plus_1 * cache.cosOmega;
+
+		const double b0 = A * (A_plus_1 + A_minus_1_cos + beta);
+		const double b1 = -2.0 * A * (A_minus_1 + A_plus_1_cos);
+		const double b2 = A * (A_plus_1 + A_minus_1_cos - beta);
+		const double a0 = A_plus_1 - A_minus_1_cos + beta;
+		const double a1 = 2.0 * (A_minus_1 - A_plus_1_cos);
+		const double a2 = A_plus_1 - A_minus_1_cos - beta;
+
+		const double inv_a0 = 1.0 / a0;
+		return Topology::Biquad{
+			.b0 = static_cast<float>(b0 * inv_a0),
+			.b1 = static_cast<float>(b1 * inv_a0),
+			.b2 = static_cast<float>(b2 * inv_a0),
+			.a1 = static_cast<float>(a1 * inv_a0),
+			.a2 = static_cast<float>(a2 * inv_a0)
 		};
 	}
 
