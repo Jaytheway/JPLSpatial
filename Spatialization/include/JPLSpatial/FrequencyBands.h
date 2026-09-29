@@ -24,6 +24,11 @@
 #include "JPLSpatial/Math/SIMD.h"
 #include "JPLSpatial/Math/SIMDMath.h"
 
+#include <algorithm>
+#include <array>
+#include <span>
+#include <ranges>
+
 namespace JPL
 {
 	using AbsorptionCoeffs = simd;
@@ -53,6 +58,22 @@ namespace JPL
 		const simd lowerEdge(20.0f, splitFrequenciesHz.F1, splitFrequenciesHz.F2, splitFrequenciesHz.F3);
 		const simd upperEdge(splitFrequenciesHz.F1, splitFrequenciesHz.F2, splitFrequenciesHz.F3, nyquist);
 		return Math::Sqrt(lowerEdge * upperEdge);
+	}
+
+	template<std::floating_point T, std::size_t N> requires(N != std::dynamic_extent)
+	[[nodiscard]] JPL_INLINE std::array<T, N + 1> ComputeBandCenters(std::span<const T, N> splitFrequenciesHz, T nyquist = T(22050.0))
+	{
+		std::array<T, N + 1> centers{ T(20.0) }; // init first element as lower bound frequency
+		std::ranges::copy(splitFrequenciesHz, &centers[1]);
+
+		for (uint32 i = 0; i < centers.size() - 1; ++i)
+			centers[i] *= splitFrequenciesHz[i];
+		centers.back() *= nyquist;
+
+		for (T& c : centers)
+			c = Math::Sqrt(c);
+
+		return centers;
 	}
 
 	[[nodiscard]] JPL_INLINE FreqBandCenters ComputeBandLowerThirdCenters(const SplitFrequencies& splitFrequenciesHz, float nyquist = 22050.0f)
