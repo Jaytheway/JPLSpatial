@@ -74,7 +74,7 @@ namespace JPL
 			Sample /*a0 = 0.0f,*/ a1 = 0.0f;
 
 			// Calculate magnitude at the given normalized frequency
-			[[nodiscard]] inline Sample CalculateResponse(float normalziedFrequency) const;
+			[[nodiscard]] inline Sample CalculateResponse(float normalizedFrequency) const;
 
 			[[nodiscard]] static JPL_INLINE OnePole MakeLowShelf(float frequency, float sampleRate, float gain);
 			[[nodiscard]] static JPL_INLINE OnePole MakeHighShelf(float frequency, float sampleRate, float gain);
@@ -376,9 +376,9 @@ namespace JPL
 	} // namespace FilterUtils
 
 	//==========================================================================
-	inline auto Topology::OnePole::CalculateResponse(float normalziedFrequency) const -> Sample
+	inline auto Topology::OnePole::CalculateResponse(float normalizedFrequency) const -> Sample
 	{
-		const Sample omega = JPL_TWO_PI * normalziedFrequency;
+		const Sample omega = JPL_TWO_PI * normalizedFrequency;
 		const Sample cosOmega = ::cosf(omega);
 		const Sample numSq = (b0 * b0) + (b1 * b1) + (2.0f * b0 * b1 * cosOmega);
 		const Sample denSq = 1.0f + (a1 * a1) + (2.0f * a1 * cosOmega);
