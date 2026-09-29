@@ -90,9 +90,13 @@ namespace JPL
 			Sample b0 = 1.0f, b1 = 0.0f, b2 = 0.0f;
 			Sample a1 = 0.0f, a2 = 0.0f;
 
-			[[nodiscard]] inline Sample CalculateResponse(float normalziedFrequency) const;
+			[[nodiscard]] inline std::complex<double> CalculateResponse(float normalizedFrequency) const;
 
 			[[nodiscard]] static inline Biquad Combine(const OnePole& low, const OnePole& high, float broadbandGain);
+
+			// RBJ with fixed slope=1
+			[[nodiscard]] static JPL_INLINE Biquad MakeHighShelf(double normalizedFrequency, double gainDb);
+			[[nodiscard]] static inline Biquad MakeHighShelf(const Cache::BiquadShelf& cache, double gainDb);
 
 			template<class StateType>
 			void ProcessInterpolating(std::span<Sample> samples, StateType& state, Biquad& previous) const;
