@@ -45,7 +45,7 @@ layers that compose them. A host can adopt only the layer it needs.
 
 #### Currently represented channel layouts
 
-- **Ground-plane layouts**: mono, stereo, LCR, quad, 4.1, 5.x, 6.x, 7.x, octagonal.
+- **Ground-plane layouts**: mono, stereo (speakers), stereo (headphones), LCR, quad, 4.1, 5.x, 6.x, 7.x, octagonal.
 - **Height-channel layouts**: 5.x.2, 5.x.4, 7.x.2, 7.x.4,
 7.x.6, 9.x.4, 9.x.6.
 
@@ -192,8 +192,6 @@ Linux/Clang Debug builds are additionally tested with AddressSanitizer.
 JPL Spatial is distributed under the [ISC license](LICENSE).
 
 ## LLM Usage
-
-This disclosure was inspired by Box3D's [LLM usage statement](https://github.com/erincatto/box3d#llm-usage).
 
 I use LLMs as supporting tools for:
 - tests
