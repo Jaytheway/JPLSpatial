@@ -301,6 +301,7 @@ namespace JPL::VBAP
         uint32 mNumInternalChannels;
         uint32 mNumTargetChannels;
         uint32 mLFEIndex;
+        bool bHeadphonesProfile;
 
         Array<ChannelAngle> mChannelAngels{ GetDefaultMemoryResource() };
 
@@ -539,11 +540,20 @@ namespace JPL::VBAP
         mChannelMapTarget = channelMap;
         mNumTargetChannels = channelMap.GetNumChannels();
 
+        // Special case for headphones profile
+        bHeadphonesProfile = channelMap.GetChannelMask() == ChannelMask::StereoHeadphones;
+
         // We need at least quad layout for VBAP to work
-        mChannelMapInternal = channelMap.GetNumChannels() < 4 ? ChannelMap::FromChannelMask(ChannelMask::Quad) : channelMap;
+        mChannelMapInternal =
+            not bHeadphonesProfile and channelMap.GetNumChannels() < 4
+            ? ChannelMap::FromChannelMask(ChannelMask::Quad)
+            : channelMap;
+
         mNumInternalChannels = mChannelMapInternal.GetNumChannels();
         mLFEIndex = mChannelMapInternal.GetChannelIndex(EChannel::LFE);
 
+        if (not bHeadphonesProfile)
+        {
         // Extract sortet speaker angles
         static constexpr bool skipLFE = false;
         VBAP::ChannelAngle::GetSortedChannelAngles(mChannelMapInternal, mChannelAngels, GetSpeakerAngleFunction, skipLFE);
@@ -558,6 +568,7 @@ namespace JPL::VBAP
             mChannelConversionWeights.Resize(mNumTargetChannels, mNumInternalChannels);
             ComputeChannelConversionRectangularWeights(mChannelMapInternal, mChannelMapTarget, mChannelConversionWeights);
         }
+        }
 
         mLUT.Resize(LUTType::LUTStats::Resolution, mNumTargetChannels);
     }
@@ -565,6 +576,9 @@ namespace JPL::VBAP
     template<auto GetSpeakerAngleFunction>
     inline float LUTBuilder2D<GetSpeakerAngleFunction>::FindShortestAperture() const
     {
+        if (bHeadphonesProfile)
+            return JPL_PI;
+
         float shortestAperture = std::numeric_limits<float>::max();
 
         const uint32 lastSpeakerId = mChannelAngels.back().ChannelId;
@@ -585,6 +599,15 @@ namespace JPL::VBAP
     template<auto GetSpeakerAngleFunction>
     inline bool LUTBuilder2D<GetSpeakerAngleFunction>::ComputeCellFor(const Vec2& direction, int lutOffset)
     {
+        if (bHeadphonesProfile)
+        {
+            const float left = Math::Sqrt(Math::FMA(direction.X, -0.5f, 0.5f));
+            const float right = Math::Sqrt(Math::FMA(direction.X, 0.5f, 0.5f));
+            mLUT.mData[lutOffset] = left;
+            mLUT.mData[lutOffset + 1] = right;
+            return true;; // Nothing more to do here
+        }
+
         // Assign speaker contribution values
         for (const ChannelPair& pair : mChannelPairs)
         {
@@ -644,6 +667,9 @@ namespace JPL::VBAP
     template<auto GetSpeakerAngleFunction>
     inline void LUTBuilder2D<GetSpeakerAngleFunction>::ComputePairMatrices()
     {
+        if (not JPL_ENSURE(not bHeadphonesProfile))
+            return; // This shouldn't be called for headphones profile
+
         auto makeInvMat = [&](const ChannelAngle& cha1, const ChannelAngle& cha2)
         {
             //JPL_ASSERT(Math::IsPositiveAndBelow(cha2.Angle - cha1.Angle, JPL_PI + 1e-6f));
@@ -672,9 +698,11 @@ namespace JPL::VBAP
 
     template<auto GetSpeakerAngleFunction>
     template<class ThisType, class CallbackType>
-    inline void LUTBuilder2D<GetSpeakerAngleFunction>::ForEachChannelAnglePair(ThisType& self,
-                                                                                                   CallbackType&& callback)
+    inline void LUTBuilder2D<GetSpeakerAngleFunction>::ForEachChannelAnglePair(ThisType& self, CallbackType&& callback)
     {
+        if (not JPL_ENSURE(not self.bHeadphonesProfile))
+            return; // This shouldn't be called for headphones profile
+
         auto sanitizeLFEIndex = [&self](uint32 idx)
         {
             return idx + (self.mChannelAngels[idx].ChannelId == self.mLFEIndex);

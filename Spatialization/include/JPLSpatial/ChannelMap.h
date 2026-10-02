@@ -100,6 +100,9 @@ namespace JPL
 	    inline constexpr uint32 LCRS                = FrontLeft | FrontRight | FrontCenter | BackCenter;
         inline constexpr uint32 Quad                = FrontLeft | FrontRight | BackLeft | BackRight;
 
+        // Special case for headphones stereo profile
+        inline constexpr uint32 StereoHeadphones    = SideLeft | SideRight;
+
         // TODO: this clashes with Surround 5.0, we should just remove it, or refactor ChannelMask to be a more than just an integer bitmask
 	    inline constexpr uint32 Pentagonal          = FrontLeft | FrontRight | FrontCenter | BackLeft | BackRight;
         
@@ -163,7 +166,10 @@ namespace JPL
         [[nodiscard]] constexpr bool HasTopChannels() const noexcept { return mChannelMask >= EChannel::TOP_Channels; }
         [[nodiscard]] constexpr bool IsValid() const noexcept { return mChannelMask != ChannelMask::Invalid; }
 
-        [[nodiscard]] constexpr uint32 GetNumChannels() const noexcept { return std::popcount(mChannelMask); }
+        [[nodiscard]] constexpr uint32 GetNumChannels() const noexcept
+        {
+            return mChannelMask == ChannelMask::StereoHeadphones ? 2 : std::popcount(mChannelMask);
+        }
         [[nodiscard]] constexpr uint32 GetChannelIndex(EChannel channel) const
         {
             if (!Has(channel))
@@ -289,6 +295,7 @@ namespace JPL
         case ChannelMask::Invalid:          return "INVALID";
         case ChannelMask::Mono:             return "Mono";
         case ChannelMask::Stereo:           return "Stereo";
+        case ChannelMask::StereoHeadphones: return "Stereo (headphones)";
         case ChannelMask::LCR:              return "LCR";
         case ChannelMask::LRS:              return "LRS";
         case ChannelMask::LCRS:             return "LCRS";
