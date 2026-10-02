@@ -554,20 +554,20 @@ namespace JPL::VBAP
 
         if (not bHeadphonesProfile)
         {
-        // Extract sortet speaker angles
-        static constexpr bool skipLFE = false;
-        VBAP::ChannelAngle::GetSortedChannelAngles(mChannelMapInternal, mChannelAngels, GetSpeakerAngleFunction, skipLFE);
-        JPL_ASSERT(mChannelAngels.size() == mNumInternalChannels);
+            // Extract sortet speaker angles
+            static constexpr bool skipLFE = false;
+            VBAP::ChannelAngle::GetSortedChannelAngles(mChannelMapInternal, mChannelAngels, GetSpeakerAngleFunction, skipLFE);
+            JPL_ASSERT(mChannelAngels.size() == mNumInternalChannels);
 
-        //JPL_ASSERT(intermNumChannels <= Traits::MAX_CHANNELS);
+            //JPL_ASSERT(intermNumChannels <= Traits::MAX_CHANNELS);
 
-        ComputePairMatrices();
+            ComputePairMatrices();
 
-        if (RequiresChannelConversion())
-        {
-            mChannelConversionWeights.Resize(mNumTargetChannels, mNumInternalChannels);
-            ComputeChannelConversionRectangularWeights(mChannelMapInternal, mChannelMapTarget, mChannelConversionWeights);
-        }
+            if (RequiresChannelConversion())
+            {
+                mChannelConversionWeights.Resize(mNumTargetChannels, mNumInternalChannels);
+                ComputeChannelConversionRectangularWeights(mChannelMapInternal, mChannelMapTarget, mChannelConversionWeights);
+            }
         }
 
         mLUT.Resize(LUTType::LUTStats::Resolution, mNumTargetChannels);
@@ -730,9 +730,9 @@ namespace JPL::VBAP
 
     template<auto GetSpeakerAngleFunction>
     JPL_INLINE void LUTBuilder2D<GetSpeakerAngleFunction>::StoreChannelGainsConverted(uint32 channelId1,
-                                                                                                          uint32 channelId2,
-                                                                                                          const Vec2& gains,
-                                                                                                          uint32 lutOffset)
+                                                                                      uint32 channelId2,
+                                                                                      const Vec2& gains,
+                                                                                      uint32 lutOffset)
     {
         std::span<float> targetGains(&mLUT.mData[lutOffset], mNumTargetChannels);
 
