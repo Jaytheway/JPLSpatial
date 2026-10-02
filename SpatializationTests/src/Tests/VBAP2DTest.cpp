@@ -64,26 +64,18 @@ namespace JPL
 		{
 		}
 
-		static constexpr auto toRad(std::floating_point auto degree) { return static_cast<decltype(degree)>(degree * (std::numbers::pi / 180.0)); };
-		static constexpr auto toDegrees(std::floating_point auto rads) { return static_cast<decltype(rads)>(rads * (180.0 / std::numbers::pi)); };
-
 	protected:
 		const std::vector<NamedChannelMask> mChannelMasks
 		{
 			{ ChannelMask::Invalid },
 			{ ChannelMask::Mono },
 			{ ChannelMask::Stereo },
+			{ ChannelMask::StereoHeadphones },
 			{ ChannelMask::Quad },
 			{ ChannelMask::Surround_4_1 },
 			{ ChannelMask::Surround_5_1 },
 			{ ChannelMask::Surround_6_1 },
 			{ ChannelMask::Surround_7_1 },
-		};
-
-		struct NamedChannelLayout
-		{
-			std::string_view Name;
-			ChannelMap Layout;
 		};
 
 		using ChannelPoints = std::vector<GroupedPoint<Vec3>>;
@@ -180,6 +172,16 @@ namespace JPL
 			}
 		},
 		{
+			"Stereo (headphones) Configuration",
+			ChannelMap::FromChannelMask(ChannelMask::StereoHeadphones),
+			{
+				{ 270.0f,	{ 1.0f, 0.0f} },
+				{ 0.0f,		{ 0.7071f, 0.7071f } },
+				{ 90.0f,	{ 0.0f, 1.0f} },
+				{ 180.0f,	{ 0.7071f, 0.7071f} }
+			}
+		},
+		{
 			"Quadraphonic Configuration",
 			ChannelMap::FromChannelMask(ChannelMask::Quad),
 			{
@@ -234,7 +236,7 @@ namespace JPL
 			for (const auto& angleTest : testCase.angleTests)
 			{
 				const float testAngleDeg = angleTest.testAngleDegrees;
-				const float testAngleRad = toRad(testAngleDeg);
+				const float testAngleRad = Math::ToRadians(testAngleDeg);
 #if 0
 				const int pos = panner.GetLUT()->AngleToLUTPosition(testAngleRad);
 
@@ -246,7 +248,8 @@ namespace JPL
 					lutGains[ch] = panner.GetLUT()->GetLUTValue(offset + ch);
 				}
 #else
-				const Vec2 direction(sinf(testAngleRad), -cosf(testAngleRad));
+				const auto [s, c] = Math::SinCos(testAngleRad);
+				const Vec2 direction(s, -c);
 				panner.GetLUT()->GetSpeakerGains(direction, lutGains);
 #endif
 
@@ -296,7 +299,7 @@ namespace JPL
 				}
 				gainSum = Math::Sqrt(gainSum);
 
-				const float angle = toDegrees(panner.GetLUT()->LUTPositionToAngle(pos));
+				const float angle = Math::ToDegrees(panner.GetLUT()->LUTPositionToAngle(pos));
 
 				SCOPED_TRACE(std::format("Position {}, angle {}", pos, angle));
 				EXPECT_NEAR(gainSum, 1.0f, 0.01f);
@@ -337,6 +340,18 @@ namespace JPL
 			},
 			{
 				.ChannelMap = { ChannelMask::Stereo },
+				.ExpectedChannelGroups = {
+					{
+						.Angle = -90.0f,
+					},
+					{
+						.Angle = 90.0f,
+					}
+				}
+			},
+			{
+				// Headphones profile should have identical source channel groups as regular stereo
+				.ChannelMap = { ChannelMask::StereoHeadphones },
 				.ExpectedChannelGroups = {
 					{
 						.Angle = -90.0f,
@@ -430,7 +445,7 @@ namespace JPL
 				SCOPED_TRACE(std::format("Channel: {}", channelGroup.Channel));
 
 				const float channelGroupRotationAngle = channelGroup.Rotation.GetRotationAngle(Vec3(0.0f, -1.0f, 0.0f));
-				EXPECT_NEAR(toDegrees(channelGroupRotationAngle), excpectedChannelGroup.Angle, 1e-4f);
+				EXPECT_NEAR(Math::ToDegrees(channelGroupRotationAngle), excpectedChannelGroup.Angle, 1e-4f);
 
 				const EChannel channel = channelMap.GetChannelAtIndex(channelGroup.Channel);
 				EXPECT_TRUE(channel != EChannel::Invalid);
@@ -485,8 +500,8 @@ namespace JPL
 			const float weight = 1.0f / testCase.VirtualSourceAnglesDegrees.size();
 			for (float angleDeg : testCase.VirtualSourceAnglesDegrees)
 			{
-				const float rad = toRad(angleDeg);
-				virtualSources.push_back({ Vec3{ std::sin(rad), 0.0f, -std::cos(rad)}, weight });
+				const auto [s, c] = Math::SinCos(Math::ToRadians(angleDeg));
+				virtualSources.push_back({ Vec3{ s, 0.0f, -c}, weight });
 			}
 
 			std::vector<float> outGains(panner.GetNumChannels(), 0.0f);
@@ -575,10 +590,10 @@ namespace JPL
 			// 1 channel group with 2 virtual sources at positions { -90, 90 } in radians
 			ASSERT_TRUE(panner.InitializeSourceLayout(ChannelMap::FromNumChannels(1), data));
 
-			const double panRad = static_cast<double>(toRad(testCase.PanAngleDegrees));
+			const auto [s, c] = Math::SinCos<double>(Math::ToRadians(testCase.PanAngleDegrees));
 			typename PannerType::PanUpdateData positionData
 			{
-				.SourceDirection = Vec3D{ std::sin(panRad), 0.0, -std::cos(panRad) },
+				.SourceDirection = Vec3D{ s, 0.0, -c },
 				.Focus = testCase.Focus,
 				.Spread = testCase.Spread
 			};
@@ -604,10 +619,10 @@ namespace JPL
 			// 1 channel group with 2 virtual sources at positions { -90, 90 } in radians
 			ASSERT_TRUE(panner.InitializeSourceLayout(ChannelMap::FromNumChannels(numSourceChannels), data));
 
-			const double panRad = static_cast<double>(toRad(0.0f));
+			const auto [s, c] = Math::SinCos<double>(Math::ToRadians(0.0f));
 			typename PannerType::PanUpdateData positionData
 			{
-				.SourceDirection = Vec3D{ std::sin(panRad), 0.0, -std::cos(panRad) },
+				.SourceDirection = Vec3D{ s, 0.0, -c },
 				.Focus = 1.0f,
 				.Spread = 1.0f
 			};
@@ -704,19 +719,20 @@ namespace JPL
 
 		using ParametersType = typename StandardPanner2D::PanUpdateData;
 
-		const std::vector<NamedChannelLayout> testTargetsChannelMaps
+		const std::vector<NamedChannelMask> testTargetsChannelMaps
 		{
-			{ "Stereo",			ChannelMap::FromChannelMask(ChannelMask::Stereo) },
-			{ "LCR",			ChannelMap::FromChannelMask(ChannelMask::LCR) },
-			{ "Quad",			ChannelMap::FromChannelMask(ChannelMask::Quad) },
-			{ "Surround 4.1",	ChannelMap::FromChannelMask(ChannelMask::Surround_4_1) },
-			{ "Surround 5.0",	ChannelMap::FromChannelMask(ChannelMask::Surround_5_0) },
-			{ "Surround 5.1",	ChannelMap::FromChannelMask(ChannelMask::Surround_5_1) },
-			{ "Surround 6.0",	ChannelMap::FromChannelMask(ChannelMask::Surround_6_0) },
-			{ "Surround 6.1",	ChannelMap::FromChannelMask(ChannelMask::Surround_6_1) },
-			{ "Surround 7.0",	ChannelMap::FromChannelMask(ChannelMask::Surround_7_0) },
-			{ "Surround 7.1",	ChannelMap::FromChannelMask(ChannelMask::Surround_7_1) },
-			{ "Octogonal",		ChannelMap::FromChannelMask(ChannelMask::Octagonal) },
+			{ ChannelMask::Stereo },
+			{ ChannelMask::StereoHeadphones },
+			{ ChannelMask::LCR },
+			{ ChannelMask::Quad },
+			{ ChannelMask::Surround_4_1 },
+			{ ChannelMask::Surround_5_0 },
+			{ ChannelMask::Surround_5_1 },
+			{ ChannelMask::Surround_6_0 },
+			{ ChannelMask::Surround_6_1 },
+			{ ChannelMask::Surround_7_0 },
+			{ ChannelMask::Surround_7_1 },
+			{ ChannelMask::Octagonal },
 		};
 
 		const std::vector<ChannelMap> testSourceChannelMaps
@@ -793,7 +809,7 @@ namespace JPL
 							   params.Spread);
 		};
 
-		for (const NamedChannelLayout& test : testTargetsChannelMaps)
+		for (const NamedChannelMask& test : testTargetsChannelMaps)
 		{
 			SCOPED_TRACE(std::format("Target Speaker Layout: {}", test.Name));
 
@@ -891,7 +907,7 @@ namespace JPL
 				const float weight = 1.0f / testCase.VirtualSourceAnglesDegrees.size();
 				for (float angleDeg : testCase.VirtualSourceAnglesDegrees)
 				{
-					const float rad = toRad(angleDeg);
+					const float rad = Math::ToRadians(angleDeg);
 					virtualSources.push_back({ Vec3Type{ std::sin(rad), 0.0f, -std::cos(rad)}, weight });
 				}
 
