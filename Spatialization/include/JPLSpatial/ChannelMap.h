@@ -148,8 +148,7 @@ namespace JPL
 
         JPL_INLINE std::string_view ToString(uint32 channelMask);
     }
-
-
+    
     //==========================================================================
     /// ChannelMap is just a interface for strongly-typed access to some sort of
     /// channel mask
@@ -166,10 +165,14 @@ namespace JPL
         [[nodiscard]] constexpr bool HasTopChannels() const noexcept { return mChannelMask >= EChannel::TOP_Channels; }
         [[nodiscard]] constexpr bool IsValid() const noexcept { return mChannelMask != ChannelMask::Invalid; }
 
-        [[nodiscard]] constexpr uint32 GetNumChannels() const noexcept
+        [[nodiscard]] constexpr uint32 GetNumChannels() const noexcept { return std::popcount(mChannelMask); }
+
+        [[nodiscard]] constexpr uint32 GetNumGroundChannels() const noexcept
         {
-            return mChannelMask == ChannelMask::StereoHeadphones ? 2 : std::popcount(mChannelMask);
+            return std::popcount(mChannelMask & static_cast<uint32>((1ull << EChannel::NUM_GroundChannels) - 1u));
         }
+        [[nodiscard]] constexpr uint32 GetNumHeightChannels() const noexcept { return GetNumChannels() - GetNumGroundChannels(); }
+
         [[nodiscard]] constexpr uint32 GetChannelIndex(EChannel channel) const
         {
             if (!Has(channel))
@@ -391,3 +394,86 @@ namespace JPL
         }
     }
 } // namespace JPL
+
+#if 0
+//==============================================================================
+namespace JPL::UnitTests
+{
+#define GROUND_CHANNEL_COUNT_OF(ChannelMask)\
+ChannelMap::FromChannelMask(ChannelMask).GetNumGroundChannels()
+
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Invalid) == 0);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Mono) == 1);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Stereo) == 2);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::StereoHeadphones) == 2);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::LCR) == 3);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::LRS) == 3);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::LCRS) == 4);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Quad) == 4);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Pentagonal) == 5);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Octagonal) == 8);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_4_1) == 5);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_5_0) == 5);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_5_1) == 6);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_6_0) == 6);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_6_1) == 7);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_7_0) == 7);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_7_1) == 8);
+    
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_5_0_2) == 5);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_5_0_4) == 5);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_5_1_2) == 6);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_5_1_4) == 6);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_7_0_2) == 7);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_7_0_4) == 7);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_7_0_6) == 7);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_7_1_2) == 8);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_7_1_4) == 8);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_7_1_6) == 8);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_9_0_4) == 9);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_9_0_6) == 9);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_9_1_4) == 10);
+    static_assert(GROUND_CHANNEL_COUNT_OF(ChannelMask::Surround_9_1_6) == 10);
+
+#undef GROUND_CHANNEL_COUNT_OF
+
+    //==========================================================================
+#define HEIGHT_CHANNEL_COUNT_OF(ChannelMask)\
+ChannelMap::FromChannelMask(ChannelMask).GetNumHeightChannels()
+
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Invalid) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Mono) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Stereo) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::StereoHeadphones) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::LCR) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::LRS) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::LCRS) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Quad) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Pentagonal) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Octagonal) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_4_1) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_5_0) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_5_1) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_6_0) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_6_1) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_7_0) == 0);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_7_1) == 0);
+
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_5_0_2) == 2);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_5_0_4) == 4);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_5_1_2) == 2);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_5_1_4) == 4);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_7_0_2) == 2);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_7_0_4) == 4);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_7_0_6) == 6);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_7_1_2) == 2);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_7_1_4) == 4);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_7_1_6) == 6);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_9_0_4) == 4);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_9_0_6) == 6);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_9_1_4) == 4);
+    static_assert(HEIGHT_CHANNEL_COUNT_OF(ChannelMask::Surround_9_1_6) == 6);
+
+#undef HEIGHT_CHANNEL_COUNT_OF
+} // namespace JPL::UnitTests
+#endif
