@@ -33,9 +33,7 @@
 //#include "Tests/QuadTreeTest.h"
 #endif
 
-#if JPL_HAS_PATH_TRACING
 //#include "Tests/BDPTTest.h"
-#endif
 
 #undef max
 #undef min
