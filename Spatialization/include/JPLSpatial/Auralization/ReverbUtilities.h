@@ -36,10 +36,10 @@ namespace JPL
     /// Estimate RT60 using Sabine's equation, which tends to be more accurate
     /// for diffuse spaces, evenly distributed absorption and for rooms
     /// with low average absorption (< 0.4).
-    [[nosiscard]] JPL_INLINE simd EstimateRT60_Sabine(float w, float l, float h, const simd& avgAbsorption);
+    [[nodiscard]] JPL_INLINE simd EstimateRT60_Sabine(float w, float l, float h, const simd& avgAbsorption);
     
     /// Estimate RT60 using Sabine's equation, taking into account air absorption
-    [[nosiscard]] JPL_INLINE simd EstimateRT60_Sabine(float w, float l, float h, const simd& avgAbsorption, const simd& airAttenuation_dB);
+    [[nodiscard]] JPL_INLINE simd EstimateRT60_Sabine(float w, float l, float h, const simd& avgAbsorption, const simd& airAttenuation_dB);
 
     // Note: we keep Sabine estimator for material workflows/measures,
     // because absorption coefficients found online often assume Sabine measure.
@@ -47,10 +47,10 @@ namespace JPL
     /// Estimate RT60 using Eyring-Norris equation, which is more accurate
     /// than Sabine for absorptive rooms, but works on the assumption that
     /// the room's sound field is perfectly diffused.
-    [[nosiscard]] JPL_INLINE simd EstimateRT60_Eyring(float w, float l, float h, const simd& avgAbsorption);
+    [[nodiscard]] JPL_INLINE simd EstimateRT60_Eyring(float w, float l, float h, const simd& avgAbsorption);
 
     /// Estimate RT60 using Eyring-Norris equation, taking into account air absorption
-    [[nosiscard]] JPL_INLINE simd EstimateRT60_Eyring(float w, float l, float h, const simd& avgAbsorption, const simd& airAttenuation_dB);
+    [[nodiscard]] JPL_INLINE simd EstimateRT60_Eyring(float w, float l, float h, const simd& avgAbsorption, const simd& airAttenuation_dB);
 
     /// Estimate RT60 from Mean Free Path using Eyring-Norris equation.
     // Note: air absortion factor requires knowing total surface area and cannot be derived just from mean free path
