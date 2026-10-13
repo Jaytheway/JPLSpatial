@@ -77,7 +77,7 @@ namespace JPL
     {
         struct Sabine
         {
-            [[nosidscard]] static JPL_INLINE simd Compute(float surface, const simd& avgAbsorption)
+            [[nodiscard]] static JPL_INLINE simd Compute(float surface, const simd& avgAbsorption)
             {
                 return surface * avgAbsorption;
             }
@@ -85,13 +85,13 @@ namespace JPL
 
         struct Eyring
         {
-            [[nosidscard]] static JPL_INLINE simd Compute(float surface, const simd& avgAbsorption)
+            [[nodiscard]] static JPL_INLINE simd Compute(float surface, const simd& avgAbsorption)
             {
                 return -surface * log(simd(1.0f) - avgAbsorption);
             }
         };
 
-        [[nosidscard]] JPL_INLINE simd ComputeAirAbsorptionFactor(float volume, const simd& airAttenuation_dB)
+        [[nodiscard]] JPL_INLINE simd ComputeAirAbsorptionFactor(float volume, const simd& airAttenuation_dB)
         {
             // Air attenuation as reciprocal meters (1/m).
             // I.e. dB converted to Nepers
